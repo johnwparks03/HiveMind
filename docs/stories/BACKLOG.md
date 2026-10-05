@@ -31,6 +31,8 @@ Feature freeze: start of day 3, week 3.
 
 ### E2: Local indexing and search (Weeks 1-2)
 
+**Note:** E2-S7 (local search) no longer depends on E2-S6 (the Bedrock proxy) or any central-service auth story. The local agent track can build and demo end-to-end local search before the central service track finishes Cognito/auth — a real parallelization win, since Feature_List 1.5 requires local search to work with zero network access.
+
 | Story | Title | Track | Size | Depends on |
 |---|---|---|---|---|
 | [E2-S1](e2-local-search/E2-S1-sqlite-registry-and-source-interface.md) | SQLite registry and Source interface | Local agent | M | E1-S2 |
@@ -38,8 +40,8 @@ Feature freeze: start of day 3, week 3.
 | [E2-S3](e2-local-search/E2-S3-text-extraction-and-dates.md) | Text extraction and dates | Local agent | M | E2-S1 |
 | [E2-S4](e2-local-search/E2-S4-chunking-embeddings-and-chroma.md) | Chunking, embeddings and Chroma | Local agent | L | E2-S3 |
 | [E2-S5](e2-local-search/E2-S5-change-detection.md) | Change detection | Local agent | M | E2-S2, E2-S4 |
-| [E2-S6](e2-local-search/E2-S6-bedrock-proxy-query-parsing.md) | Bedrock proxy: query parsing | Central service | M | E1-S1 |
-| [E2-S7](e2-local-search/E2-S7-local-search-and-open-file.md) | Local search and open file | Local agent | M | E2-S4, E2-S6 |
+| [E2-S6](e2-local-search/E2-S6-bedrock-proxy-query-parsing.md) | Bedrock proxy: query parsing (optional enhancement) | Central service | M | E1-S1 |
+| [E2-S7](e2-local-search/E2-S7-local-search-and-open-file.md) | Local search and open file | Local agent | M | E2-S4 |
 | [E2-S8](e2-local-search/E2-S8-search-and-files-pages-local.md) | Search and Files pages (local) | Frontend | L | E1-S6, E2-S2, E2-S7 |
 
 ### E3: Publish and central search (Week 2)

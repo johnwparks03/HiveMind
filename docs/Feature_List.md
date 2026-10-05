@@ -52,13 +52,14 @@ HiveMind is a team knowledge-finding tool. A user searches their own files first
 
 ### 1.5 Search
 
-- Query understanding via the central LLM proxy: returns a topic and an absolute date range
-- Agent sends its local date and timezone with the query
+- **Query understanding is local-first and offline-capable:** a local deterministic parser (`dateparser` + regex) splits the query into a topic and an absolute date range, with no network call
+- If online and logged in, the agent additionally tries the central LLM proxy with a short timeout, as a best-effort quality upgrade; on failure or timeout it silently keeps the local parse
+- Agent sends its local date and timezone with the query (used by whichever parse path runs)
 - Date filter first, then vector ranking over local Chroma
 - "Comes up short" = no local result above a configurable similarity threshold (tuned during development)
 - On "comes up short", call central search with the topic and date range (no second LLM call)
 - Merge results, labeled local vs. teammate
-- If the proxy is unreachable: return "service unavailable" (no degraded fallback)
+- **Local search never requires the central service.** If the agent is fully offline, local results still return; only the teammate portion is skipped (see 1.5 central-search behavior)
 - Open a local result in its default program via an agent endpoint
 
 ### 1.6 Publish and unpublish

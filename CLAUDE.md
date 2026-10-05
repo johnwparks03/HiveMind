@@ -39,7 +39,29 @@ If the docs disagree, `API_Contract.md` wins for paths, field names and status c
 - Match the style of surrounding code. Add tests for new behavior.
 
 ## Commands
-Not set up yet. Story E0-S1 creates the scaffolding and must record the exact commands here: run agent, run frontend, run tests (each component), lint, deploy central, run local Postgres. Until then, do not invent them.
+
+**Agent** (`agent/`, Python + FastAPI):
+```
+cd agent
+python -m venv .venv
+.venv\Scripts\pip install -r requirements.txt
+.venv\Scripts\uvicorn app.main:app --host 127.0.0.1 --port 8420
+```
+First real search downloads the embedding model from Hugging Face (one-time, needs
+normal internet access, then cached). See `agent/README.md` for example requests.
+
+**Frontend** (`frontend/`, React + Vite): chat UI wired to the agent's `/search`,
+`/folders`, and `/files/{id}/open`. No login/teams pages yet (not needed until the
+central service exists).
+```
+cd frontend
+npm install
+npm run dev
+```
+Open `http://localhost:5173` with the agent already running on port 8420.
+
+**Central / infra / tests / lint / deploy:** not set up yet. Record commands here as
+each is built.
 
 ## AWS (shared demo account)
 - There is one shared dev stack. Region, account and model access are set in E0-S2; record them here when known. Do not guess a region or model ID.

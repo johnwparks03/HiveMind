@@ -17,8 +17,8 @@ As a user, I want teammate results when my own files fall short.
 
 ## Technical notes
 - Extend `POST /search` (E2-S7). Call central `/search` with the already-resolved `topic/date_from/date_to` when no local result clears the threshold **or** `include_teammates` is true and the user has a team.
-- Response `teammate`: `{searched, skipped_reason: 'local_sufficient'|'no_team'|null, results}`.
-- If `/llm/query` fails -> `503 service_unavailable` for the whole search (no degraded fallback). If only central search fails after local succeeded, return local results with `teammate.searched=false` and an indication of failure (record the shape you choose in the contract).
+- Response `teammate`: `{searched, skipped_reason: 'local_sufficient'|'no_team'|'central_unavailable'|null, results}`.
+- `/llm/query` failing does **not** fail the search (E2-S7 already falls back to the local parser for that). If central *search* itself fails after local succeeded, return local results with `teammate.searched=false, skipped_reason='central_unavailable'` rather than failing the whole request.
 
 ## Notes
 _(add during implementation)_

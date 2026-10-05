@@ -44,7 +44,7 @@ The frontend never calls the central service. Bedrock is only called from the ce
 |403|`forbidden`|Caller does not own the resource|
 |404|`not_found`|Resource missing, expired, or not visible to the caller|
 |409|`conflict`|State conflict (details in the endpoint)|
-|503|`service_unavailable`|Central service or Bedrock unreachable or returned invalid output. The UI shows "service unavailable."|
+|503|`service_unavailable`|Central service or Bedrock unreachable or returned invalid output. The UI shows "service unavailable." **Exception:** `POST /search` never returns this for an unreachable `/llm/query` — the agent's local parser is the required fallback there (see 2.5).|
 
 ---
 
@@ -216,7 +216,7 @@ File object:
 }
 ```
 
-Flow: the agent calls `/llm/query` and runs the local date-filtered vector search. It calls central search if no local result clears the similarity threshold, **or** if `include_teammates` is `true`. The frontend's "also search teammates" control sets that flag.
+Flow: the agent parses the query itself with a local deterministic parser (always available, no network call). If the agent is online and logged in, it also tries `/llm/query` with a short timeout as a best-effort upgrade; on success that result replaces the local parse, on failure or timeout the local parse is kept. Either way the agent then runs the local date-filtered vector search, and calls central search if no local result clears the similarity threshold, **or** if `include_teammates` is `true`. The frontend's "also search teammates" control sets that flag.
 
 ```json
 // 200
@@ -224,7 +224,8 @@ Flow: the agent calls `/llm/query` and runs the local date-filtered vector searc
   "interpreted": {
     "topic": "meeting notes",
     "date_from": "2026-09-29T00:00:00-04:00",
-    "date_to": "2026-09-29T23:59:59-04:00"
+    "date_to": "2026-09-29T23:59:59-04:00",
+    "source": "local"            // "local" | "llm" - which parser produced this result
   },
   "local_results": [
     {
@@ -234,8 +235,8 @@ Flow: the agent calls `/llm/query` and runs the local date-filtered vector searc
     }
   ],
   "teammate": {
-    "searched": true,                    // false if local results were good enough (and include_teammates was false) or the user has no team
-    "skipped_reason": null,              // "local_sufficient" | "no_team" | null
+    "searched": true,                    // false if local results were good enough (and include_teammates was false), the user has no team, or central search failed
+    "skipped_reason": null,              // "local_sufficient" | "no_team" | "central_unavailable" | null
     "results": [
       {
         "file_id": "…", "filename": "…", "tags": ["…"],
@@ -247,7 +248,7 @@ Flow: the agent calls `/llm/query` and runs the local date-filtered vector searc
 }
 ```
 
-Errors: `503 service_unavailable` (proxy unreachable or invalid model output; no degraded fallback). Owner identity is not returned.
+Errors: `POST /search` itself does not return 503 for LLM-proxy failures — the local parser always produces a usable `interpreted` result, so local search always succeeds. A `503 service_unavailable` here means the **central search** portion failed after local results already came back with `include_teammates` true or a local miss; in that case `teammate.searched` is `false` with `skipped_reason: "central_unavailable"` rather than failing the whole request. Owner identity is not returned.
 
 ### 2.6 Transfers
 
@@ -391,6 +392,8 @@ Rules:
 
 Validation: dates parse and `date_from` is not after `date_to`. Invalid model output returns `503 service_unavailable`. Requires login but not a team. Nothing is stored or logged.
 
+**Caller behavior note:** the agent treats this endpoint as an optional, best-effort upgrade over its own local parser (Feature_List 1.5), called with a short client-side timeout. A `503` or timeout here never surfaces to the end user as a search failure — the agent simply keeps its local parse and proceeds.
+
 **`POST /llm/tags`**
 
 ```json
@@ -527,7 +530,7 @@ Acknowledgment, completion, and failure go over HTTP, not the WebSocket, so they
 - **Unpublish and re-sync** use the same queue. Only the latest intent per file is kept.
 - **Reconciliation:** the agent periodically calls `GET /files/mine` and corrects files the server no longer has.
 - **Transfer polling:** the agent polls `GET /transfers/{id}` on the central service every 1 to 2 seconds, then downloads and writes to the Windows Downloads folder with a numeric suffix on collisions.
-- **Local search uses `/llm/query`** on every search. If it fails, search returns `503`.
+- **Local search parses every query locally first** (deterministic parser, no network call). If online, the agent also tries `/llm/query` with a short timeout and uses its result instead on success; on failure or timeout it keeps the local parse. Local search never returns `503` because of this call.
 
 ---
 
@@ -539,6 +542,7 @@ Acknowledgment, completion, and failure go over HTTP, not the WebSocket, so they
 2. **Removing a folder unpublishes its public files** (`DELETE /folders/{id}` returns `202 { "queued_unpublish": n }`).
 3. **Existing tags skip generation.** If a file already has tags when it is published, the tag call is skipped.
 4. **"Search teammates too" is available** through the optional `include_teammates` flag on `POST /search`. I read your "Sure" as wanting this added; tell me if you meant something different.
+5. **Local search no longer hard-depends on `/llm/query`.** The agent runs its own local deterministic parser first (always available, no network call) and only opportunistically upgrades the parse via the central proxy when online, with a short timeout. This replaces the earlier "if the proxy is down, search shows service unavailable with no fallback" behavior, so the local model fully functions on local files without the central service.
 
 ### Still open
 

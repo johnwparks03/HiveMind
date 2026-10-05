@@ -11,6 +11,8 @@
 ## Story
 As an agent, I want a natural-language query turned into topic plus date range so that I can filter by date first.
 
+**Note:** this is an optional, best-effort enhancement over the agent's own local parser (E2-S7), not a hard dependency. Local search must work whether or not this endpoint exists or is reachable — do not block E2-S7 on this story.
+
 ## Acceptance criteria
 - [ ] Given a query and the client's local date and timezone, when `/llm/query` is called, then it returns topic and date range (format per E0-S7).
 - [ ] Only the central service calls Bedrock; model ID comes from config.

@@ -10,6 +10,7 @@ A concrete, AWS-mapped build plan for the core loop: check your own files first,
 |Retention|90-day default|**45 days**, server-set, re-confirm resets to 45 days from confirmation|
 |S3 expiry|Lifecycle rule (~15 min)|**Sweeper Lambda** every minute deleting objects older than 15 minutes; day-level lifecycle rule as a backstop|
 |Bedrock / Claude|Direct Claude API or Bedrock, undecided|**Bedrock, Claude Sonnet 5.5, proxied by the central service.** The agent never calls Bedrock directly.|
+|Query parsing|Central Bedrock call required, no fallback|**Local deterministic parser is the required baseline; Bedrock is an optional, best-effort enhancement.** Local search never depends on the central service.|
 |Team membership|Cognito Groups|**Postgres** (`teams`, `memberships`, `invites`); one team per user|
 |Central dates|`published_at`, `expires_at`, `last_confirmed`|`file_created_at`, `file_modified_at`, `expires_at`, plus `published_at` and `last_confirmed`|
 |Central search|Not specified|**Metadata only** (filename, tags, dates) using Postgres full-text search|
@@ -37,7 +38,8 @@ Everything here either runs free-tier on your AWS sandbox or costs nothing to st
 |Local vector store|Chroma (embedded, file-backed) with per-chunk date metadata|Zero infrastructure; metadata filters make "3 days ago" queries filter by date rather than hoping recency ranks well|
 |Credential storage|Windows Credential Manager via `keyring`|Stores only the Cognito refresh token; falls back to memory-only if unavailable|
 |Frontend|React + Vite dev server (fixed origin, e.g. `localhost:5173`)|UI for login, search, and file/folder management; talks only to the local agent|
-|Natural-language query understanding|Claude Sonnet 5.5 on Amazon Bedrock, called by the central proxy|Splits a request like "meeting notes from 3 days ago" into a topic plus a date range|
+|Local query parser|`dateparser` + regex, local, no API key, no network call|Required baseline: splits "meeting notes from 3 days ago" into a topic plus a date range entirely offline, so local search always works with zero network access|
+|Natural-language query understanding (enhancement)|Claude Sonnet 5.5 on Amazon Bedrock, called by the central proxy|Optional, best-effort improvement over the local parser for trickier phrasing; used opportunistically when the agent is online, never required|
 |Tag generation|Same Bedrock model, via the proxy|Generates 5 to 8 lowercase keyword tags per file at publish time|
 |Central service runtime|Python + FastAPI on AWS Lambda behind API Gateway (HTTP API)|Serverless; scales to zero between demo sessions|
 |Agent signaling|API Gateway WebSocket API|Each agent holds a persistent outbound connection, which lets the relay reach a laptop with no public IP|
@@ -96,12 +98,18 @@ File bytes pass through S3 only in transit. The metadata store and connection re
 
 Every file chunk is embedded once, on the owner's own laptop, with a free local model (all-MiniLM-L6-v2). No network call, no key, no per-token cost, and file content is not sent anywhere just to be indexed.
 
-### Bedrock: query understanding and tags
+### Query parsing: local baseline, Bedrock as enhancement
+
+The agent parses every query itself first, with a local deterministic parser (`dateparser` plus regex for relative-date phrases): it extracts a date range from phrases like "3 days ago" or "last week," and treats whatever's left of the query as the topic. This runs synchronously, offline, with no key and no per-call cost, and is what local search always uses.
+
+If the agent is online and logged in, it **additionally** calls the central proxy's `/llm/query` with a short timeout, as a quality upgrade for phrasing the local parser handles poorly. If that call succeeds, its result replaces the local parse for that search. If it fails, times out, or the agent is offline, the agent silently keeps the local parse — **local search is never blocked on this call and never shows "service unavailable" because of it.**
+
+### Bedrock: query understanding (enhancement) and tags
 
 All LLM use goes through the central service, which calls Claude Sonnet 5.5 on Bedrock. Laptops need only their Cognito token, not AWS credentials.
 
-- `POST /llm/query` takes the raw query plus the agent's local date and timezone, and returns a topic and an absolute date range.
-- `POST /llm/tags` takes a file excerpt and filename, and returns 5 to 8 lowercase keyword tags.
+- `POST /llm/query` takes the raw query plus the agent's local date and timezone, and returns a topic and an absolute date range. The agent treats this as an optional upgrade over its own local parse, described above.
+- `POST /llm/tags` takes a file excerpt and filename, and returns 5 to 8 lowercase keyword tags. This one has no local equivalent — tag generation only happens at publish time, which already requires the central service for other reasons, so there's no standalone-operation requirement to preserve here.
 
 **Content handling**
 
@@ -128,10 +136,11 @@ The target query is "pull up the meeting notes from 3 days ago," which is a topi
 ### Local search
 
 - **Extract real dates, not just filenames.** Index the file's created and modified timestamps and, where present, a date written inside the content (a meeting doc's header date often differs from when it was last saved). The in-document date stays local.
-- **One call does two jobs.** The proxy returns a topic string and an absolute `date_from` / `date_to` pair, resolved against the agent's local date and timezone so results near midnight are not off by a day.
+- **Parse locally first, always.** The agent's own deterministic parser splits the query into a topic string and an absolute `date_from` / `date_to` pair, resolved against the agent's local date and timezone so results near midnight are not off by a day. This never requires a network call.
+- **Upgrade opportunistically.** If the agent is online, it also tries the central proxy with a short timeout and uses that result instead if it returns in time; offline or on failure, it keeps the local parse and proceeds exactly the same way.
 - **Filter first, then rank.** Chroma metadata filters narrow candidates to the date range before vector similarity ranks within that set.
 - **"Comes up short."** If no local result clears a configurable similarity threshold, the agent calls central search. The threshold is tuned during development against real files.
-- If the proxy is unreachable, search returns "service unavailable." There is no degraded fallback.
+- **Local search works with zero network access.** It is central *search* (asking teammates) that requires the central service and a team — not the local search step itself. If the agent is offline entirely, local search still returns results; only the teammate portion is skipped.
 
 ### Central search
 
@@ -344,6 +353,7 @@ access_log: log_id, timestamp, user_id, event_type, details (JSON)
 |---|---|---|
 |File types|PDF, DOCX, PPTX, TXT|Additional types as needed|
 |Date-aware search|Built in week 1, part of core search from day one|Not specified|
+|Query parsing|Local deterministic parser required; Bedrock is an optional enhancement|Smarter local parsing (e.g. a small local model) if the regex/`dateparser` approach proves too weak|
 |File sources|Local filesystem only|`Source` interface ready now; Teams/SharePoint via Graph API is the priority next connector|
 |Networking|WebSocket relay + presigned S3 transit, cross-network from day one|True peer-to-peer (WebRTC/TURN) if bytes-via-AWS proves unacceptable|
 |Central search|Metadata only (filename, tags, dates)|Ask each teammate's agent to run an embedding search if metadata matching is too weak|
@@ -373,6 +383,8 @@ _Note: the last row of the v1 blueprint's table was cut off in the PDF text I re
 ### Tune during development
 
 - Local similarity threshold for "comes up short"
+- Local parser accuracy against real queries, and which phrasings need the Bedrock enhancement to parse correctly
+- Timeout for the opportunistic `/llm/query` upgrade call (long enough to be useful, short enough not to feel slow)
 - Full-text search behavior on real tags and filenames
 - Excerpt size (3,000 characters to start)
 - Publish concurrency

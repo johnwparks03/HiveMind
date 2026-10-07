@@ -54,6 +54,7 @@ export const api = {
   listFolders: () => request("/folders"),
   addFolder: (path) => request("/folders", { method: "POST", body: JSON.stringify({ path }) }),
   rescanFolder: (folderId) => request(`/folders/${folderId}/rescan`, { method: "POST" }),
+  removeFolder: (folderId) => request(`/folders/${folderId}`, { method: "DELETE" }),
   openFile: (fileId) => request(`/files/${fileId}/open`, { method: "POST" }),
   ping: () => getToken().then(() => true).catch(() => false),
 };

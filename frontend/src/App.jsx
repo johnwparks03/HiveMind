@@ -56,6 +56,18 @@ export default function App() {
     }
   }
 
+  async function handleRemoveFolder(folderId) {
+    setBusy(true);
+    try {
+      await api.removeFolder(folderId);
+      await refreshFolders();
+    } catch (err) {
+      pushSystemError(`Couldn't remove that folder: ${err.message}`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   function pushSystemError(text) {
     setMessages((prev) => [...prev, { role: "assistant", error: true, text }]);
   }
@@ -102,7 +114,13 @@ export default function App() {
       </header>
 
       {showFolders && (
-        <FolderBar folders={folders} onAdd={handleAddFolder} onRescan={handleRescan} busy={busy} />
+        <FolderBar
+          folders={folders}
+          onAdd={handleAddFolder}
+          onRescan={handleRescan}
+          onRemove={handleRemoveFolder}
+          busy={busy}
+        />
       )}
 
       <main className="chat-scroll" ref={scrollRef}>

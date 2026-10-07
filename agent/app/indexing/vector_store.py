@@ -34,6 +34,20 @@ def delete_file(file_id: str) -> None:
     collection.delete(where={"file_id": file_id})
 
 
+def field_bounds(field: str, date_from_ts: float | None, date_to_ts: float | None) -> dict:
+    """A single field's $gte/$lte condition, Chroma-shaped. Chroma's `where` rejects
+    a dict with two operator keys (e.g. {"$gte": a, "$lte": b}) unless each is wrapped
+    in its own clause under `$and` — easy to get wrong once and then get wrong again
+    in a second place, so every caller goes through this one function instead.
+    """
+    cond = {}
+    if date_from_ts is not None:
+        cond["$gte"] = date_from_ts
+    if date_to_ts is not None:
+        cond["$lte"] = date_to_ts
+    return {field: cond} if len(cond) == 1 else {"$and": [{field: {k: v}} for k, v in cond.items()]}
+
+
 def _date_range_where(date_from_ts: float | None, date_to_ts: float | None) -> dict | None:
     """A file matches if its created date, modified date, OR in-document date falls
     in the range (Technical_Blueprint.md section 04: "either-date matching," and
@@ -41,18 +55,10 @@ def _date_range_where(date_from_ts: float | None, date_to_ts: float | None) -> d
     if date_from_ts is None and date_to_ts is None:
         return None
 
-    def bounds(field: str) -> dict:
-        cond = {}
-        if date_from_ts is not None:
-            cond["$gte"] = date_from_ts
-        if date_to_ts is not None:
-            cond["$lte"] = date_to_ts
-        return {field: cond} if len(cond) == 1 else {"$and": [{field: {k: v}} for k, v in cond.items()]}
-
     return {"$or": [
-        bounds("file_created_at_ts"),
-        bounds("file_modified_at_ts"),
-        bounds("in_document_date_ts"),
+        field_bounds("file_created_at_ts", date_from_ts, date_to_ts),
+        field_bounds("file_modified_at_ts", date_from_ts, date_to_ts),
+        field_bounds("in_document_date_ts", date_from_ts, date_to_ts),
     ]}
 
 

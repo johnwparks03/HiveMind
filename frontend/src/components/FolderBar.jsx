@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-export default function FolderBar({ folders, onAdd, onRescan, busy }) {
+export default function FolderBar({ folders, onAdd, onRescan, onRemove, busy }) {
   const [path, setPath] = useState("");
 
   function submit(e) {
@@ -31,6 +31,9 @@ export default function FolderBar({ folders, onAdd, onRescan, busy }) {
               <span className="folder-path" title={f.path}>{f.path}</span>
               <button className="link-button" onClick={() => onRescan(f.folder_id)} disabled={busy}>
                 Rescan
+              </button>
+              <button className="link-button link-button-danger" onClick={() => onRemove(f.folder_id)} disabled={busy}>
+                Remove
               </button>
             </li>
           ))}

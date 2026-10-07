@@ -28,6 +28,23 @@ def list_folders() -> list[dict]:
         return [dict(r) for r in rows]
 
 
+def remove_folder(folder_id: str) -> bool:
+    """Drops the folder and every file registered under it, local index included.
+    Returns False if the folder didn't exist."""
+    with session() as conn:
+        row = conn.execute("SELECT folder_id FROM folders WHERE folder_id = ?", (folder_id,)).fetchone()
+        if not row:
+            return False
+        file_ids = [r["file_id"] for r in conn.execute(
+            "SELECT file_id FROM files WHERE folder_id = ?", (folder_id,)
+        ).fetchall()]
+        for file_id in file_ids:
+            delete_file(file_id)
+        conn.execute("DELETE FROM files WHERE folder_id = ?", (folder_id,))
+        conn.execute("DELETE FROM folders WHERE folder_id = ?", (folder_id,))
+    return True
+
+
 def scan_folder(folder_id: str, path: str) -> dict:
     """Walks the folder, registers new files, re-indexes changed ones, skips
     unchanged ones (by content hash), and marks missing ones as removed.

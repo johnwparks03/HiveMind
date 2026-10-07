@@ -19,9 +19,21 @@ CHUNK_OVERLAP_CHARS = 100
 
 # Search
 # Collection uses cosine space, so distance = 1 - cosine_similarity; smaller is a
-# better match. Tune against real files once there's a corpus to test with.
-SIMILARITY_DISTANCE_THRESHOLD = 0.4
+# better match. First real calibration point (2026-10-07, all-MiniLM-L6-v2): a
+# document titled "Q4 Budget Plan" against the query "budget plan" scored 0.56;
+# unrelated documents in the same small test set scored 0.75-0.91. 0.65 sits in
+# that gap. Revisit once there's a bigger, messier real corpus to test against —
+# this is one data point, not a tuned value.
+SIMILARITY_DISTANCE_THRESHOLD = 0.65
 SEARCH_RESULT_LIMIT = 20
+
+# Filename boost: whole-chunk embeddings dilute a strong title match once it's
+# pooled together with unrelated body text (confirmed 2026-10-07 — "meeting
+# notes" scored 0.72 similarity alone, but only 0.16 once embedded as part of a
+# full document about something else). A literal word overlap with the filename
+# is a cheap, reliable signal vector similarity alone misses.
+FILENAME_BOOST_PER_WORD = 0.15
+FILENAME_BOOST_MAX = 0.3
 
 # Query parsing: how long the agent waits for the optional central /llm/query
 # upgrade before keeping its own local parse (Technical_Blueprint.md section 03).

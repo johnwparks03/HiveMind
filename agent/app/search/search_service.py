@@ -2,12 +2,35 @@
 "Filter first, then rank" and "comes up short" -> central (not built today;
 the agent track is being built standalone per docs/stories/BACKLOG.md's E2 note).
 """
+import re
 from datetime import datetime
 
-from app.config import SEARCH_RESULT_LIMIT, SIMILARITY_DISTANCE_THRESHOLD
+from app.config import (
+    FILENAME_BOOST_MAX,
+    FILENAME_BOOST_PER_WORD,
+    SEARCH_RESULT_LIMIT,
+    SIMILARITY_DISTANCE_THRESHOLD,
+)
 from app.indexing.embeddings import embed
-from app.indexing.vector_store import get_collection, query as vector_query
+from app.indexing.vector_store import _date_range_where, get_collection, query as vector_query
 from app.search.query_parser import ParsedQuery, parse_query_locally
+
+_WORD_RE = re.compile(r"[a-z0-9]+")
+
+
+def _words(text: str) -> set[str]:
+    return set(_WORD_RE.findall(text.lower()))
+
+
+def _filename_boost(filename: str, topic: str) -> float:
+    """A literal word overlap between the query and the filename is a cheap,
+    reliable signal that whole-chunk vector similarity alone can miss — a short,
+    exact-match title gets diluted once it's pooled together with an unrelated
+    body (see config.py for the measurement that motivated this)."""
+    if not topic:
+        return 0.0
+    matches = _words(topic) & _words(filename)
+    return min(len(matches) * FILENAME_BOOST_PER_WORD, FILENAME_BOOST_MAX)
 
 
 def _group_best_per_file(ids, documents, metadatas, distances) -> list[dict]:
@@ -32,14 +55,7 @@ def _list_by_recency(date_from_ts, date_to_ts) -> list[dict]:
     search behavior in Technical_Blueprint.md section 04 for the local case).
     """
     collection = get_collection()
-    where = None
-    if date_from_ts is not None or date_to_ts is not None:
-        bounds = {}
-        if date_from_ts is not None:
-            bounds["$gte"] = date_from_ts
-        if date_to_ts is not None:
-            bounds["$lte"] = date_to_ts
-        where = {"file_modified_at_ts": bounds}
+    where = _date_range_where(date_from_ts, date_to_ts)
     got = collection.get(where=where, limit=500)
     seen: dict[str, dict] = {}
     for metadata, document in zip(got["metadatas"], got["documents"]):
@@ -72,6 +88,9 @@ def search_local(raw_query: str) -> dict:
         results = []
         if ids:
             results = _group_best_per_file(ids, raw["documents"][0], raw["metadatas"][0], raw["distances"][0])
+            for r in results:
+                r["score"] = max(0.0, r["score"] - _filename_boost(r["filename"], parsed.topic))
+            results.sort(key=lambda r: r["score"])
             results = [r for r in results if r["score"] <= SIMILARITY_DISTANCE_THRESHOLD][:SEARCH_RESULT_LIMIT]
 
     return {

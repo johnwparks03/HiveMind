@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from app.folders.scanner import add_folder, list_folders, scan_folder
+from app.folders.scanner import add_folder, list_folders, remove_folder, scan_folder
 
 router = APIRouter()
 
@@ -25,6 +25,16 @@ def post_folder(body: AddFolderRequest):
 @router.get("/folders")
 def get_folders():
     return {"folders": list_folders()}
+
+
+@router.delete("/folders/{folder_id}")
+def delete_folder(folder_id: str):
+    """Drops the folder and everything indexed under it. Local-only today — there's
+    no central metadata to unpublish yet (that's the E3/E5 cascade once it exists).
+    """
+    if not remove_folder(folder_id):
+        raise HTTPException(status_code=404, detail={"error": {"code": "not_found", "message": "folder not found"}})
+    return {}
 
 
 @router.post("/folders/{folder_id}/rescan")

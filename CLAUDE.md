@@ -64,10 +64,11 @@ Open `http://localhost:5173` with the agent already running on port 8420.
 each is built.
 
 ## AWS (shared demo account)
-- There is one shared dev stack. Region, account and model access are set in E0-S2; record them here when known. Do not guess a region or model ID.
+- There is one shared dev stack. Region and account are set in E0-S2; record them here when known. Do not guess a region.
 - Only one person deploys the shared stack at a time. Coordinate before running a deploy or destroy; do not destroy resources you did not create.
 - Never commit AWS credentials, Cognito secrets or DB passwords. Use Secrets Manager/SSM and local environment variables.
-- The Bedrock model ID is a config value copied from the Bedrock console.
+- **Bedrock model ID:** `anthropic.claude-sonnet-5-5` (confirmed from the Bedrock console). If invocation fails with an on-demand-throughput error, this needs to be swapped for a cross-region inference profile ID instead (check Bedrock → Inference profiles) — record whichever one actually works here.
+- A one-off connectivity check lives in `scripts/test_bedrock.py` (reads `scripts/.env`, gitignored) — not part of the shipped app; the agent/frontend never hold AWS credentials per the architecture rules above.
 
 ## Working on a story
 1. Read the story file in `docs/stories/`, its dependencies, and the spec sections it references.

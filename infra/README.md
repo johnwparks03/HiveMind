@@ -7,7 +7,7 @@ Deploys the AWS skeleton for the HiveMind central service.
 | Resource | Details |
 |---|---|
 | Cognito User Pool | Password auth, auto-confirm via pre-signup Lambda, no email verification |
-| API Gateway HTTP API | JWT authorizer (access token), `/hello` (auth required), `/health` (open) |
+| API Gateway HTTP API | JWT authorizer (agent sends the access token; the gateway also accepts the ID token), `GET /hello` (auth required), `GET /health` (open, the only route without auth). New routes go through `add_authed_route()` in `stack.py` |
 | RDS Postgres | db.t3.micro, private subnet, credentials in Secrets Manager |
 | S3 transit bucket | Private, 1-day lifecycle backstop, auto-deleted on stack destroy |
 | SSM Parameters | All config values under `/hivemind/*` |

@@ -60,8 +60,14 @@ npm run dev
 ```
 Open `http://localhost:5173` with the agent already running on port 8420.
 
-**Central / infra / tests / lint / deploy:** not set up yet. Record commands here as
-each is built.
+**Central tests** (`central/`, needs `pip install -r requirements.txt`):
+```
+python -m pytest tests                  # offline unit tests
+python -m pytest tests -m integration   # against the deployed stack; needs a valid `aws login`
+```
+**Infra deploy:** `cd infra`, activate `.venv`, `cdk diff`, then `cdk deploy` (coordinate first; see AWS section).
+
+**Lint:** not set up yet. Record commands here as each is built.
 
 ## AWS (shared demo account)
 - **Account:** 954976288579. **Region:** us-east-1. Stack name: `HiveMind`.

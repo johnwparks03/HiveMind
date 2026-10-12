@@ -47,6 +47,8 @@ python -m venv .venv
 .venv\Scripts\pip install -r requirements.txt
 .venv\Scripts\uvicorn app.main:app --host 127.0.0.1 --port 8420
 ```
+Tests: `.venv\Scripts\python -m pytest tests`. Login needs `HIVEMIND_COGNITO_CLIENT_ID` and
+`HIVEMIND_CENTRAL_API_URL` (CDK outputs) in `agent/.env`; copy `agent/.env.example`.
 First real search downloads the embedding model from Hugging Face (one-time, needs
 normal internet access, then cached). See `agent/README.md` for example requests.
 

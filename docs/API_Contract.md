@@ -44,6 +44,7 @@ The frontend never calls the central service. Bedrock is only called from the ce
 |403|`forbidden`|Caller does not own the resource|
 |404|`not_found`|Resource missing, expired, or not visible to the caller|
 |409|`conflict`|State conflict (details in the endpoint)|
+|429|`too_many_attempts`|Cognito rate limit hit on `/auth/signup` or `/auth/login`. Try again later.|
 |503|`service_unavailable`|Central service or Bedrock unreachable or returned invalid output. The UI shows "service unavailable." **Exception:** `POST /search` never returns this for an unreachable `/llm/query` — the agent's local parser is the required fallback there (see 2.5).|
 
 ---
@@ -543,6 +544,13 @@ Acknowledgment, completion, and failure go over HTTP, not the WebSocket, so they
 3. **Existing tags skip generation.** If a file already has tags when it is published, the tag call is skipped.
 4. **"Search teammates too" is available** through the optional `include_teammates` flag on `POST /search`. I read your "Sure" as wanting this added; tell me if you meant something different.
 5. **Local search no longer hard-depends on `/llm/query`.** The agent runs its own local deterministic parser first (always available, no network call) and only opportunistically upgrades the parse via the central proxy when online, with a short timeout. This replaces the earlier "if the proxy is down, search shows service unavailable with no fallback" behavior, so the local model fully functions on local files without the central service.
+
+### Settled during E1-S2/E1-S3
+
+6. **`GET /auth/token` with a wrong Origin returns `403 forbidden`** (status per 2.1; the contract gave no code).
+7. **`429 too_many_attempts`** added to the common errors for Cognito rate limiting.
+8. **Validation failures return `400 invalid_request`** with `details.fields` naming the bad fields, never their values.
+9. **Agent settings** come from `agent/.env` or the environment (`HIVEMIND_COGNITO_CLIENT_ID`, `HIVEMIND_CENTRAL_API_URL`). If unset, auth endpoints return `503 service_unavailable` with `details.missing`.
 
 ### Still open
 

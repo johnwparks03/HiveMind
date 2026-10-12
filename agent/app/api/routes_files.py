@@ -1,8 +1,9 @@
 import os
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 
 from app.db import session
+from app.errors import ApiError
 
 router = APIRouter()
 
@@ -19,8 +20,8 @@ def post_open_file(file_id: str):
     with session() as conn:
         row = conn.execute("SELECT path FROM files WHERE file_id = ?", (file_id,)).fetchone()
     if not row:
-        raise HTTPException(status_code=404, detail={"error": {"code": "not_found", "message": "file not found"}})
+        raise ApiError(404, "not_found", "file not found")
     if not os.path.exists(row["path"]):
-        raise HTTPException(status_code=404, detail={"error": {"code": "file_missing", "message": "file no longer on disk"}})
+        raise ApiError(404, "file_missing", "file no longer on disk")
     os.startfile(row["path"])  # noqa: S606 - Windows-only MVP, launches default app
     return {}

@@ -1,6 +1,7 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from pydantic import BaseModel
 
+from app.errors import ApiError
 from app.folders.scanner import add_folder, list_folders, remove_folder, scan_folder
 
 router = APIRouter()
@@ -17,7 +18,7 @@ def post_folder(body: AddFolderRequest):
     """
     import os
     if not os.path.isdir(body.path):
-        raise HTTPException(status_code=400, detail={"error": {"code": "invalid_request", "message": "not a directory"}})
+        raise ApiError(400, "invalid_request", "not a directory")
     folder_id = add_folder(body.path)
     return {"folder_id": folder_id}
 
@@ -33,7 +34,7 @@ def delete_folder(folder_id: str):
     no central metadata to unpublish yet (that's the E3/E5 cascade once it exists).
     """
     if not remove_folder(folder_id):
-        raise HTTPException(status_code=404, detail={"error": {"code": "not_found", "message": "folder not found"}})
+        raise ApiError(404, "not_found", "folder not found")
     return {}
 
 
@@ -43,6 +44,6 @@ def post_rescan(folder_id: str):
     with session() as conn:
         row = conn.execute("SELECT path FROM folders WHERE folder_id = ?", (folder_id,)).fetchone()
     if not row:
-        raise HTTPException(status_code=404, detail={"error": {"code": "not_found", "message": "folder not found"}})
+        raise ApiError(404, "not_found", "folder not found")
     stats = scan_folder(folder_id, row["path"])
     return {"stats": stats}

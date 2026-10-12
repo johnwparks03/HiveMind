@@ -22,18 +22,22 @@ def _extract_pdf(path: Path) -> str:
 
 
 def _extract_docx(path: Path) -> str:
+    # Blank line between paragraphs (not just "\n") so chunking.py's
+    # paragraph-aware splitter can treat each one as its own chunkable unit.
     doc = DocxDocument(path)
-    return "\n".join(p.text for p in doc.paragraphs)
+    return "\n\n".join(p.text for p in doc.paragraphs if p.text.strip())
 
 
 def _extract_pptx(path: Path) -> str:
+    # Blank line between slides so each slide can become its own chunk instead
+    # of getting pooled with every other slide in the deck (see chunking.py).
     prs = Presentation(path)
-    chunks = []
+    slide_texts = []
     for slide in prs.slides:
-        for shape in slide.shapes:
-            if shape.has_text_frame:
-                chunks.append(shape.text_frame.text)
-    return "\n".join(chunks)
+        shape_texts = [s.text_frame.text for s in slide.shapes if s.has_text_frame and s.text_frame.text.strip()]
+        if shape_texts:
+            slide_texts.append("\n".join(shape_texts))
+    return "\n\n".join(slide_texts)
 
 
 def _extract_txt(path: Path) -> str:

@@ -1,7 +1,15 @@
 """Config values. Per CLAUDE.md: these must be configuration, not literals scattered in code."""
+import os
 from pathlib import Path
 
-DATA_DIR = Path(__file__).resolve().parent.parent / "data"
+from dotenv import load_dotenv
+
+AGENT_DIR = Path(__file__).resolve().parent.parent
+
+# agent/.env (gitignored; see .env.example). Variables already set in the shell win.
+load_dotenv(AGENT_DIR / ".env")
+
+DATA_DIR = AGENT_DIR / "data"
 DATA_DIR.mkdir(exist_ok=True)
 
 SQLITE_PATH = DATA_DIR / "registry.db"
@@ -11,6 +19,23 @@ HOST = "127.0.0.1"
 PORT = 8420
 
 FRONTEND_ORIGIN = "http://localhost:5173"
+
+# Central service / Cognito. The IDs are CDK outputs (UserPoolClientId, HttpApiUrl)
+# and are not committed; set them in agent/.env or the environment (see agent/README.md).
+# Blank counts as unset; the endpoints that need them return 503 instead of crashing.
+COGNITO_REGION = os.environ.get("HIVEMIND_COGNITO_REGION", "").strip() or "us-east-1"
+COGNITO_CLIENT_ID = os.environ.get("HIVEMIND_COGNITO_CLIENT_ID", "").strip()
+CENTRAL_API_URL = os.environ.get("HIVEMIND_CENTRAL_API_URL", "").strip().rstrip("/")
+CENTRAL_TIMEOUT_SECONDS = 10
+# How long GET /session reuses the last central /health result.
+CENTRAL_HEALTH_CACHE_SECONDS = 5
+# Refresh the access token this long before it expires.
+TOKEN_REFRESH_MARGIN_SECONDS = 60
+# Windows Credential Manager entry for the refresh token.
+KEYRING_SERVICE = "HiveMind"
+# Credential Manager blobs max out at 2,560 bytes (~1,280 UTF-16 characters), so long
+# refresh tokens are split into chunks of this many characters.
+KEYRING_CHUNK_CHARS = 1000
 
 # Embedding / chunking
 EMBEDDING_MODEL = "all-MiniLM-L6-v2"

@@ -1,7 +1,8 @@
 # HiveMind local agent
 
-Local-only slice today: folder indexing + local search, no central service, no auth.
-Feature_List 1.1-1.5, 1.11, 1.12 (local parts only).
+Local search plus sign-in: folder indexing + local search, and Cognito login with a shared
+central API client. Teams, publish, central search and relay are not built yet.
+Feature_List 1.1-1.5, 1.9, 1.11, 1.12 (local parts only).
 
 ## Setup (one-time)
 
@@ -30,6 +31,34 @@ hash-based stand-in instead of downloading `all-MiniLM-L6-v2`. Indexing and date
 filtering work identically; semantic ranking doesn't (it only matches on exact text
 reuse). Useful for quick smoke tests or CI — never use it for a real demo.
 
+## Central service config
+
+Login talks to Cognito and the central API. Copy `.env.example` to `.env` (gitignored,
+never commit it) and fill in the CDK stack outputs:
+
+```
+copy .env.example .env
+aws cloudformation describe-stacks --stack-name HiveMind --region us-east-1 --query "Stacks[0].Outputs" --output table
+```
+
+- `HIVEMIND_COGNITO_CLIENT_ID` = `UserPoolClientId`
+- `HIVEMIND_CENTRAL_API_URL` = `HttpApiUrl`
+- `HIVEMIND_COGNITO_REGION` (optional, default `us-east-1`)
+
+Variables already set in the shell override `.env`. The values only change if the stack's
+resources are recreated (destroy + deploy), so re-run the command above if login starts failing
+after a teammate's deploy.
+
+If they're unset or blank the agent still starts and local search works. `/auth/signup` and
+`/auth/login` return 503 `service_unavailable` with `details.missing` naming the variable, and
+`/session` reports `central_reachable: false`.
+
+## Tests
+
+```
+.venv\Scripts\python -m pytest tests
+```
+
 ## Try it (PowerShell)
 
 ```powershell
@@ -43,8 +72,19 @@ Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8420/search -Headers $heade
   -Body (@{ query = "meeting notes from 3 days ago" } | ConvertTo-Json)
 ```
 
+Login (after the headers above):
+
+```powershell
+$cred = @{ email = "you@firm.com"; password = "..." } | ConvertTo-Json
+Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8420/auth/signup -Headers $headers -ContentType "application/json" -Body $cred
+Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8420/auth/login  -Headers $headers -ContentType "application/json" -Body $cred
+Invoke-RestMethod -Uri http://127.0.0.1:8420/session -Headers $headers
+Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8420/auth/logout -Headers $headers
+```
+
 ## What's built
 
+- `POST /auth/signup|login|logout` and `GET /session` (Cognito sign-in, refresh token in Windows Credential Manager, shared central API client in `app/central/client.py`)
 - `Source` interface + `LocalFilesystemSource` (recursive, PDF/DOCX/PPTX/TXT)
 - Folder add + scan: content-hash change detection, registers/re-indexes/removes files
 - Extraction with in-document date detection (best-effort header scan)
@@ -57,10 +97,11 @@ Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8420/search -Headers $heade
 ## Not built yet
 
 - Continuous file watcher (watchdog) — only initial/on-demand scan right now (`POST /folders/{id}/rescan`)
-- Central service integration: auth, teams, publish, central search, relay transfer, the
-  optional `/llm/query` enhancement (Technical_Blueprint.md §03)
+- Central service integration beyond sign-in: teams (E1-S4/S5), publish, central search, relay
+  transfer, the optional `/llm/query` enhancement (Technical_Blueprint.md §03). `GET /session`
+  returns `team: null` and `relay: "disconnected"` until then
 - Native Windows folder-picker dialog — `POST /folders` takes a path string directly
-- Tests
+- Frontend login page (E1-S6); the agent endpoints it needs exist
 
 ## Verified end-to-end (2026-10-05)
 

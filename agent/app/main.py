@@ -1,27 +1,26 @@
-import secrets
+from contextlib import asynccontextmanager
 
+import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 
-from app.api import routes_auth, routes_files, routes_folders, routes_search
-from app.config import FRONTEND_ORIGIN
+from app.api import routes_auth, routes_files, routes_folders, routes_search, routes_session
+from app.auth import session
+from app.auth.security import token_matches
+from app.config import FRONTEND_ORIGIN, HOST, PORT
 from app.db import init_db
+from app.errors import envelope, install_error_handlers
 
-# Random per-restart token (Feature_List 1.11 / API_Contract 2.1). GET /auth/token
-# is the only endpoint that doesn't require it.
-STARTUP_TOKEN = secrets.token_urlsafe(32)
 
-init_db()
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    init_db()
+    session.restore_from_keychain()  # silent sign-in if a refresh token is stored
+    yield
 
-app = FastAPI(title="HiveMind Local Agent")
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[FRONTEND_ORIGIN],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+app = FastAPI(title="HiveMind Local Agent", lifespan=lifespan)
+install_error_handlers(app)
 
 _EXEMPT_PATHS = {"/auth/token", "/docs", "/openapi.json", "/redoc"}
 
@@ -33,15 +32,26 @@ async def require_startup_token(request: Request, call_next):
     if request.method == "OPTIONS":
         return await call_next(request)
     if request.url.path not in _EXEMPT_PATHS:
-        if request.headers.get("x-hivemind-token") != STARTUP_TOKEN:
-            return JSONResponse(
-                status_code=401,
-                content={"error": {"code": "unauthorized", "message": "missing or invalid token"}},
-            )
+        if not token_matches(request.headers.get("x-hivemind-token")):
+            return envelope(401, "unauthorized", "missing or invalid token")
     return await call_next(request)
 
 
+# Added last so it is the outermost layer: the token check's 401 and 500s still need
+# CORS headers, or the browser hides them behind an opaque network error.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[FRONTEND_ORIGIN],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["X-HiveMind-Token", "Content-Type"],
+)
+
 app.include_router(routes_auth.router)
+app.include_router(routes_session.router)
 app.include_router(routes_folders.router)
 app.include_router(routes_files.router)
 app.include_router(routes_search.router)
+
+
+if __name__ == "__main__":
+    uvicorn.run(app, host=HOST, port=PORT)

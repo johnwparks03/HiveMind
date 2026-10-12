@@ -25,6 +25,9 @@ def index_file(
     """
     result = extract_text(path)
     if result.failure_reason:
+        # The file changed and can no longer be read: its previous chunks describe content
+        # that's gone, so they must not stay searchable.
+        delete_file(file_id)
         return {
             "index_status": "failed",
             "index_failure_reason": result.failure_reason,

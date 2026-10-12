@@ -108,10 +108,9 @@ def parse_query_locally(query: str, local_now: datetime | None = None) -> Parsed
             parsed_dt = parsed_dt.replace(tzinfo=local_now.tzinfo)
         date_from, date_to = _day_bounds(parsed_dt)
         topic = _RELATIVE_HINTS.sub("", query, count=1)
-        if matched_text.lower() not in topic.lower():
-            # search_dates matched a phrase our stripping regex doesn't fully cover;
-            # fall back to removing the exact matched substring instead.
-            topic = query.replace(matched_text, "", 1)
+        # search_dates can match a phrase the stripping regex doesn't cover ("from March");
+        # whatever it matched must come out of the topic too.
+        topic = re.sub(re.escape(matched_text), "", topic, count=1, flags=re.IGNORECASE)
 
     topic = re.sub(r"\b(from|on|for)\b", "", topic, flags=re.IGNORECASE)
     topic = re.sub(r"\s+", " ", topic).strip(" ,.-") or None

@@ -1,25 +1,35 @@
-function formatDate(iso) {
-  if (!iso) return null;
-  return new Date(iso).toLocaleString(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  });
-}
+import { formatDate, matchPercent } from "../lib/files";
+import OpenButton from "./OpenButton";
 
-export default function ResultCard({ result, onOpen }) {
+export default function ResultCard({ result }) {
+  const percent = matchPercent(result.score);
+
   return (
-    <div className="result-card">
-      <div className="result-card-head">
-        <span className="result-filename">{result.filename}</span>
-        <button className="link-button" onClick={() => onOpen(result.file_id)}>
-          Open
-        </button>
+    <article className="result-card">
+      <div className="result-head">
+        <h3 className="result-name" title={result.path}>{result.filename}</h3>
+        {percent != null && <span className="match">{percent}% match</span>}
       </div>
-      {result.snippet && <p className="result-snippet">{result.snippet}</p>}
-      <div className="result-meta">
-        {result.file_modified_at && <span>Modified {formatDate(result.file_modified_at)}</span>}
-        {result.score != null && <span>Match {(1 - result.score).toFixed(2)}</span>}
+
+      {result.tags?.length > 0 && (
+        <ul className="tag-list" aria-label="Tags">
+          {result.tags.map((tag) => (
+            <li key={tag} className="tag">{tag}</li>
+          ))}
+        </ul>
+      )}
+
+      <div className="result-foot">
+        <dl className="meta">
+          {result.file_created_at && (
+            <div><dt>Created</dt><dd>{formatDate(result.file_created_at)}</dd></div>
+          )}
+          {result.file_modified_at && (
+            <div><dt>Modified</dt><dd>{formatDate(result.file_modified_at)}</dd></div>
+          )}
+        </dl>
+        <OpenButton fileId={result.file_id} filename={result.filename} />
       </div>
-    </div>
+    </article>
   );
 }

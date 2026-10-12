@@ -3,10 +3,11 @@ so Chroma's `where` filter can do range queries (Technical_Blueprint.md section 
 "filter first, then rank").
 """
 from functools import lru_cache
+from typing import Iterator
 
 import chromadb
 
-from app.config import CHROMA_PATH
+from app.config import CHROMA_PAGE_SIZE, CHROMA_PATH
 
 COLLECTION_NAME = "files"
 
@@ -60,6 +61,19 @@ def _date_range_where(date_from_ts: float | None, date_to_ts: float | None) -> d
         field_bounds("file_modified_at_ts", date_from_ts, date_to_ts),
         field_bounds("in_document_date_ts", date_from_ts, date_to_ts),
     ]}
+
+
+def iter_chunks(where: dict | None) -> Iterator[tuple[dict, str]]:
+    """Yields (metadata, document) for every chunk matching `where`, one page at a time."""
+    collection = get_collection()
+    offset = 0
+    while True:
+        page = collection.get(where=where, limit=CHROMA_PAGE_SIZE, offset=offset)
+        for metadata, document in zip(page["metadatas"], page["documents"]):
+            yield metadata, document
+        if len(page["ids"]) < CHROMA_PAGE_SIZE:
+            return
+        offset += CHROMA_PAGE_SIZE
 
 
 def query(embedding: list[float], date_from_ts: float | None, date_to_ts: float | None, n_results: int = 50):

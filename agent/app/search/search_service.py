@@ -12,7 +12,7 @@ from app.config import (
     SIMILARITY_DISTANCE_THRESHOLD,
 )
 from app.indexing.embeddings import embed
-from app.indexing.vector_store import _date_range_where, get_collection, query as vector_query
+from app.indexing.vector_store import _date_range_where, iter_chunks, query as vector_query
 from app.search.query_parser import ParsedQuery, parse_query_locally
 
 _WORD_RE = re.compile(r"[a-z0-9]+")
@@ -54,11 +54,9 @@ def _list_by_recency(date_from_ts, date_to_ts) -> list[dict]:
     """Empty topic -> list by recency within the date range (mirrors the central
     search behavior in Technical_Blueprint.md section 04 for the local case).
     """
-    collection = get_collection()
     where = _date_range_where(date_from_ts, date_to_ts)
-    got = collection.get(where=where, limit=500)
     seen: dict[str, dict] = {}
-    for metadata, document in zip(got["metadatas"], got["documents"]):
+    for metadata, document in iter_chunks(where):
         file_id = metadata["file_id"]
         if file_id in seen:
             continue

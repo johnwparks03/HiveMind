@@ -1,6 +1,6 @@
 import secrets
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -24,6 +24,17 @@ app.add_middleware(
 )
 
 _EXEMPT_PATHS = {"/auth/token", "/docs", "/openapi.json", "/redoc"}
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    # API_Contract.md section 1: every error is {"error": {...}} at the top level. FastAPI would
+    # otherwise nest a dict `detail` under "detail", which the frontend can't read.
+    if isinstance(exc.detail, dict) and "error" in exc.detail:
+        content = exc.detail
+    else:
+        content = {"error": {"code": "http_error", "message": str(exc.detail), "details": {}}}
+    return JSONResponse(status_code=exc.status_code, content=content)
 
 
 @app.middleware("http")

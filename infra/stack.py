@@ -183,20 +183,31 @@ class HiveMindStack(Stack):
             jwt_audience=[user_pool_client.user_pool_client_id],
         )
 
-        hello_integration = apigwv2_integrations.HttpLambdaIntegration(
-            "HelloIntegration", hello_fn
+        def add_authed_route(path, methods, fn, integration_id):
+            """Every Interface B route goes through here so the JWT authorizer
+            is the default. Only /health is registered without it (below)."""
+            http_api.add_routes(
+                path=path,
+                methods=methods,
+                integration=apigwv2_integrations.HttpLambdaIntegration(integration_id, fn),
+                authorizer=jwt_authorizer,
+            )
+
+        add_authed_route("/hello", [apigwv2.HttpMethod.GET], hello_fn, "HelloIntegration")
+
+        # Unauthenticated health check: the one deliberate exception
+        health_fn = lambda_.Function(self, "HealthFn",
+            runtime=lambda_.Runtime.PYTHON_3_12,
+            handler="health.handler",
+            code=lambda_.Code.from_asset(
+                os.path.join(os.path.dirname(__file__), "..", "central", "lambdas")
+            ),
+            timeout=Duration.seconds(10),
         )
-        http_api.add_routes(
-            path="/hello",
-            methods=[apigwv2.HttpMethod.GET],
-            integration=hello_integration,
-            authorizer=jwt_authorizer,
-        )
-        # Unauthenticated health check
         http_api.add_routes(
             path="/health",
             methods=[apigwv2.HttpMethod.GET],
-            integration=hello_integration,
+            integration=apigwv2_integrations.HttpLambdaIntegration("HealthIntegration", health_fn),
         )
 
         # ── Outputs ──────────────────────────────────────────────────────────

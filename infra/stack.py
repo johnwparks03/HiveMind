@@ -65,26 +65,27 @@ class HiveMindStack(Stack):
         rds_sg = ec2.SecurityGroup(self, "RdsSg", vpc=vpc, description="RDS")
         rds_sg.add_ingress_rule(lambda_sg, ec2.Port.tcp(5432), "Lambda access")
 
-        # ── RDS Postgres (db.t3.micro) ───────────────────────────────────────
+        # ── Aurora Serverless v2 (Postgres-compatible) ───────────────────────
+        # Standard RDS CreateDBInstance is blocked by org policy; Aurora
+        # Serverless v2 uses CreateDBCluster which is permitted.
         db_secret = rds.DatabaseSecret(self, "DbSecret",
             username="hivemind",
             secret_name="hivemind/db-credentials",
         )
-        db = rds.DatabaseInstance(self, "Db",
-            engine=rds.DatabaseInstanceEngine.postgres(
-                version=rds.PostgresEngineVersion.VER_16
-            ),
-            instance_type=ec2.InstanceType.of(
-                ec2.InstanceClass.T3, ec2.InstanceSize.MICRO
+        db = rds.DatabaseCluster(self, "Db",
+            engine=rds.DatabaseClusterEngine.aurora_postgres(
+                version=rds.AuroraPostgresEngineVersion.of("16.8", "16")
             ),
             credentials=rds.Credentials.from_secret(db_secret),
-            database_name="hivemind",
+            default_database_name="hivemind",
             vpc=vpc,
             vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_ISOLATED),
             security_groups=[rds_sg],
+            serverless_v2_min_capacity=0.5,
+            serverless_v2_max_capacity=1,
+            writer=rds.ClusterInstance.serverless_v2("writer"),
             removal_policy=RemovalPolicy.DESTROY,
             deletion_protection=False,
-            backup_retention=Duration.days(0),
         )
 
         # ── S3 transit bucket ────────────────────────────────────────────────
@@ -156,6 +157,9 @@ class HiveMindStack(Stack):
             security_groups=[lambda_sg],
             environment={
                 "DB_SECRET_ARN": db_secret.secret_arn,
+                "DB_HOST": db.cluster_endpoint.hostname,
+                "DB_PORT": "5432",
+                "DB_NAME": "hivemind",
                 "TRANSIT_BUCKET": transit_bucket.bucket_name,
                 **{k: v for k, v in config.items()},
             },

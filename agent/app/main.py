@@ -4,7 +4,7 @@ import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import routes_auth, routes_files, routes_folders, routes_search, routes_session
+from app.api import routes_auth, routes_files, routes_folders, routes_search, routes_session, routes_team
 from app.auth import session
 from app.auth.security import token_matches
 from app.config import FRONTEND_ORIGIN, HOST, PORT
@@ -48,6 +48,7 @@ app.add_middleware(
 
 app.include_router(routes_auth.router)
 app.include_router(routes_session.router)
+app.include_router(routes_team.router)
 app.include_router(routes_folders.router)
 app.include_router(routes_files.router)
 app.include_router(routes_search.router)

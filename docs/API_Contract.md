@@ -44,6 +44,9 @@ The frontend never calls the central service. Bedrock is only called from the ce
 |403|`forbidden`|Caller does not own the resource|
 |404|`not_found`|Resource missing, expired, or not visible to the caller|
 |409|`conflict`|State conflict (details in the endpoint)|
+|404|`invalid_code`|Invite code does not exist (`/team/join`)|
+|410|`invite_expired`|Invite code expired or already used (`/team/join`)|
+|409|`already_in_team`|Caller is already in a team (`/team`, `/team/join`)|
 |429|`too_many_attempts`|Cognito rate limit hit on `/auth/signup` or `/auth/login`. Try again later.|
 |503|`service_unavailable`|Central service or Bedrock unreachable or returned invalid output. The UI shows "service unavailable." **Exception:** `POST /search` never returns this for an unreachable `/llm/query` — the agent's local parser is the required fallback there (see 2.5).|
 

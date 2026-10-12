@@ -16,6 +16,7 @@ from aws_cdk import (
     aws_s3 as s3,
     aws_secretsmanager as secretsmanager,
     aws_ssm as ssm,
+    triggers,
 )
 from constructs import Construct
 
@@ -144,26 +145,62 @@ class HiveMindStack(Stack):
         db_secret.grant_read(lambda_role)
         transit_bucket.grant_read_write(lambda_role)
 
+        # ── Secrets Manager VPC endpoint (E1-S4) ─────────────────────────────
+        # Lambdas are in isolated subnets with no NAT, so they can only reach
+        # Secrets Manager (DB credentials) through an interface endpoint.
+        endpoint_sg = ec2.SecurityGroup(self, "EndpointSg", vpc=vpc,
+                                        description="VPC interface endpoints")
+        endpoint_sg.add_ingress_rule(lambda_sg, ec2.Port.tcp(443), "Lambda to endpoints")
+        vpc.add_interface_endpoint("SecretsManagerEndpoint",
+            service=ec2.InterfaceVpcEndpointAwsService.SECRETS_MANAGER,
+            subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_ISOLATED),
+            security_groups=[endpoint_sg],
+        )
+
+        # ── Shared Lambda settings ───────────────────────────────────────────
+        lambdas_dir = os.path.join(os.path.dirname(__file__), "..", "central", "lambdas")
+        lambda_env = {
+            "DB_SECRET_ARN": db_secret.secret_arn,
+            "DB_HOST": db.cluster_endpoint.hostname,
+            "DB_PORT": "5432",
+            "DB_NAME": "hivemind",
+            "TRANSIT_BUCKET": transit_bucket.bucket_name,
+            **{k: v for k, v in config.items()},
+        }
+
+        # psycopg2 built for Linux by infra/build_layer.py (no Docker needed).
+        psycopg2_layer = lambda_.LayerVersion(self, "Psycopg2Layer",
+            code=lambda_.Code.from_asset(os.path.join(os.path.dirname(__file__), "layer")),
+            compatible_runtimes=[lambda_.Runtime.PYTHON_3_12],
+            description="psycopg2-binary for Lambda (manylinux)",
+        )
+
+        def vpc_function(construct_id, handler, timeout=30):
+            return lambda_.Function(self, construct_id,
+                runtime=lambda_.Runtime.PYTHON_3_12,
+                handler=handler,
+                code=lambda_.Code.from_asset(lambdas_dir),
+                role=lambda_role,
+                vpc=vpc,
+                vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_ISOLATED),
+                security_groups=[lambda_sg],
+                environment=lambda_env,
+                layers=[psycopg2_layer],
+                timeout=Duration.seconds(timeout),
+            )
+
         # ── Hello Lambda ─────────────────────────────────────────────────────
-        hello_fn = lambda_.Function(self, "HelloFn",
-            runtime=lambda_.Runtime.PYTHON_3_12,
-            handler="hello.handler",
-            code=lambda_.Code.from_asset(
-                os.path.join(os.path.dirname(__file__), "..", "central", "lambdas")
-            ),
-            role=lambda_role,
-            vpc=vpc,
-            vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_ISOLATED),
-            security_groups=[lambda_sg],
-            environment={
-                "DB_SECRET_ARN": db_secret.secret_arn,
-                "DB_HOST": db.cluster_endpoint.hostname,
-                "DB_PORT": "5432",
-                "DB_NAME": "hivemind",
-                "TRANSIT_BUCKET": transit_bucket.bucket_name,
-                **{k: v for k, v in config.items()},
-            },
-            timeout=Duration.seconds(30),
+        hello_fn = vpc_function("HelloFn", "hello.handler")
+
+        # ── Teams API (E1-S4) and DB migrations ──────────────────────────────
+        teams_fn = vpc_function("TeamsFn", "teams.handler")
+        migrate_fn = vpc_function("MigrateFn", "migrate.handler", timeout=120)
+        # Runs migrate_fn on every deploy where its code changed. Idempotent
+        # (applies each migrations/*.sql once); a failure fails the deploy.
+        triggers.Trigger(self, "RunMigrations",
+            handler=migrate_fn,
+            execute_after=[db],
+            execute_on_handler_change=True,
         )
 
         # ── HTTP API Gateway (E0-S3 JWT authorizer) ──────────────────────────
@@ -194,6 +231,15 @@ class HiveMindStack(Stack):
             )
 
         add_authed_route("/hello", [apigwv2.HttpMethod.GET], hello_fn, "HelloIntegration")
+
+        for path, methods, integration_id in [
+            ("/teams", [apigwv2.HttpMethod.POST], "TeamsCreateIntegration"),
+            ("/teams/me", [apigwv2.HttpMethod.GET], "TeamsMeIntegration"),
+            ("/teams/me/invites", [apigwv2.HttpMethod.POST], "TeamsInvitesIntegration"),
+            ("/teams/join", [apigwv2.HttpMethod.POST], "TeamsJoinIntegration"),
+            ("/teams/me/leave", [apigwv2.HttpMethod.POST], "TeamsLeaveIntegration"),
+        ]:
+            add_authed_route(path, methods, teams_fn, integration_id)
 
         # Unauthenticated health check: the one deliberate exception
         health_fn = lambda_.Function(self, "HealthFn",

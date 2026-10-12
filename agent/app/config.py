@@ -29,6 +29,8 @@ CENTRAL_API_URL = os.environ.get("HIVEMIND_CENTRAL_API_URL", "").strip().rstrip(
 CENTRAL_TIMEOUT_SECONDS = 10
 # How long GET /session reuses the last central /health result.
 CENTRAL_HEALTH_CACHE_SECONDS = 5
+# How long GET /session reuses the team it last fetched from central.
+TEAM_CACHE_SECONDS = 5
 # Refresh the access token this long before it expires.
 TOKEN_REFRESH_MARGIN_SECONDS = 60
 # Windows Credential Manager entry for the refresh token.

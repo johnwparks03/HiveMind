@@ -14,7 +14,8 @@ from corpus_generator import TOTAL_DOCX, TOTAL_PPTX
 def client(isolated_store):
     from fastapi.testclient import TestClient
 
-    from app.main import STARTUP_TOKEN, app
+    from app.auth.security import STARTUP_TOKEN
+    from app.main import app
 
     test_client = TestClient(app)
     test_client.headers.update({"X-HiveMind-Token": STARTUP_TOKEN})
@@ -28,8 +29,8 @@ def test_token_endpoint_only_answers_the_frontend_origin(client):
     assert client.get("/auth/token", headers={"Origin": FRONTEND_ORIGIN}).status_code == 200
 
     other = client.get("/auth/token", headers={"Origin": "http://evil.example"})
-    assert other.status_code == 401
-    assert other.json()["error"]["code"] == "unauthorized"
+    assert other.status_code == 403
+    assert other.json()["error"]["code"] == "forbidden"
 
 
 def test_other_endpoints_need_the_token(client):

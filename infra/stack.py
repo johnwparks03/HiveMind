@@ -61,7 +61,7 @@ class HiveMindStack(Stack):
         )
 
         # ── Security groups ─────────────────────────────────────────────────
-        lambda_sg = ec2.SecurityGroup(self, "LambdaSg", vpc=vpc, description="Lambda → RDS")
+        lambda_sg = ec2.SecurityGroup(self, "LambdaSg", vpc=vpc, description="Lambda to RDS")
         rds_sg = ec2.SecurityGroup(self, "RdsSg", vpc=vpc, description="RDS")
         rds_sg.add_ingress_rule(lambda_sg, ec2.Port.tcp(5432), "Lambda access")
 

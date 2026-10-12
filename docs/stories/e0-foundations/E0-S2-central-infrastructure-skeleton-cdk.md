@@ -27,5 +27,5 @@ As a developer, I want the AWS skeleton deployed from code so that central stori
 - All config values stored in SSM Parameter Store under `/hivemind/*`.
 - DB credentials in Secrets Manager at `hivemind/db-credentials`.
 - S3 transit bucket has 1-day lifecycle rule as backstop; sweeper Lambda (E4-S5) handles the 15-minute sweep.
-- Account: 954976288579. Region: _record after confirming from deploy output_.
+- Account: 954976288579. Region: us-east-1.
 - Bedrock invocation logging: verified off in AWS Console.

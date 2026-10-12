@@ -27,5 +27,5 @@ As a developer, I want to prove Cognito sign-up without email verification and J
 - **Auth flow:** `USER_PASSWORD_AUTH`, no client secret. Confirmed working.
 - **Auto-confirm:** pre sign-up Lambda sets `autoConfirmUser = true` and `autoVerifyEmail = true`. Sign-up returns `UserConfirmed: true` immediately — no email step.
 - **Password policy:** Cognito default — minimum 8 characters, requires uppercase, lowercase, and digit. No symbols required. Error code for policy violations: `InvalidPasswordException`.
-- **Token lifetimes:** access token _record from Cognito console_, refresh token _record from Cognito console_.
+- **Token lifetimes:** access token 1 hour, ID token 1 hour, refresh token 30 days.
 - **Verified:** `GET /hello` with valid access token → 200; with missing token → 401; with garbage token → 401.

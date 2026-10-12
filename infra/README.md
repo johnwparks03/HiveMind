@@ -10,6 +10,7 @@ Deploys the AWS skeleton for the HiveMind central service.
 | API Gateway HTTP API | JWT authorizer (agent sends the access token; the gateway also accepts the ID token), `GET /hello` (auth required), `GET /health` (open, the only route without auth). New routes go through `add_authed_route()` in `stack.py` |
 | RDS Postgres | db.t3.micro, private subnet, credentials in Secrets Manager |
 | S3 transit bucket | Private, 1-day lifecycle backstop, auto-deleted on stack destroy |
+| Teams API | `TeamsFn` behind `/teams/*` (auth required), `MigrateFn` run on deploy by a CDK Trigger (applies `central/lambdas/migrations/*.sql`), Secrets Manager VPC endpoint, psycopg2 Lambda layer |
 | SSM Parameters | All config values under `/hivemind/*` |
 
 ## Prerequisites
@@ -25,6 +26,7 @@ cd infra
 python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
+python build_layer.py   # builds the psycopg2 Lambda layer (Linux wheels, no Docker)
 cdk bootstrap   # once per account/region
 cdk deploy
 ```

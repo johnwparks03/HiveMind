@@ -1,7 +1,7 @@
 # HiveMind local agent
 
 Local search plus sign-in: folder indexing + local search, and Cognito login with a shared
-central API client. Teams, publish, central search and relay are not built yet.
+central API client, plus team endpoints that proxy central. Publish, central search and relay are not built yet.
 Feature_List 1.1-1.5, 1.9, 1.11, 1.12 (local parts only).
 
 ## Setup (one-time)
@@ -82,8 +82,19 @@ Invoke-RestMethod -Uri http://127.0.0.1:8420/session -Headers $headers
 Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8420/auth/logout -Headers $headers
 ```
 
+Teams (signed in; needs the central Teams API deployed):
+
+```powershell
+Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8420/team -Headers $headers -ContentType "application/json" -Body (@{ name = "Project Alpha" } | ConvertTo-Json)
+Invoke-RestMethod -Uri http://127.0.0.1:8420/team -Headers $headers
+$invite = Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8420/team/invites -Headers $headers
+Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8420/team/join -Headers $headers -ContentType "application/json" -Body (@{ code = $invite.code } | ConvertTo-Json)
+Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8420/team/leave -Headers $headers
+```
+
 ## What's built
 
+- `GET/POST /team`, `POST /team/invites|join|leave` (proxy to central, errors mapped one to one; leave also clears local publish state)
 - `POST /auth/signup|login|logout` and `GET /session` (Cognito sign-in, refresh token in Windows Credential Manager, shared central API client in `app/central/client.py`)
 - `Source` interface + `LocalFilesystemSource` (recursive, PDF/DOCX/PPTX/TXT)
 - Folder add + scan: content-hash change detection, registers/re-indexes/removes files
@@ -97,9 +108,9 @@ Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8420/auth/logout -Headers $
 ## Not built yet
 
 - Continuous file watcher (watchdog) — only initial/on-demand scan right now (`POST /folders/{id}/rescan`)
-- Central service integration beyond sign-in: teams (E1-S4/S5), publish, central search, relay
+- Central service integration beyond sign-in and teams: publish, central search, relay
   transfer, the optional `/llm/query` enhancement (Technical_Blueprint.md §03). `GET /session`
-  returns `team: null` and `relay: "disconnected"` until then
+  returns `relay: "disconnected"` until the relay exists
 - Native Windows folder-picker dialog — `POST /folders` takes a path string directly
 - Frontend login page (E1-S6); the agent endpoints it needs exist
 

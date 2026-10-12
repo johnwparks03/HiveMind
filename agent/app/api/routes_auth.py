@@ -3,7 +3,7 @@ from pydantic import BaseModel
 
 from app.auth import cognito, session
 from app.auth.security import STARTUP_TOKEN
-from app.central import relay
+from app.central import relay, teams
 from app.config import FRONTEND_ORIGIN
 from app.errors import ApiError
 
@@ -34,6 +34,7 @@ def signup(body: Credentials):
 @router.post("/auth/login")
 def login(body: Credentials):
     session.login(body.email, body.password)
+    teams.invalidate_cache()
     return {"signed_in": True, "email": body.email}
 
 
@@ -41,4 +42,5 @@ def login(body: Credentials):
 def logout():
     relay.close()
     session.logout()
+    teams.invalidate_cache()
     return Response(status_code=204)

@@ -28,7 +28,7 @@ Implemented on branch `feature/e1-s2-s3-agent-auth`; acceptance boxes stay untic
 - Config: `HIVEMIND_COGNITO_CLIENT_ID`, `HIVEMIND_CENTRAL_API_URL` (CDK outputs `UserPoolClientId`, `HttpApiUrl`), optional `HIVEMIND_COGNITO_REGION`. Loaded from gitignored `agent/.env` (template: `agent/.env.example`) or the environment. If unset, the agent still starts; the auth endpoints return 503 with `details.missing`.
 - Keychain: one Credential Manager entry (service `HiveMind`) holding email + refresh token; falls back to memory only if keyring raises (`keystore.persistent`). This also covers the E0-S6 spike's code; its own story still needs the manual Credential Manager check.
 - Shared central client: `app/central/client.py` `request()`; refreshes near expiry and once on a 401.
-- `GET /session`: `team` is always `null` until E1-S4; `relay` is `disconnected` until E4-S3 (`app/central/relay.py` is a stub).
+- `GET /session`: `team` is filled from central by E1-S5 (was `null` until then); `relay` is `disconnected` until E4-S3 (`app/central/relay.py` is a stub).
 - Cognito error mapping: UsernameExists -> 409 user_exists; InvalidPassword -> 400 password_policy; NotAuthorized/UserNotFound -> 401 invalid_credentials; InvalidParameter -> 400 invalid_request; anything else -> 503.
 - A revoked refresh token at startup clears the keychain entry; a network failure at startup leaves it in place.
 - Keychain values are split into chunks (`KEYRING_CHUNK_CHARS`) because Credential Manager caps a blob at ~1,280 UTF-16 characters and Cognito refresh tokens can be longer. **verify-in-AWS:** confirm with a real login that a Credential Manager entry `HiveMind` (+ `.0`, `.1` chunks) appears and survives an agent restart.

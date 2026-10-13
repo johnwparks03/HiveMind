@@ -194,6 +194,7 @@ class HiveMindStack(Stack):
 
         # ── Teams API (E1-S4) and DB migrations ──────────────────────────────
         teams_fn = vpc_function("TeamsFn", "teams.handler")
+        files_fn = vpc_function("FilesFn", "files.handler")
         migrate_fn = vpc_function("MigrateFn", "migrate.handler", timeout=120)
         # Runs migrate_fn on every deploy where its code changed. Idempotent
         # (applies each migrations/*.sql once); a failure fails the deploy.
@@ -240,6 +241,14 @@ class HiveMindStack(Stack):
             ("/teams/me/leave", [apigwv2.HttpMethod.POST], "TeamsLeaveIntegration"),
         ]:
             add_authed_route(path, methods, teams_fn, integration_id)
+
+        # Metadata API (E3-S2)
+        for path, methods, integration_id in [
+            ("/files/{file_id}", [apigwv2.HttpMethod.PUT, apigwv2.HttpMethod.DELETE], "FilesItemIntegration"),
+            ("/files/{file_id}/confirm", [apigwv2.HttpMethod.POST], "FilesConfirmIntegration"),
+            ("/files/mine", [apigwv2.HttpMethod.GET], "FilesMineIntegration"),
+        ]:
+            add_authed_route(path, methods, files_fn, integration_id)
 
         # Unauthenticated health check: the one deliberate exception
         health_fn = lambda_.Function(self, "HealthFn",

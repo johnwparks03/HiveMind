@@ -46,6 +46,7 @@ async function request(path, options = {}) {
     }
     const error = new Error(detail?.error?.message || `request_failed_${res.status}`);
     error.code = detail?.error?.code;
+    error.details = detail?.error?.details ?? {};
     error.status = res.status;
     throw error;
   }
@@ -67,4 +68,15 @@ export const api = {
   removeFolder: (folderId) => request(`/folders/${folderId}`, { method: "DELETE" }),
   openFile: (fileId) => request(`/files/${fileId}/open`, { method: "POST" }),
   ping: () => request("/folders").then(() => true).catch(() => false),
+  // Sign-in goes through the agent, which talks to Cognito. The frontend never sees Cognito tokens.
+  logIn: (email, password) =>
+    request("/auth/login", { method: "POST", body: JSON.stringify({ email, password }) }),
+  logOut: () => request("/auth/logout", { method: "POST" }),
+  getSession: () => request("/session"),
+  // Groups: one team per person for the MVP (API_Contract section 3.1). The agent proxies these to central.
+  getGroup: () => request("/team").then((data) => data.team),
+  createGroup: (name) => request("/team", { method: "POST", body: JSON.stringify({ name }) }),
+  createInvite: () => request("/team/invites", { method: "POST" }),
+  joinGroup: (code) => request("/team/join", { method: "POST", body: JSON.stringify({ code }) }),
+  leaveGroup: () => request("/team/leave", { method: "POST" }),
 };

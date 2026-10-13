@@ -1,12 +1,18 @@
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import StatusIndicator from "./components/StatusIndicator";
+import AccountPage from "./pages/AccountPage";
 import FilesPage from "./pages/FilesPage";
+import GroupsPage from "./pages/GroupsPage";
 import SearchPage from "./pages/SearchPage";
+import { api } from "./api/client";
 import "./App.css";
 
 const TABS = [
   { id: "search", label: "Search" },
   { id: "files", label: "Files" },
+  { id: "groups", label: "Groups" },
+  { id: "account", label: "Sign in" },
 ];
 
 function tabFromHash() {
@@ -18,6 +24,14 @@ export default function App() {
   const [tab, setTab] = useState(tabFromHash);
   // Bumped when the Search tab is clicked while already on Search, to clear it back to the entry page.
   const [searchKey, setSearchKey] = useState(0);
+
+  // Same query key as the account page, so signing in or out updates the header straight away.
+  const session = useQuery({
+    queryKey: ["session"],
+    queryFn: api.getSession,
+    refetchInterval: 15000,
+  });
+  const signedIn = Boolean(session.data?.signed_in);
 
   useEffect(() => {
     const onHashChange = () => setTab(tabFromHash());
@@ -44,7 +58,7 @@ export default function App() {
               aria-current={tab === t.id ? "page" : undefined}
               onClick={(e) => handleTabClick(t.id, e)}
             >
-              {t.label}
+              {t.id === "account" && signedIn ? "Sign out" : t.label}
             </a>
           ))}
         </nav>
@@ -57,6 +71,8 @@ export default function App() {
           <SearchPage key={searchKey} />
         </div>
         {tab === "files" && <FilesPage />}
+        {tab === "groups" && <GroupsPage />}
+        {tab === "account" && <AccountPage />}
       </main>
     </div>
   );

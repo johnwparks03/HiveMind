@@ -1,13 +1,38 @@
+/* Deloitte brand tokens (digital-brand reference). Change colours here, not per component.
+   Green is for fills, borders and focus; text on green is always dark (white fails contrast). */
 :root {
-  --bg: #f6f6f4;
+  --dl-green: #86bc25;
+  --dl-green-hover: #75a521;
+  --dl-green-tint: #eef6dc;
+  --dl-neon: #86eb22;
+  --dl-blue: #00a3e0;
+  --dl-blue-tint: #e5f5fc;
+  --dl-red: #da291c;
+  --dl-red-tint: #fbe9e7;
+  --dl-amber-tint: #fdf3dc;
+  --dl-charcoal: #282728;
+  --dl-grey: #555555;
+  --dl-line: #e6e6e6;
+  --dl-page: #f5f5f5;
+
+  --bg: var(--dl-page);
   --surface: #ffffff;
-  --ink: #1c1b1f;
-  --ink-soft: #6b6a70;
-  --line: #e3e2df;
-  --accent: #4f46e5;
-  --accent-soft: #ecebfc;
-  --error: #b3261e;
-  --error-bg: #fbeceb;
+  --ink: var(--dl-charcoal);
+  --ink-soft: var(--dl-grey);
+  --line: var(--dl-line);
+  --accent: var(--dl-green);
+  --accent-hover: var(--dl-green-hover);
+  --accent-soft: var(--dl-green-tint);
+  --on-accent: var(--dl-charcoal);
+  --ok: var(--dl-green);
+  --ok-soft: var(--dl-green-tint);
+  --pending: var(--dl-blue);
+  --pending-soft: var(--dl-blue-tint);
+  --error: var(--dl-red);
+  --error-soft: var(--dl-red-tint);
+  --warn-soft: var(--dl-amber-tint);
+  --radius: 10px;
+  --focus: 0 0 0 3px rgba(134, 188, 37, 0.45);
   color-scheme: light;
 }
 
@@ -23,7 +48,7 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--ink);
-  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  font-family: "Open Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
   font-size: 14px;
   line-height: 1.5;
 }

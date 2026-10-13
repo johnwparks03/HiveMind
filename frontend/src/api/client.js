@@ -2,6 +2,8 @@
 // service"). Interface A: header X-HiveMind-Token on every request except
 // GET /auth/token, per API_Contract.md section 2.1 / Feature_List 1.11.
 
+import { normaliseFile } from "../lib/files.js";
+
 const AGENT_BASE = "http://127.0.0.1:8420";
 
 let tokenPromise = null;
@@ -33,6 +35,8 @@ async function request(path, options = {}) {
     },
   });
 
+  if (res.status === 401) tokenPromise = null; // agent restarted; fetch a fresh token next time
+
   if (!res.ok) {
     let detail;
     try {
@@ -49,12 +53,18 @@ async function request(path, options = {}) {
   return res.json();
 }
 
+// True when the agent process itself can't be reached (not when it returned an error).
+export function isAgentUnreachable(err) {
+  return err.message === "agent_unreachable" || err instanceof TypeError;
+}
+
 export const api = {
   search: (query) => request("/search", { method: "POST", body: JSON.stringify({ query }) }),
-  listFolders: () => request("/folders"),
+  listFolders: () => request("/folders").then((data) => data.folders),
+  listFiles: () => request("/files").then((data) => data.files.map(normaliseFile)),
   addFolder: (path) => request("/folders", { method: "POST", body: JSON.stringify({ path }) }),
   rescanFolder: (folderId) => request(`/folders/${folderId}/rescan`, { method: "POST" }),
   removeFolder: (folderId) => request(`/folders/${folderId}`, { method: "DELETE" }),
   openFile: (fileId) => request(`/files/${fileId}/open`, { method: "POST" }),
-  ping: () => getToken().then(() => true).catch(() => false),
+  ping: () => request("/folders").then(() => true).catch(() => false),
 };

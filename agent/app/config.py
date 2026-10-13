@@ -53,6 +53,9 @@ CHUNK_OVERLAP_CHARS = 100
 # this is one data point, not a tuned value.
 SIMILARITY_DISTANCE_THRESHOLD = 0.65
 SEARCH_RESULT_LIMIT = 20
+# How many chunks to read per page when listing by recency. Chroma's get() returns at most
+# this many per call, so the listing pages through instead of stopping at the first page.
+CHROMA_PAGE_SIZE = 500
 
 # Filename boost: whole-chunk embeddings dilute a strong title match once it's
 # pooled together with unrelated body text (confirmed 2026-10-07 — "meeting

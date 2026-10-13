@@ -21,15 +21,10 @@ test("validateCredentials asks for a valid email first, then a password", () => 
   assert.equal(validateCredentials({ email: "a@b.co", password: "x" }), null);
 });
 
+
 test("known agent error codes get plain-language messages", () => {
   assert.equal(authErrorMessage({ code: "invalid_credentials" }), "That email or password isn't right.");
-  assert.match(authErrorMessage({ code: "user_exists" }), /already exists/);
   assert.match(authErrorMessage({ code: "too_many_attempts" }), /Too many attempts/);
-});
-
-test("password_policy shows the sign-in service's own message", () => {
-  const err = { code: "password_policy", message: "Password must include a number" };
-  assert.equal(authErrorMessage(err), "Password must include a number");
 });
 
 test("service_unavailable says whether configuration is missing or the network is down", () => {

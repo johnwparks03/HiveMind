@@ -21,10 +21,6 @@ export function authErrorMessage(err) {
   switch (err.code) {
     case "invalid_credentials":
       return "That email or password isn't right.";
-    case "user_exists":
-      return "An account with that email already exists. Try signing in instead.";
-    case "password_policy":
-      return err.message || "That password doesn't meet the requirements.";
     case "too_many_attempts":
       return "Too many attempts. Wait a few minutes, then try again.";
     case "service_unavailable":

@@ -69,10 +69,14 @@ export const api = {
   openFile: (fileId) => request(`/files/${fileId}/open`, { method: "POST" }),
   ping: () => request("/folders").then(() => true).catch(() => false),
   // Sign-in goes through the agent, which talks to Cognito. The frontend never sees Cognito tokens.
-  signUp: (email, password) =>
-    request("/auth/signup", { method: "POST", body: JSON.stringify({ email, password }) }),
   logIn: (email, password) =>
     request("/auth/login", { method: "POST", body: JSON.stringify({ email, password }) }),
   logOut: () => request("/auth/logout", { method: "POST" }),
   getSession: () => request("/session"),
+  // Groups: one team per person for the MVP (API_Contract section 3.1). The agent proxies these to central.
+  getGroup: () => request("/team").then((data) => data.team),
+  createGroup: (name) => request("/team", { method: "POST", body: JSON.stringify({ name }) }),
+  createInvite: () => request("/team/invites", { method: "POST" }),
+  joinGroup: (code) => request("/team/join", { method: "POST", body: JSON.stringify({ code }) }),
+  leaveGroup: () => request("/team/leave", { method: "POST" }),
 };

@@ -1,20 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api, isAgentUnreachable } from "../api/client";
+import PasswordInput from "../components/PasswordInput";
 import { authErrorMessage, validateCredentials } from "../lib/auth";
-
-const MODES = [
-  { id: "login", label: "Sign in", submit: "Sign in", busy: "Signing in…" },
-  { id: "signup", label: "Create account", submit: "Create account", busy: "Creating account…" },
-];
 
 export default function AccountPage() {
   const queryClient = useQueryClient();
-  const [mode, setMode] = useState("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [formError, setFormError] = useState(null);
-  const [notice, setNotice] = useState(null);
 
   const session = useQuery({
     queryKey: ["session"],
@@ -26,36 +20,36 @@ export default function AccountPage() {
     queryClient.invalidateQueries({ queryKey: ["session"] });
   }
 
+  // Update the status straight from the response, so the page changes at once. The agent's
+  // /session also looks up the team on central, which can be slow, so it refreshes in the background.
   const signIn = useMutation({
     mutationFn: ({ email, password }) => api.logIn(email, password),
-    onSuccess: () => {
+    onSuccess: (data) => {
       setPassword("");
-      setNotice(null);
+      queryClient.setQueryData(["session"], (old) => ({
+        ...old,
+        signed_in: true,
+        email: data.email,
+      }));
       refreshSession();
-    },
-  });
-
-  // Accounts are confirmed automatically by the sign-up trigger, so sign-in follows straight away.
-  const signUp = useMutation({
-    mutationFn: ({ email, password }) => api.signUp(email, password),
-    onSuccess: (_data, { email, password }) => {
-      setNotice("Account created. Signing you in…");
-      signIn.mutate({ email, password });
+      queryClient.invalidateQueries({ queryKey: ["group"] });
     },
   });
 
   const logOut = useMutation({
     mutationFn: api.logOut,
-    onSuccess: refreshSession,
+    onSuccess: () => {
+      setEmail("");
+      queryClient.setQueryData(["session"], (old) => ({
+        ...old,
+        signed_in: false,
+        email: null,
+        team: null,
+      }));
+      refreshSession();
+      queryClient.removeQueries({ queryKey: ["group"] });
+    },
   });
-
-  function switchMode(next) {
-    setMode(next);
-    setFormError(null);
-    setNotice(null);
-    signIn.reset();
-    signUp.reset();
-  }
 
   function handleSubmit(e) {
     e.preventDefault();
@@ -63,20 +57,13 @@ export default function AccountPage() {
     const problem = validateCredentials(creds);
     setFormError(problem);
     if (problem) return;
-    if (mode === "signup") signUp.mutate(creds);
-    else signIn.mutate(creds);
+    signIn.mutate(creds);
   }
 
-  const busy = signIn.isPending || signUp.isPending;
-  const failure = signIn.error || signUp.error;
-  const current = MODES.find((m) => m.id === mode);
   const signedIn = session.data?.signed_in;
 
   return (
-    <section className="account-page" aria-labelledby="account-title">
-      <h2 id="account-title" className="page-title">Your <span className="accent-word">account</span></h2>
-      <p className="page-lede">Sign in to share with your team. Your files stay on this computer until you choose to share them.</p>
-
+    <section className="account-page" aria-label={signedIn ? "Signed in" : "Sign in"}>
       {session.isPending && <p className="muted">Checking sign-in…</p>}
 
       {session.isError && (
@@ -88,13 +75,13 @@ export default function AccountPage() {
       )}
 
       {signedIn && (
-        <div className="account-card">
-          <p className="account-status">
-            <span className="dot dot-online" aria-hidden="true" /> Signed in as <strong>{session.data.email}</strong>
+        <div className="account-card signed-in-card">
+          <p className="signed-in-text">
+            You are signed in as <strong>{session.data.email}</strong>
           </p>
           <button
             type="button"
-            className="btn btn-outline"
+            className="btn btn-danger"
             onClick={() => logOut.mutate()}
             disabled={logOut.isPending}
           >
@@ -107,52 +94,41 @@ export default function AccountPage() {
       )}
 
       {session.data && !signedIn && (
-        <div className="account-card">
-          <div className="segmented" role="group" aria-label="Sign in or create an account">
-            {MODES.map((m) => (
-              <button
-                key={m.id}
-                type="button"
-                className="segment"
-                aria-pressed={mode === m.id}
-                onClick={() => switchMode(m.id)}
-              >
-                {m.label}
+        <>
+          <h2 className="page-title">Sign <span className="accent-word">in</span></h2>
+          <p className="page-lede">Sign in to share with your team. Your files stay on this computer until you choose to share them.</p>
+
+          <div className="account-card">
+            <form className="account-form" onSubmit={handleSubmit} noValidate>
+              <label htmlFor="account-email" className="field-label">Email</label>
+              <input
+                id="account-email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
+                spellCheck={false}
+              />
+
+              <label htmlFor="account-password" className="field-label">Password</label>
+              <PasswordInput
+                id="account-password"
+                value={password}
+                onChange={setPassword}
+                autoComplete="current-password"
+              />
+
+              {formError && <p className="inline-error" role="alert">{formError}</p>}
+              {signIn.error && !formError && (
+                <p className="inline-error" role="alert">{authErrorMessage(signIn.error)}</p>
+              )}
+
+              <button type="submit" className="btn btn-primary" disabled={signIn.isPending}>
+                {signIn.isPending ? "Signing in…" : "Sign in"}
               </button>
-            ))}
+            </form>
           </div>
-
-          <form className="account-form" onSubmit={handleSubmit} noValidate>
-            <label htmlFor="account-email" className="field-label">Email</label>
-            <input
-              id="account-email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoComplete="email"
-              spellCheck={false}
-            />
-
-            <label htmlFor="account-password" className="field-label">Password</label>
-            <input
-              id="account-password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete={mode === "signup" ? "new-password" : "current-password"}
-            />
-
-            {formError && <p className="inline-error" role="alert">{formError}</p>}
-            {failure && !formError && (
-              <p className="inline-error" role="alert">{authErrorMessage(failure)}</p>
-            )}
-            {notice && <p className="muted" role="status">{notice}</p>}
-
-            <button type="submit" className="btn btn-primary" disabled={busy}>
-              {busy ? current.busy : current.submit}
-            </button>
-          </form>
-        </div>
+        </>
       )}
     </section>
   );

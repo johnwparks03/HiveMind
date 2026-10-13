@@ -1,4 +1,4 @@
-/* Layout and components. Colours come from the tokens below; change them here, not per component. */
+﻿/* Layout and components. Colours come from the tokens below; change them here, not per component. */
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
@@ -725,7 +725,7 @@ input:focus {
   outline: none;
 }
 
-/* One row per recent search: the query, plus a small grey × to drop just that one. */
+/* One row per recent search: the query, plus a small grey Ã— to drop just that one. */
 .recent-row {
   display: flex;
   align-items: center;
@@ -819,31 +819,99 @@ input:focus {
   font-size: 15px;
 }
 
-/* Two-way toggle: Sign in / Create account. The selected segment is dark, not green, for contrast. */
-.segmented {
-  display: flex;
-  padding: 3px;
-  background: var(--bg);
-  border: 1px solid var(--line);
-  border-radius: 999px;
+/* Signed-in page: just the box, plus the red sign-out button. */
+.signed-in-card {
+  align-items: center;
+  text-align: center;
+  padding: 32px 28px;
 }
 
-.segment {
-  flex: 1;
-  padding: 7px 14px;
+.signed-in-text {
+  margin: 0;
+  font-size: 15px;
+}
+
+.btn-danger {
+  background: var(--error);
+  color: #fff;
+  font-weight: 700;
+}
+
+.btn-danger:hover:not(:disabled) {
+  filter: brightness(0.92);
+}
+
+/* Password fields: one eye control at the far right, shown only once something is typed.
+   The browser's own reveal icon is hidden so the two never appear together. */
+/* Masked password text: dots drawn by CSS on a text input, so no browser reveal icon appears. */
+.password-field input.is-masked {
+  -webkit-text-security: disc;
+}
+
+.password-field {
+  position: relative;
+}
+
+.password-field input {
+  padding-right: 44px;
+}
+
+.reveal-toggle {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
   border: 0;
-  border-radius: 999px;
+  border-radius: 6px;
   background: none;
   color: var(--ink-soft);
-  font: inherit;
-  font-size: 13.5px;
-  font-weight: 500;
   cursor: pointer;
 }
 
-.segment[aria-pressed="true"] {
-  background: var(--surface);
+.reveal-toggle:hover {
   color: var(--ink);
+  background: var(--bg);
+}
+
+.reveal-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* Groups: the invite code is shown large and in a monospace font so it's easy to read out. */
+.groups-page .account-card {
+  max-width: 440px;
+  margin: 20px auto 0;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.groups-page .section-title {
+  margin: 0;
+}
+
+.invite-code {
+  margin: 4px 0 0;
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 22px;
   font-weight: 700;
-  box-shadow: inset 0 -2px 0 var(--accent), 0 1px 2px rgba(40, 39, 40, 0.1);
+  letter-spacing: 0.08em;
+}
+
+.groups-page .btn-primary,
+.groups-page .btn-outline,
+.groups-page .btn-danger-ghost {
+  align-self: flex-start;
+}
+
+.groups-page .account-form {
+  gap: 6px;
 }

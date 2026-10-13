@@ -75,8 +75,7 @@ python -m pytest tests -m integration   # against the deployed stack; needs a va
 - **Account:** 954976288579. **Region:** us-east-1. Stack name: `HiveMind`.
 - Only one person deploys the shared stack at a time. Coordinate before running a deploy or destroy; do not destroy resources you did not create.
 - Never commit AWS credentials, Cognito secrets or DB passwords. Use Secrets Manager/SSM and local environment variables.
-- **Bedrock model ID:** `anthropic.claude-sonnet-5-5` (confirmed from the Bedrock console). If invocation fails with an on-demand-throughput error, this needs to be swapped for a cross-region inference profile ID instead (check Bedrock → Inference profiles) — record whichever one actually works here.
-- A one-off connectivity check lives in `scripts/test_bedrock.py` (reads `scripts/.env`, gitignored) — not part of the shipped app; the agent/frontend never hold AWS credentials per the architecture rules above.
+- **Bedrock model ID:** `us.anthropic.claude-sonnet-5-5` (US cross-region inference profile; verified with `Converse` on 2026-10-13). The bare `anthropic.claude-sonnet-5-5` fails with an on-demand-throughput error. Sonnet 5.5 also rejects the `temperature` parameter, so do not send it.
 
 ## Working on a story
 1. Read the story file in `docs/stories/`, its dependencies, and the spec sections it references.

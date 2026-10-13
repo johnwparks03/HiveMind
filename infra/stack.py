@@ -33,7 +33,7 @@ class HiveMindStack(Stack):
             "EXCERPT_MAX_CHARS": "3000",
             "SEARCH_RESULT_CAP": "20",
             "PUBLISH_CONCURRENCY": "5",
-            "BEDROCK_MODEL_ID": "anthropic.claude-sonnet-5-5",
+            "BEDROCK_MODEL_ID": "us.anthropic.claude-sonnet-5-5",
             "TRANSFER_ACK_TIMEOUT_SECONDS": "60",
             "SWEEPER_MAX_AGE_MINUTES": "15",
         }
@@ -196,6 +196,35 @@ class HiveMindStack(Stack):
         teams_fn = vpc_function("TeamsFn", "teams.handler")
         files_fn = vpc_function("FilesFn", "files.handler")
         migrate_fn = vpc_function("MigrateFn", "migrate.handler", timeout=120)
+
+        # ── LLM proxy (E3-S3) ────────────────────────────────────────────────
+        # Outside the VPC on purpose: the VPC subnets have no NAT so they cannot reach
+        # Bedrock, and this function needs no database. Its own role, so it gets no DB/S3.
+        llm_role = iam.Role(self, "LlmRole",
+            assumed_by=iam.ServicePrincipal("lambda.amazonaws.com"),
+            managed_policies=[
+                iam.ManagedPolicy.from_aws_managed_policy_name(
+                    "service-role/AWSLambdaBasicExecutionRole"
+                ),
+            ],
+        )
+        # Converse needs bedrock:InvokeModel. The inference-profile ARN keeps this working if
+        # BEDROCK_MODEL_ID has to become a cross-region inference profile.
+        llm_role.add_to_policy(iam.PolicyStatement(
+            actions=["bedrock:InvokeModel"],
+            resources=[
+                "arn:aws:bedrock:*::foundation-model/anthropic.*",
+                f"arn:aws:bedrock:{self.region}:{self.account}:inference-profile/*",
+            ],
+        ))
+        llm_fn = lambda_.Function(self, "LlmFn",
+            runtime=lambda_.Runtime.PYTHON_3_12,
+            handler="llm.handler",
+            code=lambda_.Code.from_asset(lambdas_dir),
+            role=llm_role,
+            environment={k: config[k] for k in ("BEDROCK_MODEL_ID", "EXCERPT_MAX_CHARS")},
+            timeout=Duration.seconds(25),
+        )
         # Runs migrate_fn on every deploy where its code changed. Idempotent
         # (applies each migrations/*.sql once); a failure fails the deploy.
         triggers.Trigger(self, "RunMigrations",
@@ -249,6 +278,9 @@ class HiveMindStack(Stack):
             ("/files/mine", [apigwv2.HttpMethod.GET], "FilesMineIntegration"),
         ]:
             add_authed_route(path, methods, files_fn, integration_id)
+
+        # LLM proxy (E3-S3)
+        add_authed_route("/llm/tags", [apigwv2.HttpMethod.POST], llm_fn, "LlmTagsIntegration")
 
         # Unauthenticated health check: the one deliberate exception
         health_fn = lambda_.Function(self, "HealthFn",

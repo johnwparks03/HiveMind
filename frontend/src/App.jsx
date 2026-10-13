@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import StatusIndicator from "./components/StatusIndicator";
+import AccountPage from "./pages/AccountPage";
 import FilesPage from "./pages/FilesPage";
 import SearchPage from "./pages/SearchPage";
 import "./App.css";
@@ -7,6 +8,7 @@ import "./App.css";
 const TABS = [
   { id: "search", label: "Search" },
   { id: "files", label: "Files" },
+  { id: "account", label: "Account" },
 ];
 
 function tabFromHash() {
@@ -57,6 +59,7 @@ export default function App() {
           <SearchPage key={searchKey} />
         </div>
         {tab === "files" && <FilesPage />}
+        {tab === "account" && <AccountPage />}
       </main>
     </div>
   );

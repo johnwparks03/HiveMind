@@ -46,6 +46,7 @@ async function request(path, options = {}) {
     }
     const error = new Error(detail?.error?.message || `request_failed_${res.status}`);
     error.code = detail?.error?.code;
+    error.details = detail?.error?.details ?? {};
     error.status = res.status;
     throw error;
   }
@@ -67,4 +68,11 @@ export const api = {
   removeFolder: (folderId) => request(`/folders/${folderId}`, { method: "DELETE" }),
   openFile: (fileId) => request(`/files/${fileId}/open`, { method: "POST" }),
   ping: () => request("/folders").then(() => true).catch(() => false),
+  // Sign-in goes through the agent, which talks to Cognito. The frontend never sees Cognito tokens.
+  signUp: (email, password) =>
+    request("/auth/signup", { method: "POST", body: JSON.stringify({ email, password }) }),
+  logIn: (email, password) =>
+    request("/auth/login", { method: "POST", body: JSON.stringify({ email, password }) }),
+  logOut: () => request("/auth/logout", { method: "POST" }),
+  getSession: () => request("/session"),
 };

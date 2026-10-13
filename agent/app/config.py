@@ -69,4 +69,19 @@ FILENAME_BOOST_MAX = 0.3
 # upgrade before keeping its own local parse (Technical_Blueprint.md section 03).
 LLM_QUERY_TIMEOUT_SECONDS = 2.5
 
+# Query expansion: WordNet synonyms added to the topic before embedding, to close
+# vocabulary gaps between a short query and a document's actual wording (e.g. "seed
+# round" vs "fundraising") that semantic similarity alone can still miss. Entirely
+# offline (WordNet is a static local corpus, not a network call) — no Bedrock
+# involved. Measured against the real test corpus (2026-10-13) and disabled: it made
+# every sample query's match distance worse, not better (e.g. "seed round" -> "round"
+# expanded to its ammunition/geometry sense: "elevation, lift, unit of ammunition, one
+# shot"). MiniLM's own semantic embedding already handles this better than word-by-word
+# dictionary lookup. Left in place, off, in case someone wants to try a different
+# source (a curated domain thesaurus instead of raw WordNet) rather than redoing this
+# measurement from scratch.
+QUERY_EXPANSION_ENABLED = False
+QUERY_EXPANSION_MAX_SYNONYMS_PER_WORD = 2
+QUERY_EXPANSION_MAX_TOTAL_WORDS = 6
+
 SUPPORTED_EXTENSIONS = {".pdf", ".docx", ".pptx", ".txt"}

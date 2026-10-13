@@ -3,6 +3,7 @@ required baseline for local search — no network call, no API key. The central
 /llm/query enhancement (when/if built) only ever replaces this result opportunistically;
 it is never required for a local search to succeed.
 """
+import calendar
 import re
 from dataclasses import dataclass
 from datetime import datetime, time, timedelta
@@ -18,7 +19,7 @@ _RELATIVE_HINTS = re.compile(
     r"\d+\s+(?:day|week|month)s?\s+ago|"
     r"(?:last|past|this)\s+(?:week|month|monday|tuesday|wednesday|thursday|friday|saturday|sunday)|"
     r"(?:on\s+)?\d{1,2}[/\-]\d{1,2}(?:[/\-]\d{2,4})?|"
-    r"(?:on\s+)?(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{1,2}(?:st|nd|rd|th)?(?:,?\s+\d{4})?"
+    r"(?:on\s+)?(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{1,2}\b(?:st|nd|rd|th)?(?:,?\s+\d{4})?"
     r")\b",
     re.IGNORECASE,
 )
@@ -28,6 +29,38 @@ _RELATIVE_HINTS = re.compile(
 # one anchor point (so "anything from last week" only ever matched whatever
 # happened to fall on that one specific day, instead of the whole week).
 _RANGE_PHRASE = re.compile(r"\b(last|past|this)\s+(week|month)\b", re.IGNORECASE)
+
+# "2 months ago" / "3 weeks ago" are also ranges, not a single anchor day — same bug
+# as _RANGE_PHRASE above, just with a number instead of last/past/this.
+_N_UNITS_AGO = re.compile(r"\b(\d+)\s+(week|month)s?\s+ago\b", re.IGNORECASE)
+
+_MONTH_NAMES = {
+    "jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6,
+    "jul": 7, "aug": 8, "sep": 9, "oct": 10, "nov": 11, "dec": 12,
+}
+_MONTH_WORD = (
+    r"(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|"
+    r"sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)"
+)
+# A month name with a specific day ("September 5", "on Mar 3rd") names one day, not a
+# range — handled by the existing single-day path below, so _MONTH_RANGE must not also
+# claim it.
+_MONTH_DAY_SPECIFIC = re.compile(
+    rf"(?:on\s+)?{_MONTH_WORD}\s+\d{{1,2}}\b(?:st|nd|rd|th)?(?:,?\s+\d{{4}})?",
+    re.IGNORECASE,
+)
+# A bare month name only reads as a date range ("notes from September", "September 2026")
+# when it's clearly being used that way — after a preposition, or paired with a year.
+# Without that guard, an ordinary word like "may" in running text ("documents that may
+# need updating") would wrongly turn into a date filter.
+_MONTH_AFTER_TRIGGER = re.compile(
+    rf"\b(?:in|during|for|from)\s+{_MONTH_WORD}(?:\s+(\d{{4}}))?\b", re.IGNORECASE
+)
+_MONTH_WITH_YEAR = re.compile(rf"\b{_MONTH_WORD}\s+(\d{{4}})\b", re.IGNORECASE)
+# The whole query being just a month name ("September", "September 2025") is
+# unambiguous on its own — no trigger word needed, unlike a month name buried in a
+# longer sentence where "may" etc. could just be an ordinary word.
+_MONTH_WHOLE_QUERY = re.compile(rf"^\s*{_MONTH_WORD}(?:\s+(\d{{4}}))?\s*$", re.IGNORECASE)
 
 
 @dataclass
@@ -72,6 +105,44 @@ def _parse_range_phrase(query: str, local_now: datetime) -> tuple[datetime, date
     return _month_bounds(anchor) if unit == "month" else _week_bounds(anchor)
 
 
+def _add_months(d: datetime, delta: int) -> datetime:
+    month_index = d.month - 1 + delta
+    year = d.year + month_index // 12
+    month = month_index % 12 + 1
+    day = min(d.day, calendar.monthrange(year, month)[1])
+    return d.replace(year=year, month=month, day=day)
+
+
+def _parse_n_units_ago(query: str, local_now: datetime) -> tuple[datetime, datetime] | None:
+    match = _N_UNITS_AGO.search(query)
+    if not match:
+        return None
+    n, unit = int(match.group(1)), match.group(2).lower()
+    if unit == "month":
+        return _month_bounds(_add_months(local_now, -n))
+    return _week_bounds(local_now - timedelta(weeks=n))
+
+
+def _parse_month_only(query: str, local_now: datetime) -> tuple[tuple[datetime, datetime], re.Match] | None:
+    """A bare month name ('September', 'in September', 'September 2026') names a
+    whole calendar month, not one day — same bug as _parse_range_phrase, just for an
+    explicit month instead of a relative one.
+    """
+    if _MONTH_DAY_SPECIFIC.search(query):
+        return None
+    match = (
+        _MONTH_WHOLE_QUERY.match(query)
+        or _MONTH_AFTER_TRIGGER.search(query)
+        or _MONTH_WITH_YEAR.search(query)
+    )
+    if not match:
+        return None
+    month = _MONTH_NAMES[match.group(1)[:3].lower()]
+    year = int(match.group(2)) if match.group(2) else local_now.year
+    anchor = local_now.replace(year=year, month=month, day=1)
+    return _month_bounds(anchor), match
+
+
 def parse_query_locally(query: str, local_now: datetime | None = None) -> ParsedQuery:
     """Splits `query` into a topic and an absolute date range, entirely offline.
 
@@ -92,6 +163,22 @@ def parse_query_locally(query: str, local_now: datetime | None = None) -> Parsed
         date_from, date_to = range_bounds
         topic = _RELATIVE_HINTS.sub("", query, count=1)
         topic = re.sub(r"\b(from|on|for)\b", "", topic, flags=re.IGNORECASE)
+        topic = re.sub(r"\s+", " ", topic).strip(" ,.-") or None
+        return ParsedQuery(topic=topic, date_from=date_from, date_to=date_to, source="local")
+
+    n_units_bounds = _parse_n_units_ago(query, local_now)
+    if n_units_bounds is not None:
+        date_from, date_to = n_units_bounds
+        topic = _RELATIVE_HINTS.sub("", query, count=1)
+        topic = re.sub(r"\b(from|on|for)\b", "", topic, flags=re.IGNORECASE)
+        topic = re.sub(r"\s+", " ", topic).strip(" ,.-") or None
+        return ParsedQuery(topic=topic, date_from=date_from, date_to=date_to, source="local")
+
+    month_only = _parse_month_only(query, local_now)
+    if month_only is not None:
+        (date_from, date_to), match = month_only
+        topic = query[: match.start()] + query[match.end():]
+        topic = re.sub(r"\b(from|on|for|in|during)\b", "", topic, flags=re.IGNORECASE)
         topic = re.sub(r"\s+", " ", topic).strip(" ,.-") or None
         return ParsedQuery(topic=topic, date_from=date_from, date_to=date_to, source="local")
 

@@ -8,11 +8,13 @@ from datetime import datetime
 from app.config import (
     FILENAME_BOOST_MAX,
     FILENAME_BOOST_PER_WORD,
+    QUERY_EXPANSION_ENABLED,
     SEARCH_RESULT_LIMIT,
     SIMILARITY_DISTANCE_THRESHOLD,
 )
 from app.indexing.embeddings import embed
 from app.indexing.vector_store import _date_range_where, iter_chunks, query as vector_query
+from app.search.query_expansion import expand_topic
 from app.search.query_parser import ParsedQuery, parse_query_locally
 
 _WORD_RE = re.compile(r"[a-z0-9]+")
@@ -80,7 +82,8 @@ def search_local(raw_query: str) -> dict:
     if not parsed.topic:
         results = _list_by_recency(date_from_ts, date_to_ts)
     else:
-        [embedding] = embed([parsed.topic])
+        embed_input = expand_topic(parsed.topic) if QUERY_EXPANSION_ENABLED else parsed.topic
+        [embedding] = embed([embed_input])
         raw = vector_query(embedding, date_from_ts, date_to_ts, n_results=SEARCH_RESULT_LIMIT * 3)
         ids = raw["ids"][0]
         results = []

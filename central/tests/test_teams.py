@@ -191,6 +191,14 @@ def test_leave_keeps_team_when_others_remain(fake_db):
     assert "DELETE FROM memberships" in cur.sqls()
 
 
+def test_leave_removes_callers_public_files_and_connections(fake_db):
+    cur = fake_db([("tid", "Alpha"), (2,)])
+    assert teams.handler(_event("POST /teams/me/leave", sub="user-1"), None)["statusCode"] == 204
+    deletes = {sql: params for sql, params in cur.executed if sql.startswith("DELETE FROM")}
+    assert deletes["DELETE FROM public_files WHERE owner_id = %s"] == ("user-1",)
+    assert deletes["DELETE FROM connections WHERE user_id = %s"] == ("user-1",)
+
+
 def test_unique_violation_maps_to_already_in_team(monkeypatch):
     class Dup(Exception):
         pgcode = "23505"

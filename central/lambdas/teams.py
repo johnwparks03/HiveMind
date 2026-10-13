@@ -118,8 +118,8 @@ def leave_team(cur, user_id):
     team_id = row[0]
     # Lock the team so two last members leaving at once can't both skip the cleanup.
     cur.execute("SELECT id FROM teams WHERE id = %s FOR UPDATE", (team_id,))
-    # E3-S1 / E4 extend this transaction to delete the user's public_files and
-    # connections rows once those tables exist.
+    cur.execute("DELETE FROM public_files WHERE owner_id = %s", (user_id,))
+    cur.execute("DELETE FROM connections WHERE user_id = %s", (user_id,))
     cur.execute("DELETE FROM memberships WHERE user_id = %s", (user_id,))
     log_event(cur, "team_leave", user_id, team_id)
     cur.execute("SELECT count(*) FROM memberships WHERE team_id = %s", (team_id,))

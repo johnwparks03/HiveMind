@@ -18,6 +18,27 @@ def parse_body(event):
     return body
 
 
+def invalid_request(*fields):
+    """400 invalid_request naming the bad fields only, never their values."""
+    return ApiError(400, "invalid_request", "invalid request", {"fields": list(fields)})
+
+
+def optional_timestamp(body, field):
+    """A nullable ISO 8601 timestamp that must carry a timezone; raises on anything else."""
+    value = body.get(field)
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise invalid_request(field)
+    try:
+        parsed = datetime.datetime.fromisoformat(value)
+    except ValueError:
+        raise invalid_request(field) from None
+    if parsed.tzinfo is None:
+        raise invalid_request(field)
+    return parsed
+
+
 def json_response(status, body):
     return {"statusCode": status, "headers": {"Content-Type": "application/json"},
             "body": json.dumps(body)}

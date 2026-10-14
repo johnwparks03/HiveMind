@@ -65,6 +65,27 @@ CHROMA_PAGE_SIZE = 500
 FILENAME_BOOST_PER_WORD = 0.15
 FILENAME_BOOST_MAX = 0.3
 
+# Format-word boost: a word describing a file's *format* ("slides", "notes") has weak
+# semantic content on its own — no chunk text ever says "this is a slide deck," so
+# embedding similarity alone misses it. Measured 2026-10-13: "slides" scored 0.80-0.86
+# against every candidate, including an actual .pptx modified that same week — nowhere
+# close to the 0.65 threshold, and the filename boost above doesn't help either since
+# "slides" isn't literally in that file's name. A deterministic word-to-extension
+# mapping is a second cheap signal alongside the filename boost. Query expansion
+# (query_expansion.py) was tried for this kind of gap and made things worse, not
+# better — this is a narrower, explainable fix for the specific case it was for.
+FORMAT_WORD_BOOST = 0.25
+FORMAT_WORDS = {
+    ".pptx": {"slide", "slides", "deck", "presentation"},
+    ".docx": {"doc", "document", "memo", "report"},
+    ".pdf": {"pdf"},
+    ".txt": {"note", "notes", "transcript", "log"},
+}
+# Filename boost and format boost can both apply to the same result; cap their
+# combined effect so a coincidental double-match can't drag a genuinely unrelated
+# file under the threshold.
+TOTAL_BOOST_MAX = 0.35
+
 # Query parsing: how long the agent waits for the optional central /llm/query
 # upgrade before keeping its own local parse (Technical_Blueprint.md section 03).
 LLM_QUERY_TIMEOUT_SECONDS = 2.5

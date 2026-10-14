@@ -62,6 +62,20 @@ _MONTH_WITH_YEAR = re.compile(rf"\b{_MONTH_WORD}\s+(\d{{4}})\b", re.IGNORECASE)
 # longer sentence where "may" etc. could just be an ordinary word.
 _MONTH_WHOLE_QUERY = re.compile(rf"^\s*{_MONTH_WORD}(?:\s+(\d{{4}}))?\s*$", re.IGNORECASE)
 
+# A query like "anything from last week" strips down to the literal word "anything"
+# as the topic, which then gets embedded and searched for — instead of being
+# recognized as a placeholder meaning "no topic, just list by date" (Technical_
+# Blueprint.md section 04: null topic with dates means list by recency).
+_GENERIC_TOPIC = re.compile(
+    r"^(?:any|every|some|all|my)?\s*(?:thing|file|document|stuff)s?$", re.IGNORECASE
+)
+
+
+def _drop_if_generic(topic: str | None) -> str | None:
+    if topic and _GENERIC_TOPIC.match(topic):
+        return None
+    return topic
+
 
 @dataclass
 class ParsedQuery:
@@ -164,6 +178,7 @@ def parse_query_locally(query: str, local_now: datetime | None = None) -> Parsed
         topic = _RELATIVE_HINTS.sub("", query, count=1)
         topic = re.sub(r"\b(from|on|for)\b", "", topic, flags=re.IGNORECASE)
         topic = re.sub(r"\s+", " ", topic).strip(" ,.-") or None
+        topic = _drop_if_generic(topic)
         return ParsedQuery(topic=topic, date_from=date_from, date_to=date_to, source="local")
 
     n_units_bounds = _parse_n_units_ago(query, local_now)
@@ -172,6 +187,7 @@ def parse_query_locally(query: str, local_now: datetime | None = None) -> Parsed
         topic = _RELATIVE_HINTS.sub("", query, count=1)
         topic = re.sub(r"\b(from|on|for)\b", "", topic, flags=re.IGNORECASE)
         topic = re.sub(r"\s+", " ", topic).strip(" ,.-") or None
+        topic = _drop_if_generic(topic)
         return ParsedQuery(topic=topic, date_from=date_from, date_to=date_to, source="local")
 
     month_only = _parse_month_only(query, local_now)
@@ -180,6 +196,7 @@ def parse_query_locally(query: str, local_now: datetime | None = None) -> Parsed
         topic = query[: match.start()] + query[match.end():]
         topic = re.sub(r"\b(from|on|for|in|during)\b", "", topic, flags=re.IGNORECASE)
         topic = re.sub(r"\s+", " ", topic).strip(" ,.-") or None
+        topic = _drop_if_generic(topic)
         return ParsedQuery(topic=topic, date_from=date_from, date_to=date_to, source="local")
 
     settings = {
@@ -201,5 +218,6 @@ def parse_query_locally(query: str, local_now: datetime | None = None) -> Parsed
 
     topic = re.sub(r"\b(from|on|for)\b", "", topic, flags=re.IGNORECASE)
     topic = re.sub(r"\s+", " ", topic).strip(" ,.-") or None
+    topic = _drop_if_generic(topic)
 
     return ParsedQuery(topic=topic, date_from=date_from, date_to=date_to, source="local")

@@ -4,13 +4,17 @@ the agent track is being built standalone per docs/stories/BACKLOG.md's E2 note)
 """
 import re
 from datetime import datetime
+from pathlib import Path
 
 from app.config import (
     FILENAME_BOOST_MAX,
     FILENAME_BOOST_PER_WORD,
+    FORMAT_WORD_BOOST,
+    FORMAT_WORDS,
     QUERY_EXPANSION_ENABLED,
     SEARCH_RESULT_LIMIT,
     SIMILARITY_DISTANCE_THRESHOLD,
+    TOTAL_BOOST_MAX,
 )
 from app.indexing.embeddings import embed
 from app.indexing.vector_store import _date_range_where, iter_chunks, query as vector_query
@@ -33,6 +37,19 @@ def _filename_boost(filename: str, topic: str) -> float:
         return 0.0
     matches = _words(topic) & _words(filename)
     return min(len(matches) * FILENAME_BOOST_PER_WORD, FILENAME_BOOST_MAX)
+
+
+def _format_boost(filename: str, topic: str) -> float:
+    """A query naming the file's *format* ("slides", "notes") rather than its
+    content has nothing for embedding similarity to match against — see config.py
+    for the measurement that motivated this. Deterministic word-to-extension
+    mapping, same spirit as the filename boost above."""
+    if not topic:
+        return 0.0
+    trigger_words = FORMAT_WORDS.get(Path(filename).suffix.lower())
+    if not trigger_words:
+        return 0.0
+    return FORMAT_WORD_BOOST if _words(topic) & trigger_words else 0.0
 
 
 def _group_best_per_file(ids, documents, metadatas, distances) -> list[dict]:
@@ -90,7 +107,8 @@ def search_local(raw_query: str) -> dict:
         if ids:
             results = _group_best_per_file(ids, raw["documents"][0], raw["metadatas"][0], raw["distances"][0])
             for r in results:
-                r["score"] = max(0.0, r["score"] - _filename_boost(r["filename"], parsed.topic))
+                boost = _filename_boost(r["filename"], parsed.topic) + _format_boost(r["filename"], parsed.topic)
+                r["score"] = max(0.0, r["score"] - min(boost, TOTAL_BOOST_MAX))
             results.sort(key=lambda r: r["score"])
             results = [r for r in results if r["score"] <= SIMILARITY_DISTANCE_THRESHOLD][:SEARCH_RESULT_LIMIT]
 

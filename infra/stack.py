@@ -195,6 +195,7 @@ class HiveMindStack(Stack):
         # ── Teams API (E1-S4) and DB migrations ──────────────────────────────
         teams_fn = vpc_function("TeamsFn", "teams.handler")
         files_fn = vpc_function("FilesFn", "files.handler")
+        search_fn = vpc_function("SearchFn", "search.handler")
         migrate_fn = vpc_function("MigrateFn", "migrate.handler", timeout=120)
 
         # ── LLM proxy (E3-S3) ────────────────────────────────────────────────
@@ -278,6 +279,9 @@ class HiveMindStack(Stack):
             ("/files/mine", [apigwv2.HttpMethod.GET], "FilesMineIntegration"),
         ]:
             add_authed_route(path, methods, files_fn, integration_id)
+
+        # Central search (E3-S7)
+        add_authed_route("/search", [apigwv2.HttpMethod.POST], search_fn, "SearchIntegration")
 
         # LLM proxy (E3-S3)
         add_authed_route("/llm/tags", [apigwv2.HttpMethod.POST], llm_fn, "LlmTagsIntegration")

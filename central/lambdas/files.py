@@ -2,7 +2,6 @@
 routeKey. owner_id comes from the token and team_id from membership, never from input."""
 import base64
 import binascii
-import datetime
 import os
 import uuid
 
@@ -10,7 +9,7 @@ from common import db
 from common.access_log import log_event
 from common.auth import get_caller_sub
 from common.errors import ApiError, Unauthorized, error_response, unauthorized_response
-from common.http import get_membership, iso, json_response, parse_body
+from common.http import get_membership, invalid_request, iso, json_response, optional_timestamp, parse_body
 
 FILENAME_MAX_CHARS = 255
 TAGS_MAX_COUNT = 50
@@ -23,31 +22,12 @@ def retention_days():
     return int(os.environ.get("RETENTION_DAYS", "45"))
 
 
-def _invalid(*fields):
-    return ApiError(400, "invalid_request", "invalid request", {"fields": list(fields)})
-
-
 def _file_id(event):
     raw = (event.get("pathParameters") or {}).get("file_id", "")
     try:
         return str(uuid.UUID(raw))
     except (ValueError, AttributeError, TypeError):
-        raise _invalid("file_id") from None
-
-
-def _optional_timestamp(body, field):
-    value = body.get(field)
-    if value is None:
-        return None
-    if not isinstance(value, str):
-        raise _invalid(field)
-    try:
-        parsed = datetime.datetime.fromisoformat(value)
-    except ValueError:
-        raise _invalid(field) from None
-    if parsed.tzinfo is None:
-        raise _invalid(field)
-    return parsed
+        raise invalid_request("file_id") from None
 
 
 def _validate_put(body):
@@ -62,11 +42,11 @@ def _validate_put(body):
     stamps = {}
     for field in ("file_created_at", "file_modified_at"):
         try:
-            stamps[field] = _optional_timestamp(body, field)
+            stamps[field] = optional_timestamp(body, field)
         except ApiError:
             bad.append(field)
     if bad:
-        raise _invalid(*bad)
+        raise invalid_request(*bad)
     return filename.strip(), [t.strip() for t in tags], stamps["file_created_at"], stamps["file_modified_at"]
 
 
@@ -134,7 +114,7 @@ def _decode_cursor(raw):
     try:
         return str(uuid.UUID(base64.urlsafe_b64decode(raw.encode()).decode()))
     except (ValueError, binascii.Error, UnicodeError):
-        raise _invalid("cursor") from None
+        raise invalid_request("cursor") from None
 
 
 def list_mine(cur, user_id, event, body):
@@ -142,9 +122,9 @@ def list_mine(cur, user_id, event, body):
     try:
         limit = int(params.get("limit", DEFAULT_PAGE_SIZE))
     except ValueError:
-        raise _invalid("limit") from None
+        raise invalid_request("limit") from None
     if not 1 <= limit <= MAX_PAGE_SIZE:
-        raise _invalid("limit")
+        raise invalid_request("limit")
     cursor = _decode_cursor(params["cursor"]) if params.get("cursor") else None
     cur.execute(
         "SELECT file_id, filename, published_at, expires_at, last_confirmed FROM public_files "

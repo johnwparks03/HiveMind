@@ -12,7 +12,9 @@ from common.http import (get_membership, invalid_request, iso, json_response, op
                          parse_body)
 
 TOPIC_MAX_CHARS = 500
-WORD_RE = re.compile(r"[A-Za-z0-9]+")  # the same word splitting the filename vector uses
+# Unicode letters and digits; underscore is a separator, as in the filename vector, so accented
+# and non-Latin words ("résumé", "契約書") stay whole and match what Postgres stored.
+WORD_RE = re.compile(r"[^\W_]+")
 
 # Recency: latest known activity on the file, falling back to when it was published.
 RECENCY = "coalesce(pf.file_modified_at, pf.file_created_at, pf.published_at)"

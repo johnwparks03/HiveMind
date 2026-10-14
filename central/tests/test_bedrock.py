@@ -80,3 +80,24 @@ def test_nothing_from_the_prompt_or_reply_is_logged(client, capsys):
     out = capsys.readouterr()
     assert SECRET_PROMPT not in out.out + out.err
     assert "RuntimeError" in out.out
+
+
+LLM_FN_TIMEOUT_SECONDS = 25  # LlmFn in infra/stack.py
+
+
+def test_worst_case_call_time_fits_inside_the_lambda_timeout():
+    worst = (bedrock.CONNECT_TIMEOUT + bedrock.READ_TIMEOUT) * (bedrock.RETRIES + 1)
+    assert worst < LLM_FN_TIMEOUT_SECONDS
+
+
+def test_the_client_uses_the_budgeted_timeouts(monkeypatch):
+    import boto3
+
+    seen = {}
+    monkeypatch.setattr(bedrock, "_client", None)
+    monkeypatch.setattr(boto3, "client", lambda service, config=None: seen.update(service=service, config=config))
+    bedrock._get_client()
+    assert seen["service"] == "bedrock-runtime"
+    assert seen["config"].read_timeout == bedrock.READ_TIMEOUT
+    assert seen["config"].connect_timeout == bedrock.CONNECT_TIMEOUT
+    assert seen["config"].retries["max_attempts"] == bedrock.RETRIES

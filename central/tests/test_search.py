@@ -103,6 +103,18 @@ def test_topic_is_matched_as_any_word_and_ranked_before_recency(fake_db):
     assert "ORDER BY ts_rank(pf.search_vector, q) DESC, coalesce(" in sql
 
 
+@pytest.mark.parametrize("topic,expected", [
+    ("résumé 2024", "résumé or 2024"),            # accented words stay whole
+    ("契約書 更新", "契約書 or 更新"),               # non-Latin words are kept
+    ("Q3_client_contracts", "Q3 or client or contracts"),  # underscore still separates
+    ("!!! ???", ""),                              # punctuation only: empty query, no error
+])
+def test_topic_words_are_unicode_aware(fake_db, topic, expected):
+    cur = fake_db([TEAM, []])
+    assert _call({"topic": topic})["statusCode"] == 200
+    assert cur.search_call()[1]["topic_query"] == expected
+
+
 @pytest.mark.parametrize("body", [{}, {"topic": None}, {"topic": "   "}, {"topic": ""}])
 def test_no_topic_means_all_files_newest_first(fake_db, body):
     cur = fake_db([TEAM, []])

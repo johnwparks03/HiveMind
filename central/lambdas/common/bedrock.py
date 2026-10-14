@@ -4,6 +4,13 @@ import json
 import os
 import re
 
+# Time budget: botocore's max_attempts counts retries after the first try, so the worst case is
+# (CONNECT_TIMEOUT + READ_TIMEOUT) * (RETRIES + 1) = 22 s. That must stay below LlmFn's timeout
+# (25 s, infra/stack.py) so a slow Bedrock becomes a 503 from us, not a killed Lambda.
+CONNECT_TIMEOUT = 3
+READ_TIMEOUT = 8
+RETRIES = 1
+
 _client = None
 _FENCE_RE = re.compile(r"^```(?:json)?\s*(.*?)\s*```$", re.DOTALL)
 
@@ -20,7 +27,8 @@ def _get_client():
 
         _client = boto3.client(
             "bedrock-runtime",
-            config=Config(read_timeout=20, connect_timeout=5, retries={"max_attempts": 2}),
+            config=Config(read_timeout=READ_TIMEOUT, connect_timeout=CONNECT_TIMEOUT,
+                          retries={"max_attempts": RETRIES}),
         )
     return _client
 

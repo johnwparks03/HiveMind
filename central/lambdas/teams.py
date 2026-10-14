@@ -1,6 +1,5 @@
 """Teams API (Interface B /teams/*). One Lambda behind five routes; dispatches on
 routeKey. team_id is always derived from the caller's membership, never from input."""
-import json
 import os
 import re
 import secrets
@@ -10,6 +9,7 @@ from common import db
 from common.access_log import log_event
 from common.auth import get_caller_sub
 from common.errors import ApiError, Unauthorized, error_response, unauthorized_response
+from common.http import get_membership, json_response, parse_body
 
 # No 0/O/1/I/L so codes survive being read aloud or retyped.
 CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
@@ -30,39 +30,15 @@ def normalize_code(raw):
     return raw.strip().upper() if isinstance(raw, str) else ""
 
 
-def parse_body(event):
-    raw = event.get("body")
-    if not raw:
-        return {}
-    try:
-        body = json.loads(raw)
-    except ValueError:
-        raise ApiError(400, "invalid_request", "body must be valid JSON") from None
-    if not isinstance(body, dict):
-        raise ApiError(400, "invalid_request", "body must be a JSON object")
-    return body
-
-
 def _is_unique_violation(exc):
     return getattr(exc, "pgcode", None) == "23505"
-
-
-def _json(status, body):
-    return {"statusCode": status, "headers": {"Content-Type": "application/json"},
-            "body": json.dumps(body)}
-
-
-def _membership(cur, user_id):
-    cur.execute("SELECT t.id, t.name FROM memberships m JOIN teams t ON t.id = m.team_id "
-                "WHERE m.user_id = %s", (user_id,))
-    return cur.fetchone()
 
 
 def create_team(cur, user_id, body):
     name = body.get("name")
     if not isinstance(name, str) or not name.strip() or len(name.strip()) > NAME_MAX_CHARS:
         raise ApiError(400, "invalid_request", "name is required (1-%d characters)" % NAME_MAX_CHARS)
-    if _membership(cur, user_id):
+    if get_membership(cur, user_id):
         raise ApiError(409, "already_in_team", "you are already in a team")
     team_id = str(uuid.uuid4())
     cur.execute("INSERT INTO teams (id, name, created_by) VALUES (%s, %s, %s) RETURNING created_at",
@@ -70,30 +46,30 @@ def create_team(cur, user_id, body):
     created_at = cur.fetchone()[0]
     cur.execute("INSERT INTO memberships (user_id, team_id) VALUES (%s, %s)", (user_id, team_id))
     log_event(cur, "team_create", user_id, team_id)
-    return _json(201, {"team_id": team_id, "name": name.strip(), "created_at": created_at.isoformat()})
+    return json_response(201, {"team_id": team_id, "name": name.strip(), "created_at": created_at.isoformat()})
 
 
 def get_my_team(cur, user_id):
-    row = _membership(cur, user_id)
-    return _json(200, {"team": {"team_id": str(row[0]), "name": row[1]} if row else None})
+    row = get_membership(cur, user_id)
+    return json_response(200, {"team": {"team_id": str(row[0]), "name": row[1]} if row else None})
 
 
 def create_invite(cur, user_id):
-    row = _membership(cur, user_id)
+    row = get_membership(cur, user_id)
     if not row:
         raise ApiError(403, "no_team", "you are not in a team")
     code = generate_code()
     cur.execute("INSERT INTO invites (code, team_id, created_by, expires_at) "
                 "VALUES (%s, %s, %s, now() + make_interval(days => %s)) RETURNING expires_at",
                 (code, row[0], user_id, invite_lifetime_days()))
-    return _json(201, {"code": code, "expires_at": cur.fetchone()[0].isoformat()})
+    return json_response(201, {"code": code, "expires_at": cur.fetchone()[0].isoformat()})
 
 
 def join_team(cur, user_id, body):
     code = normalize_code(body.get("code"))
     if not code:
         raise ApiError(400, "invalid_request", "code is required")
-    if _membership(cur, user_id):
+    if get_membership(cur, user_id):
         raise ApiError(409, "already_in_team", "you are already in a team")
     cur.execute("SELECT i.team_id, t.name, i.expires_at <= now(), "
                 "i.max_uses IS NOT NULL AND i.use_count >= i.max_uses "
@@ -108,18 +84,18 @@ def join_team(cur, user_id, body):
     cur.execute("INSERT INTO memberships (user_id, team_id) VALUES (%s, %s)", (user_id, team_id))
     cur.execute("UPDATE invites SET use_count = use_count + 1 WHERE code = %s", (code,))
     log_event(cur, "team_join", user_id, team_id)
-    return _json(200, {"team_id": str(team_id), "name": name})
+    return json_response(200, {"team_id": str(team_id), "name": name})
 
 
 def leave_team(cur, user_id):
-    row = _membership(cur, user_id)
+    row = get_membership(cur, user_id)
     if not row:
         raise ApiError(403, "no_team", "you are not in a team")
     team_id = row[0]
     # Lock the team so two last members leaving at once can't both skip the cleanup.
     cur.execute("SELECT id FROM teams WHERE id = %s FOR UPDATE", (team_id,))
-    # E3-S1 / E4 extend this transaction to delete the user's public_files and
-    # connections rows once those tables exist.
+    cur.execute("DELETE FROM public_files WHERE owner_id = %s", (user_id,))
+    cur.execute("DELETE FROM connections WHERE user_id = %s", (user_id,))
     cur.execute("DELETE FROM memberships WHERE user_id = %s", (user_id,))
     log_event(cur, "team_leave", user_id, team_id)
     cur.execute("SELECT count(*) FROM memberships WHERE team_id = %s", (team_id,))

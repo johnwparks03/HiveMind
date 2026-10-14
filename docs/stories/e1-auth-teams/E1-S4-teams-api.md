@@ -11,10 +11,10 @@
 As a user, I want to create a team, invite colleagues and join so that we can share files.
 
 ## Acceptance criteria
-- [ ] Given I am signed in, when I create a team, then I am its member and `GET /teams/me` returns it.
-- [ ] Invites expire after 7 days; joining with an expired or used invite returns an error.
-- [ ] Leaving removes my membership; team-scoped endpoints return 403 `no_team` afterwards.
-- [ ] `team_id` is always derived server-side from membership.
+- [x] Given I am signed in, when I create a team, then I am its member and `GET /teams/me` returns it.
+- [ ] Invites expire after 7 days; joining with an expired or used invite returns an error. (Integration run 2026-10-13: used/invalid-code paths pass; the backdated-expiry assertion was skipped, no `HIVEMIND_TEST_DB_DSN`.)
+- [x] Leaving removes my membership; team-scoped endpoints return 403 `no_team` afterwards.
+- [x] `team_id` is always derived server-side from membership.
 
 ## Technical notes
 - Interface B: `POST /teams` `{name}` -> `201 {team_id,name,created_at}` (409 `already_in_team`); `GET /teams/me` -> `{team:{team_id,name}}` or `{team:null}`; `POST /teams/me/invites` -> `201 {code,expires_at}`; `POST /teams/join` `{code}` -> `200 {team_id,name}` (404 `invalid_code`, 410 `invite_expired`, 409 `already_in_team`); `POST /teams/me/leave` -> `204` (403 `no_team`).

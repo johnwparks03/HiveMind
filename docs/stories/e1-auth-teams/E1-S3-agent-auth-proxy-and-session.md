@@ -11,9 +11,9 @@
 As a user, I want to log in once and stay logged in so that I don't re-enter credentials.
 
 ## Acceptance criteria
-- [ ] Given valid credentials, when `POST /auth/login` is called, then the refresh token is stored in the keychain and `GET /session` shows signed in.
-- [ ] Tokens are refreshed automatically and attached to every central call.
-- [ ] `POST /auth/logout` deletes the keychain entry and clears memory.
+- [x] Given valid credentials, when `POST /auth/login` is called, then the refresh token is stored in the keychain and `GET /session` shows signed in.
+- [x] Tokens are refreshed automatically and attached to every central call.
+- [x] `POST /auth/logout` deletes the keychain entry and clears memory.
 
 ## Technical notes
 - `POST /auth/signup` `{email,password}` -> `201 {"status":"created"}`; errors `400 password_policy` (details = Cognito message), `409 user_exists`, `503 service_unavailable`.
@@ -23,7 +23,8 @@ As a user, I want to log in once and stay logged in so that I don't re-enter cre
 - On startup, if a refresh token exists in the keychain, refresh silently. Provide one shared central-API client that adds the Bearer token and refreshes on expiry; all later stories use it.
 
 ## Notes
-Implemented on branch `feature/e1-s2-s3-agent-auth`; acceptance boxes stay unticked until checked against real Cognito and Windows Credential Manager (unit tests use fakes for both).
+Implemented on branch `feature/e1-s2-s3-agent-auth`.
+- **Verified 2026-10-13** against real Cognito, the deployed API and Windows Credential Manager (15/15 checks, throwaway user, deleted afterwards): signup 201; login returns only `{signed_in,email}`; `/session` signed in with `central_reachable: true`; Credential Manager held 3 entries (`HiveMind`, `refresh_token.0`, `refresh_token.1`); `POST /team` through the agent returned 201 (Bearer attached); a second agent started on another port restored the session from the keychain and called central successfully (refresh path); logout returned 204, all 3 entries were removed, `/session` showed signed out, and a central call afterwards returned 401. Near-expiry refresh while running is covered by unit tests only, not waited out live.
 - Cognito is called with plain HTTPS (`app/auth/cognito.py`), so the agent holds no AWS credentials. Bearer token = access token.
 - Config: `HIVEMIND_COGNITO_CLIENT_ID`, `HIVEMIND_CENTRAL_API_URL` (CDK outputs `UserPoolClientId`, `HttpApiUrl`), optional `HIVEMIND_COGNITO_REGION`. Loaded from gitignored `agent/.env` (template: `agent/.env.example`) or the environment. If unset, the agent still starts; the auth endpoints return 503 with `details.missing`.
 - Keychain: one Credential Manager entry (service `HiveMind`) holding email + refresh token; falls back to memory only if keyring raises (`keystore.persistent`). This also covers the E0-S6 spike's code; its own story still needs the manual Credential Manager check.

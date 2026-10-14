@@ -58,6 +58,13 @@ def test_topic_matches_filename_words_tags_and_stems(cfg, team_of_two):  # noqa:
     assert _search(cfg, seeker, topic="???")[1] == {"results": []}
 
 
+def test_accented_words_are_found(cfg, team_of_two):  # noqa: F811
+    seeker, publisher = team_of_two
+    resume = _publish(cfg, publisher, {"filename": "Résumé_2024.docx", "tags": ["candidate"]})
+    assert _ids(_search(cfg, seeker, topic="résumé")[1]) == [resume]
+    assert _ids(_search(cfg, seeker, topic="Résumé 2024")[1]) == [resume]
+
+
 def test_any_word_of_the_topic_is_enough(cfg, team_of_two):  # noqa: F811
     seeker, publisher = team_of_two
     contracts = _publish(cfg, publisher, CONTRACTS)

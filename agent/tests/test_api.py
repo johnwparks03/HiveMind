@@ -96,3 +96,27 @@ def test_rescan_reports_stats(client, corpus):
     response = client.post(f"/folders/{folder_id}/rescan")
     assert response.status_code == 200
     assert response.json()["stats"]["unchanged"] == TOTAL_DOCX + TOTAL_PPTX + 3
+
+def test_pick_folder_returns_the_chosen_path_and_null_on_cancel(client, monkeypatch):
+    from app.folders import picker
+
+    monkeypatch.setattr(picker, "pick_folder", lambda: "C:\\Notes")
+    chosen = client.post("/folders/pick")
+    assert chosen.status_code == 200
+    assert chosen.json() == {"path": "C:\\Notes"}
+
+    monkeypatch.setattr(picker, "pick_folder", lambda: None)
+    cancelled = client.post("/folders/pick")
+    assert cancelled.status_code == 200
+    assert cancelled.json() == {"path": None}
+
+def test_remove_files_endpoint_reports_how_many_were_removed(client, corpus):
+    root, _ = corpus
+    folder_id = client.post("/folders", json={"path": str(root)}).json()["folder_id"]
+    files = client.get("/files").json()["files"]
+    readable = next(f for f in files if f["index_status"] == "indexed")
+
+    response = client.post("/files/remove", json={"file_ids": [readable["file_id"]]})
+    assert response.status_code == 200
+    assert response.json() == {"removed": 1}
+    assert all(f["file_id"] != readable["file_id"] for f in client.get("/files").json()["files"])

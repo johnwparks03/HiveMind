@@ -1,9 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import Loading, { Spinner } from "../components/Loading";
 import { api, isAgentUnreachable } from "../api/client";
 import FolderCard from "../components/FolderCard";
 import FileRow from "../components/FileRow";
 import { countsByFolder, countsFor, folderName, hasPendingWork, scopeFiles, totalsByState } from "../lib/files";
+import { removeConfirmText, selectedInView, toggleSelected } from "../lib/selection";
 
 // Poll quickly while anything is indexing, slowly when idle (E2-S8 technical notes).
 const FAST_POLL_MS = 2000;
@@ -18,9 +20,9 @@ const FILTERS = [
 
 export default function FilesPage() {
   const queryClient = useQueryClient();
-  const [newPath, setNewPath] = useState("");
   const [folderId, setFolderId] = useState(null); // null = all folders
   const [filter, setFilter] = useState("all");
+  const [selected, setSelected] = useState([]); // file_ids ticked in the list
 
   const folders = useQuery({
     queryKey: ["folders"],
@@ -41,9 +43,14 @@ export default function FilesPage() {
 
   const addFolder = useMutation({
     mutationFn: (path) => api.addFolder(path),
-    onSuccess: () => {
-      setNewPath("");
-      refresh();
+    onSuccess: refresh,
+  });
+
+  // The agent opens the Windows folder dialog. Cancelling gives null, and nothing happens.
+  const pickFolder = useMutation({
+    mutationFn: api.pickFolder,
+    onSuccess: (path) => {
+      if (path) addFolder.mutate(path);
     },
   });
 
@@ -60,6 +67,14 @@ export default function FilesPage() {
     },
   });
 
+  const removeFiles = useMutation({
+    mutationFn: (ids) => api.removeFiles(ids),
+    onSuccess: () => {
+      setSelected([]);
+      refresh();
+    },
+  });
+
   const folderList = folders.data ?? [];
   const fileList = files.data ?? [];
   const counts = countsByFolder(fileList);
@@ -70,15 +85,17 @@ export default function FilesPage() {
 
   const selectedFolder = folderList.find((f) => f.folder_id === folderId);
 
-  function handleAdd(e) {
-    e.preventDefault();
-    const path = newPath.trim();
-    if (path) addFolder.mutate(path);
-  }
+  // Only what's showing counts, so changing the filter never removes files you can't see.
+  const selectedShown = selectedInView(selected, visible.map((f) => f.file_id));
 
   function handleRemove(folder) {
     const ok = window.confirm(`Stop watching ${folder.path}? Its index entries will be removed. Your files are not touched.`);
     if (ok) removeFolder.mutate(folder.folder_id);
+  }
+
+  function handleRemoveSelected() {
+    if (selectedShown.length === 0) return;
+    if (window.confirm(removeConfirmText(selectedShown.length))) removeFiles.mutate(selectedShown);
   }
 
   const loadError = folders.isError || files.isError;
@@ -88,26 +105,21 @@ export default function FilesPage() {
       <h2 id="files-title" className="page-title">Your folders</h2>
       <p className="page-lede">Add a folder to index its Word and PowerPoint files. Indexing runs in the background.</p>
 
-      <form className="add-folder" onSubmit={handleAdd}>
-        <label htmlFor="folder-path" className="field-label">Folder path</label>
-        <div className="add-folder-row">
-          <input
-            id="folder-path"
-            type="text"
-            value={newPath}
-            onChange={(e) => setNewPath(e.target.value)}
-            placeholder="C:\Users\you\Documents\Notes"
-            autoComplete="off"
-            spellCheck={false}
-          />
-          <button type="submit" className="btn btn-primary" disabled={addFolder.isPending || !newPath.trim()}>
-            {addFolder.isPending ? "Adding…" : "Add folder"}
-          </button>
-        </div>
-        {addFolder.isError && (
-          <p className="inline-error" role="alert">Couldn't add that folder: {addFolder.error.message}</p>
+      <div className="add-folder">
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={() => pickFolder.mutate()}
+          disabled={pickFolder.isPending || addFolder.isPending}
+        >
+          {pickFolder.isPending ? "Opening…" : addFolder.isPending ? "Adding…" : "Choose a folder"}
+        </button>
+        {(pickFolder.isError || addFolder.isError) && (
+          <p className="inline-error" role="alert">
+            Couldn't add that folder: {(pickFolder.error ?? addFolder.error).message}
+          </p>
         )}
-      </form>
+      </div>
 
       {loadError && (
         <div className="banner banner-error" role="alert">
@@ -117,7 +129,9 @@ export default function FilesPage() {
         </div>
       )}
 
-      {folderList.length === 0 && !loadError && (
+      {folders.isPending && <Loading label="Loading your folders…" />}
+
+      {folderList.length === 0 && !loadError && !folders.isPending && (
         <div className="empty">
           <p>No folders yet.</p>
           <p className="muted">Add one above to start indexing.</p>
@@ -169,14 +183,54 @@ export default function FilesPage() {
             ))}
           </div>
 
+          {selectedShown.length > 0 && (
+            <div className="selection-bar" role="region" aria-label="Selected files">
+              <span>{selectedShown.length} selected</span>
+              <div className="selection-actions">
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => setSelected([])}>
+                  Clear
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-danger-ghost btn-sm"
+                  onClick={handleRemoveSelected}
+                  disabled={removeFiles.isPending}
+                >
+                  {removeFiles.isPending ? <><Spinner />Removing…</> : "Remove from HiveMind"}
+                </button>
+              </div>
+              {removeFiles.isError && (
+                <p className="inline-error" role="alert">Couldn't remove those files. Try again.</p>
+              )}
+            </div>
+          )}
+
           {visible.length === 0 ? (
             <p className="empty muted">No files in this view.</p>
           ) : (
-            <ul className="file-list">
-              {visible.map((file) => (
-                <FileRow key={file.file_id} file={file} />
-              ))}
-            </ul>
+            <>
+              {visible.length > 1 && selectedShown.length === 0 && (
+                <div className="select-all">
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => setSelected(visible.map((f) => f.file_id))}
+                  >
+                    Select all shown
+                  </button>
+                </div>
+              )}
+              <ul className="file-list">
+                {visible.map((file) => (
+                  <FileRow
+                    key={file.file_id}
+                    file={file}
+                    selected={selectedShown.includes(file.file_id)}
+                    onToggle={(id) => setSelected(toggleSelected(selected, id))}
+                  />
+                ))}
+              </ul>
+            </>
           )}
         </div>
       )}

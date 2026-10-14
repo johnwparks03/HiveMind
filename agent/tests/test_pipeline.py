@@ -156,3 +156,20 @@ def test_edge_case_folder_is_scanned(indexed_folder):
     folder_id, root = indexed_folder
     edge_rows = [r for r in _registry_rows(folder_id) if Path(r["path"]).parent.name == EDGE_CASE_FOLDER]
     assert len(edge_rows) == 3
+
+def test_removed_file_stays_on_disk_and_stays_out_after_rescan(indexed_folder):
+    from app.folders.scanner import exclude_files
+
+    folder_id, root = indexed_folder
+    target = next(root.rglob("Roadmap*.docx"))
+    row = next(r for r in _registry_rows(folder_id) if r["path"] == str(target))
+
+    assert exclude_files([row["file_id"]]) == 1
+
+    assert target.exists(), "removing from HiveMind must not delete the file"
+    assert all(r["file_id"] != row["file_id"] for r in _registry_rows(folder_id))
+    assert _chunks_for(row["file_id"]) == []
+
+    stats = scan_folder(folder_id, str(root))
+    assert stats["added"] == 0
+    assert all(r["path"] != str(target) for r in _registry_rows(folder_id))

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import BeeLogo from "./components/BeeLogo";
 import StatusIndicator from "./components/StatusIndicator";
 import AccountPage from "./pages/AccountPage";
 import FilesPage from "./pages/FilesPage";
@@ -48,7 +49,10 @@ export default function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <div className="brand">HiveMind</div>
+        <div className="brand">
+          <BeeLogo />
+          <span>HiveMind</span>
+        </div>
         <nav className="tabs" aria-label="Main">
           {TABS.map((t) => (
             <a

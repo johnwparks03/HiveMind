@@ -22,6 +22,25 @@ def add_folder(path: str) -> str:
     return folder_id
 
 
+def exclude_files(file_ids: list[str]) -> int:
+    """Removes files from HiveMind: drops their index entries and remembers their paths so
+    rescans skip them. Nothing is deleted from disk. Returns how many were removed."""
+    removed = 0
+    with session() as conn:
+        for file_id in file_ids:
+            row = conn.execute("SELECT path FROM files WHERE file_id = ?", (file_id,)).fetchone()
+            if not row:
+                continue
+            conn.execute(
+                "INSERT OR IGNORE INTO excluded_files (path, excluded_at) VALUES (?, ?)",
+                (row["path"], datetime.now(timezone.utc).isoformat()),
+            )
+            delete_file(file_id)
+            conn.execute("DELETE FROM files WHERE file_id = ?", (file_id,))
+            removed += 1
+    return removed
+
+
 def list_folders() -> list[dict]:
     with session() as conn:
         rows = conn.execute("SELECT * FROM folders ORDER BY added_at").fetchall()
@@ -60,8 +79,11 @@ def scan_folder(folder_id: str, path: str) -> dict:
             row["path"]: dict(row)
             for row in conn.execute("SELECT * FROM files WHERE folder_id = ?", (folder_id,)).fetchall()
         }
+        excluded = {row["path"] for row in conn.execute("SELECT path FROM excluded_files").fetchall()}
 
         for source_file in found:
+            if source_file.source_path in excluded:
+                continue  # removed from HiveMind by the user; leave it out until they add it back
             raw = source.get_file_bytes(source_file.source_path)
             new_hash = content_hash(raw)
             existing_row = existing.get(source_file.source_path)

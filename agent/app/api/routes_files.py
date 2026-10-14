@@ -1,11 +1,23 @@
 import os
 
 from fastapi import APIRouter
+from pydantic import BaseModel
 
 from app.db import session
 from app.errors import ApiError
+from app.folders.scanner import exclude_files
 
 router = APIRouter()
+
+
+class RemoveFiles(BaseModel):
+    file_ids: list[str]
+
+
+@router.post("/files/remove")
+def post_remove_files(body: RemoveFiles):
+    """Removes files from HiveMind only. They stay on disk, and rescans skip them."""
+    return {"removed": exclude_files(body.file_ids)}
 
 
 @router.get("/files")

@@ -31,6 +31,12 @@ CREATE TABLE IF NOT EXISTS files (
 );
 
 CREATE INDEX IF NOT EXISTS idx_files_folder ON files(folder_id);
+
+-- Files the user removed from HiveMind. They stay on disk, but rescans skip these paths.
+CREATE TABLE IF NOT EXISTS excluded_files (
+    path        TEXT PRIMARY KEY,
+    excluded_at TEXT NOT NULL
+);
 """
 
 

@@ -1,10 +1,21 @@
+import asyncio
+
 from fastapi import APIRouter
 from pydantic import BaseModel
 
 from app.errors import ApiError
+from app.folders import picker
 from app.folders.scanner import add_folder, list_folders, remove_folder, scan_folder
 
 router = APIRouter()
+
+
+@router.post("/folders/pick")
+async def post_pick_folder():
+    """Opens the Windows folder dialog. Runs off the event loop so other requests keep working
+    while it's open. Cancelling returns {"path": null}, not an error (API_Contract 2.3)."""
+    path = await asyncio.to_thread(picker.pick_folder)
+    return {"path": path}
 
 
 class AddFolderRequest(BaseModel):

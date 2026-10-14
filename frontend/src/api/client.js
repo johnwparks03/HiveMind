@@ -64,9 +64,14 @@ export const api = {
   listFolders: () => request("/folders").then((data) => data.folders),
   listFiles: () => request("/files").then((data) => data.files.map(normaliseFile)),
   addFolder: (path) => request("/folders", { method: "POST", body: JSON.stringify({ path }) }),
+  // Opens the Windows folder dialog on the laptop. Resolves to the chosen path, or null on cancel.
+  pickFolder: () => request("/folders/pick", { method: "POST" }).then((data) => data.path),
   rescanFolder: (folderId) => request(`/folders/${folderId}/rescan`, { method: "POST" }),
   removeFolder: (folderId) => request(`/folders/${folderId}`, { method: "DELETE" }),
   openFile: (fileId) => request(`/files/${fileId}/open`, { method: "POST" }),
+  // Removes files from HiveMind only. They stay on disk, and rescans won't add them back.
+  removeFiles: (fileIds) =>
+    request("/files/remove", { method: "POST", body: JSON.stringify({ file_ids: fileIds }) }),
   ping: () => request("/folders").then(() => true).catch(() => false),
   // Sign-in goes through the agent, which talks to Cognito. The frontend never sees Cognito tokens.
   logIn: (email, password) =>

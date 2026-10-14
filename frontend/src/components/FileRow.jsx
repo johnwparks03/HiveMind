@@ -7,9 +7,16 @@ const STATE_LABEL = {
   failed: "Failed",
 };
 
-export default function FileRow({ file }) {
+export default function FileRow({ file, selected, onToggle }) {
   return (
-    <li className="file-row">
+    <li className={`file-row${selected ? " is-selected" : ""}`}>
+      <input
+        type="checkbox"
+        className="file-check"
+        checked={selected}
+        onChange={() => onToggle(file.file_id)}
+        aria-label={`Select ${file.filename}`}
+      />
       <div className="file-main">
         <div className="file-line">
           <span className="file-name" title={file.path}>{file.filename}</span>

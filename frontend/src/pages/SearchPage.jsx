@@ -1,6 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { api, isAgentUnreachable } from "../api/client";
+import Loading, { Spinner } from "../components/Loading";
 import ResultCard from "../components/ResultCard";
 import SearchIllustration from "../components/SearchIllustration";
 import { interpretedCaption } from "../lib/files";
@@ -127,6 +128,8 @@ export default function SearchPage() {
               : `Search failed: ${search.error.message}`}
           </div>
         )}
+
+        {search.isPending && <Loading label="Searching your files…" />}
 
         {!search.isPending && !results && !search.isError && (
           <div className="examples">

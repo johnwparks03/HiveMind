@@ -226,6 +226,59 @@ class HiveMindStack(Stack):
             environment={k: config[k] for k in ("BEDROCK_MODEL_ID", "EXCERPT_MAX_CHARS")},
             timeout=Duration.seconds(25),
         )
+        # ── Relay WebSocket (E4-S1) ──────────────────────────────────────────
+        # The authorizer is outside the VPC for the same reason as llm_fn: it must fetch
+        # Cognito's JWKS over the internet. It needs no DB, so it gets a basic role only.
+        auth_layer = lambda_.LayerVersion(self, "AuthLayer",
+            code=lambda_.Code.from_asset(os.path.join(os.path.dirname(__file__), "auth_layer")),
+            compatible_runtimes=[lambda_.Runtime.PYTHON_3_12],
+            description="PyJWT + cryptography for the WebSocket authorizer (manylinux)",
+        )
+        ws_authorizer_role = iam.Role(self, "WsAuthorizerRole",
+            assumed_by=iam.ServicePrincipal("lambda.amazonaws.com"),
+            managed_policies=[
+                iam.ManagedPolicy.from_aws_managed_policy_name(
+                    "service-role/AWSLambdaBasicExecutionRole"
+                ),
+            ],
+        )
+        ws_authorizer_fn = lambda_.Function(self, "WsAuthorizerFn",
+            runtime=lambda_.Runtime.PYTHON_3_12,
+            handler="ws_authorizer.handler",
+            code=lambda_.Code.from_asset(lambdas_dir),
+            role=ws_authorizer_role,
+            layers=[auth_layer],
+            environment={
+                "USER_POOL_ID": user_pool.user_pool_id,
+                "USER_POOL_CLIENT_ID": user_pool_client.user_pool_client_id,
+            },
+            timeout=Duration.seconds(10),
+        )
+        relay_fn = vpc_function("RelayFn", "relay.handler", timeout=10)
+
+        ws_api = apigwv2.WebSocketApi(self, "RelayWsApi",
+            route_selection_expression="$request.body.action",
+        )
+        ws_api.add_route("$connect",
+            integration=apigwv2_integrations.WebSocketLambdaIntegration("WsConnectIntegration", relay_fn),
+            # Agents are not browsers, so the token travels in the Authorization header
+            # rather than a query string that would end up in URLs and logs.
+            authorizer=apigwv2_auth.WebSocketLambdaAuthorizer(
+                "WsJwtAuthorizer", ws_authorizer_fn,
+                identity_source=["route.request.header.Authorization"],
+            ),
+        )
+        ws_api.add_route("$disconnect",
+            integration=apigwv2_integrations.WebSocketLambdaIntegration("WsDisconnectIntegration", relay_fn),
+        )
+        ws_api.add_route("ping",
+            integration=apigwv2_integrations.WebSocketLambdaIntegration("WsPingIntegration", relay_fn),
+            return_response=True,  # the handler's body is sent back to the client as the pong
+        )
+        ws_stage = apigwv2.WebSocketStage(self, "RelayWsStage",
+            web_socket_api=ws_api, stage_name="dev", auto_deploy=True,
+        )
+
         # Runs migrate_fn on every deploy where its code changed. Idempotent
         # (applies each migrations/*.sql once); a failure fails the deploy.
         triggers.Trigger(self, "RunMigrations",
@@ -304,6 +357,8 @@ class HiveMindStack(Stack):
         # ── Outputs ──────────────────────────────────────────────────────────
         cdk.CfnOutput(self, "HttpApiUrl", value=http_api.api_endpoint,
                        description="Central HTTP API base URL — put in agent config")
+        cdk.CfnOutput(self, "WebSocketUrl", value=ws_stage.url,
+                       description="Relay WebSocket URL (wss) — put in agent config")
         cdk.CfnOutput(self, "UserPoolId", value=user_pool.user_pool_id,
                        description="Cognito User Pool ID — put in agent config")
         cdk.CfnOutput(self, "UserPoolClientId", value=user_pool_client.user_pool_client_id,

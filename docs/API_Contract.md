@@ -459,7 +459,7 @@ The presigned GET URL is issued at the moment the requester polls and sees `read
 **Connect**
 
 - The agent connects after login and reconnects automatically on drop.
-- A Lambda authorizer validates the Cognito JWT on `$connect`. The mechanism for passing the token (query string or `Authorization` header) must be verified; the agent is not a browser, so a header may work.
+- A Lambda authorizer validates the Cognito **access** token on `$connect`. The agent sends it as `Authorization: Bearer <token>` (header, not query string, so it stays out of URLs and logs). A missing, invalid, expired or ID token is rejected at the handshake (401/403). Verified on the deployed API (E4-S1): missing token returns 401, invalid token or ID token returns 403.
 - On connect the server stores `connection_id`, `user_id`, `connected_at`. On disconnect it removes the row.
 - A user with no team can still connect.
 
@@ -561,7 +561,7 @@ Acknowledgment, completion, and failure go over HTTP, not the WebSocket, so they
 2. **Opening a downloaded file** (`POST /transfers/{id}/open`) is my addition and not confirmed.
 3. **Header name, port, and token type.** I used `X-HiveMind-Token`. I don't know which Cognito token (access or ID) your JWT authorizer will accept, and the port is undecided.
 4. **Pagination.** Cursors on `GET /files` and `GET /files/mine` could be dropped for demo-size data.
-5. **WebSocket token passing** needs verifying against API Gateway's authorizer options.
+5. **WebSocket token passing: resolved.** The `Authorization` header works on `$connect` (verified in E4-S1). Still to confirm: the idle timeout (documented 10 min) and max connection duration (documented 2 h), which set the agent's ping interval and require a reconnect after 2 h.
 6. **Team-removal notification.** Nothing is pushed over the WebSocket when a user leaves a team. The agent learns through its own `POST /team/leave` call, or through reconciliation if the change happens another way.
 7. **Presigned PUT headers.** Whether the signed URL requires a specific `Content-Type` or `Content-Length` depends on how the server generates it. Check this during the relay prototype.
 8. **Tag edits on private files.** Setting tags before publishing now means those tags are used as-is (see settled item 3). I haven't checked whether you want the UI to make that clear.

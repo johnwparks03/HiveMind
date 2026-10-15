@@ -60,7 +60,15 @@ def _converse(system_prompt: str, user_text: str, max_tokens: int) -> str:
             messages=[{"role": "user", "content": [{"text": user_text}]}],
             inferenceConfig={"maxTokens": max_tokens},  # Sonnet 5.5 rejects `temperature`
         )
-        return response["output"]["message"]["content"][0]["text"].strip()
+        # The reply isn't always content[0] — verified live 2026-10-15: Sonnet 5.5 can
+        # return a `reasoningContent` block before the actual `text` block, so indexing
+        # content[0] directly raised KeyError on a real (non-mocked) call. Find the text
+        # block by key instead of assuming its position.
+        blocks = response["output"]["message"]["content"]
+        text = next((b["text"] for b in blocks if "text" in b), None)
+        if text is None:
+            raise BedrockUnavailable()
+        return text.strip()
     except ApiError:
         raise
     except Exception as exc:  # noqa: BLE001

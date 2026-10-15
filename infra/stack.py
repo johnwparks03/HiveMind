@@ -37,6 +37,7 @@ class HiveMindStack(Stack):
             "PUBLISH_CONCURRENCY": "5",
             "BEDROCK_MODEL_ID": "us.anthropic.claude-sonnet-5-5",
             "TRANSFER_ACK_TIMEOUT_SECONDS": "60",
+            "TRANSFER_UPLOAD_TIMEOUT_SECONDS": "600",
             "SWEEPER_MAX_AGE_MINUTES": "15",
             "UPLOAD_URL_EXPIRY_SECONDS": "600",
             "DOWNLOAD_URL_EXPIRY_SECONDS": "300",

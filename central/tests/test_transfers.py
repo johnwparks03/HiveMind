@@ -208,7 +208,11 @@ def test_all_connections_gone_fails_the_transfer_and_returns_owner_offline(db, e
     assert [p[-1] for p in _log_rows(cur)] == ["requested", "owner_offline"]
 
 
-def test_send_error_is_503_logs_no_urls_and_fails_the_transfer(db, env, monkeypatch, capsys):
+FAIL_UNSENT = "WHERE transfer_id = %s AND status = 'requested'"
+
+
+def test_an_unclear_send_keeps_the_transfer_requested_and_returns_202(db, env, monkeypatch, capsys):
+    """The owner may have received the message before the error, so the transfer must not be failed."""
     cur = db(_request_answers())
 
     def boom(user_id, message):
@@ -216,9 +220,40 @@ def test_send_error_is_503_logs_no_urls_and_fails_the_transfer(db, env, monkeypa
 
     monkeypatch.setattr(transfers.relay, "send_to_user", boom)
     resp = call("POST /transfers", {"file_id": FILE_ID})
+    assert resp["statusCode"] == 202 and json.loads(resp["body"])["status"] == "requested"
+    assert not [s for s, _ in cur.ran("UPDATE transfers") if FAIL_UNSENT in s]
+    assert [p[-1] for p in _log_rows(cur)] == ["requested", "send_unconfirmed"]
+    out = capsys.readouterr().out
+    assert "transfer notify error: RuntimeError" in out and "https://" not in out
+
+
+def test_a_presign_failure_means_nothing_was_sent_so_the_transfer_fails_with_503(db, env, monkeypatch, capsys):
+    sent, _ = env
+    cur = db(_request_answers())
+
+    def boom(key):
+        raise RuntimeError(f"secret {key}")
+
+    monkeypatch.setattr(transfers.transit, "presign_put", boom)
+    resp = call("POST /transfers", {"file_id": FILE_ID})
     assert resp["statusCode"] == 503 and code(resp) == "service_unavailable"
+    assert [s for s, _ in cur.ran("UPDATE transfers") if FAIL_UNSENT in s] and not sent
     assert [p[-1] for p in _log_rows(cur)] == ["requested", "send_failed"]
-    assert "https://" not in capsys.readouterr().out
+    assert "secret" not in capsys.readouterr().out
+
+
+def test_both_timeouts_are_applied_on_create_get_and_owner_routes(db, env):
+    for run in (lambda: call("POST /transfers", {"file_id": FILE_ID}),
+                lambda: _get(None)[0],
+                lambda: _owner("ack", db)):
+        cur = db({**_request_answers(), "SELECT file_id, status": [(FILE_ID, "uploading", TRANSFER_ID, None)],
+                  "RETURNING 1": [(1,)]})
+        run()
+        order = [s for s, _ in cur.executed]
+        unacked = next(i for i, s in enumerate(order) if "owner_unresponsive" in s)
+        stalled = next(i for i, s in enumerate(order) if "error_code = 'upload_failed'" in s)
+        assert unacked < stalled
+        assert cur.ran("error_code = 'upload_failed'")[0][1][0] == 600  # TRANSFER_UPLOAD_TIMEOUT_SECONDS
 
 
 # ── GET /transfers/{id} ──────────────────────────────────────────────────────

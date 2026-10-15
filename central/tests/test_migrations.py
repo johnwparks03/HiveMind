@@ -105,3 +105,10 @@ def test_0004_adds_swept_at_and_the_sweeper_index():
     sql = _sql("0004_transfer_sweeper.sql")
     assert "ALTER TABLE transfers ADD COLUMN swept_at timestamptz" in sql
     assert re.search(r"CREATE INDEX idx_transfers_unswept ON transfers \(created_at\)\s+WHERE swept_at IS NULL", sql)
+
+
+def test_in_flight_statuses_are_defined_once_and_match_the_index_predicate():
+    from common.transfer_state import IN_FLIGHT
+
+    predicate = re.search(r"WHERE status IN (\([^)]*\))", _sql("0003_transfers_api.sql")).group(1)
+    assert predicate == IN_FLIGHT

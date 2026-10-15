@@ -2,7 +2,6 @@
 routeKey. The requester and owner come from the token and the team from membership, never
 from input. Each route opens its own transactions: POST /transfers commits the row before it
 notifies the owner, so the owner can never ack a transfer that is not yet visible."""
-import os
 import uuid
 
 from common import db, relay, transit
@@ -10,14 +9,11 @@ from common.access_log import log_event
 from common.auth import get_caller_sub
 from common.errors import ApiError, Unauthorized, error_response, unauthorized_response
 from common.http import get_membership, invalid_request, iso, json_response, parse_body
+from common.transfer_state import ack_timeout_seconds, expire_unacked as _expire_unacked
 
 IN_FLIGHT = "('requested', 'uploading', 'ready')"
 FAIL_ERROR_CODES = {"file_not_found": "file_unavailable", "not_public": "file_unavailable",
                     "upload_error": "upload_failed"}
-
-
-def ack_timeout_seconds():
-    return int(os.environ.get("TRANSFER_ACK_TIMEOUT_SECONDS", "60"))
 
 
 def _uuid_or_none(raw):
@@ -32,15 +28,6 @@ def _transfer_id(event):
     if transfer_id is None:
         raise invalid_request("transfer_id")
     return transfer_id
-
-
-def _expire_unacked(cur, where, params):
-    """Lazily apply the ack timeout (the sweeper does it too): a transfer still `requested`
-    after TRANSFER_ACK_TIMEOUT_SECONDS has failed."""
-    cur.execute(
-        "UPDATE transfers SET status = 'failed', error_code = 'owner_unresponsive', updated_at = now() "
-        f"WHERE status = 'requested' AND created_at < now() - make_interval(secs => %s) AND {where}",
-        (ack_timeout_seconds(), *params))
 
 
 def _accepted(transfer_id, status):

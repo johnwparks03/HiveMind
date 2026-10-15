@@ -7,6 +7,8 @@ from aws_cdk import (
     RemovalPolicy,
     aws_cognito as cognito,
     aws_ec2 as ec2,
+    aws_events as events,
+    aws_events_targets as targets,
     aws_iam as iam,
     aws_lambda as lambda_,
     aws_apigatewayv2 as apigwv2,
@@ -316,6 +318,21 @@ class HiveMindStack(Stack):
         notify_fn.grant_invoke(lambda_role)
         transfers_fn = vpc_function("TransfersFn", "transfers.handler")
         transfers_fn.add_environment("NOTIFY_FUNCTION_NAME", notify_fn.function_name)
+
+        # ── Transfer sweeper (E4-S5) ─────────────────────────────────────────
+        # Needs the DB, so it lives in the VPC, and the VPC has no NAT: a free S3 gateway
+        # endpoint lets it delete transit objects. lambda_role already has bucket read/write.
+        vpc.add_gateway_endpoint("S3Endpoint",
+            service=ec2.GatewayVpcEndpointAwsService.S3,
+            subnets=[ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_ISOLATED)],
+        )
+        sweeper_fn = vpc_function("SweeperFn", "sweeper.handler", timeout=60)
+        events.Rule(self, "SweeperSchedule",
+            schedule=events.Schedule.rate(Duration.minutes(1)),
+            targets=[targets.LambdaFunction(sweeper_fn)],
+        )
+        cdk.CfnOutput(self, "SweeperFunctionName", value=sweeper_fn.function_name,
+                       description="Transfer sweeper Lambda (integration tests invoke it directly)")
 
         # Runs migrate_fn on every deploy where its code changed. Idempotent
         # (applies each migrations/*.sql once); a failure fails the deploy.

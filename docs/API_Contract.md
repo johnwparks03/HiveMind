@@ -452,7 +452,7 @@ The presigned GET URL is issued at the moment the requester polls and sees `read
 
 - Upload: the owner's agent streams the file with `PUT` to the `upload_url`. No auth header. Only the bucket and key are signed, so any (or no) `Content-Type` and `Content-Length` is accepted.
 - Download: the requester's agent issues `GET` on `download_url`. No auth header.
-- Object key is the transfer ID. The sweeper deletes the object after 15 minutes.
+- Object key is the transfer ID. The sweeper deletes the object once the transfer is 15 minutes old (counted from `POST /transfers`, not from the upload), so an object lives at most about 16 minutes. The transfer then reports `expired` and no `download_url`; the requester may start a new transfer for the same file.
 
 ---
 
@@ -527,7 +527,7 @@ Acknowledgment, completion, and failure go over HTTP, not the WebSocket, so they
 
 **Scheduled jobs (not part of any API)**
 
-- Transfer sweeper, every minute: deletes S3 objects older than 15 minutes, marks stale transfers `expired`, and marks transfers with no acknowledgment after 60 seconds `failed`.
+- Transfer sweeper, every minute: deletes the S3 object of every transfer more than 15 minutes old and marks it `expired` (a transfer already `failed` keeps that status), and marks transfers with no acknowledgment after 60 seconds `failed` / `owner_unresponsive`. Repeated runs change nothing further.
 - Nightly purge: deletes expired `public_files` rows, expired invites, and stale `connections` rows.
 
 ---

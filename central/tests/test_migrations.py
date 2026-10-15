@@ -99,3 +99,9 @@ def test_0003_adds_transfer_api_columns_and_the_in_flight_index():
     assert re.search(r"CREATE UNIQUE INDEX uq_transfers_in_flight ON transfers \(file_id, requester_id\)\s+"
                      r"WHERE status IN \('requested', 'uploading', 'ready'\)", sql)
     assert "ALTER TABLE access_log ADD COLUMN transfer_id uuid, ADD COLUMN outcome text" in sql
+
+
+def test_0004_adds_swept_at_and_the_sweeper_index():
+    sql = _sql("0004_transfer_sweeper.sql")
+    assert "ALTER TABLE transfers ADD COLUMN swept_at timestamptz" in sql
+    assert re.search(r"CREATE INDEX idx_transfers_unswept ON transfers \(created_at\)\s+WHERE swept_at IS NULL", sql)

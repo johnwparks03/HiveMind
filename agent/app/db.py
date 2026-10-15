@@ -37,6 +37,26 @@ CREATE TABLE IF NOT EXISTS excluded_files (
     path        TEXT PRIMARY KEY,
     excluded_at TEXT NOT NULL
 );
+
+-- Saved Ask conversations. Local to this computer; only the question and the excerpts
+-- needed for an answer leave it (the Bedrock call), never the chat history itself.
+CREATE TABLE IF NOT EXISTS chats (
+    chat_id    TEXT PRIMARY KEY,
+    title      TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS chat_messages (
+    message_id TEXT PRIMARY KEY,
+    chat_id    TEXT NOT NULL REFERENCES chats(chat_id) ON DELETE CASCADE,
+    role       TEXT NOT NULL CHECK (role IN ('user', 'assistant')),
+    content    TEXT NOT NULL,
+    sources    TEXT,              -- JSON list of {file_id, filename}; null for user messages
+    created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_chat_messages_chat ON chat_messages(chat_id);
 """
 
 

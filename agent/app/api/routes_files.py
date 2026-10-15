@@ -5,6 +5,7 @@ from pathlib import Path
 from fastapi import APIRouter
 from pydantic import BaseModel
 
+from app.central import publish, teams
 from app.config import TAG_EXCERPT_MAX_CHARS
 from app.db import session
 from app.errors import ApiError
@@ -20,6 +21,16 @@ class RemoveFiles(BaseModel):
     file_ids: list[str]
 
 
+class SetTagsRequest(BaseModel):
+    tags: list[str]
+
+
+def _get_file(file_id: str) -> dict | None:
+    with session() as conn:
+        row = conn.execute("SELECT * FROM files WHERE file_id = ?", (file_id,)).fetchone()
+    return dict(row) if row else None
+
+
 @router.post("/files/remove")
 def post_remove_files(body: RemoveFiles):
     """Removes files from HiveMind only. They stay on disk, and rescans skip them."""
@@ -31,6 +42,57 @@ def get_files():
     with session() as conn:
         rows = conn.execute("SELECT * FROM files ORDER BY file_modified_at DESC").fetchall()
         return {"files": [dict(r) for r in rows]}
+
+
+@router.put("/files/{file_id}/tags")
+def put_file_tags(file_id: str, body: SetTagsRequest):
+    """User-edited tags are used as-is (central's publish flow never regenerates
+    them once set). If the file is already public, queues a metadata re-sync —
+    this never extends expires_at, only POST /files/{id}/confirm does that."""
+    file = _get_file(file_id)
+    if not file:
+        raise ApiError(404, "not_found", "file not found")
+    with session() as conn:
+        conn.execute("UPDATE files SET tags = ? WHERE file_id = ?", (json.dumps(body.tags), file_id))
+    if file["public_state"] == "public":
+        publish.enqueue(file_id, "publish")
+    return _get_file(file_id)
+
+
+@router.post("/files/{file_id}/publish", status_code=202)
+def post_publish_file(file_id: str):
+    if teams.current_team_or_none() is None:
+        raise ApiError(403, "no_team", "join a team before publishing")
+    file = _get_file(file_id)
+    if not file:
+        raise ApiError(404, "not_found", "file not found")
+    if file["index_status"] != "indexed":
+        raise ApiError(409, "file_unavailable", "file is not indexed")
+    with session() as conn:
+        conn.execute("UPDATE files SET publish_state = 'pending' WHERE file_id = ?", (file_id,))
+    publish.enqueue(file_id, "publish")
+    return _get_file(file_id)
+
+
+@router.post("/files/{file_id}/unpublish", status_code=202)
+def post_unpublish_file(file_id: str):
+    file = _get_file(file_id)
+    if not file:
+        raise ApiError(404, "not_found", "file not found")
+    with session() as conn:
+        conn.execute("UPDATE files SET publish_state = 'pending' WHERE file_id = ?", (file_id,))
+    publish.enqueue(file_id, "unpublish")
+    return _get_file(file_id)
+
+
+@router.post("/files/{file_id}/retry", status_code=202)
+def post_retry_publish(file_id: str):
+    """Re-queues a file whose last publish/unpublish attempt failed."""
+    if not publish.retry(file_id):
+        raise ApiError(409, "conflict", "nothing to retry for this file")
+    with session() as conn:
+        conn.execute("UPDATE files SET publish_state = 'pending' WHERE file_id = ?", (file_id,))
+    return _get_file(file_id)
 
 
 @router.post("/files/{file_id}/tags/generate")

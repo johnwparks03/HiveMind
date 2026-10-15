@@ -28,21 +28,28 @@ test("normaliseFile keeps contract names when they are already present", () => {
   assert.equal(file.failure_reason, null);
 });
 
+test("normaliseFile parses the tags JSON string column into a real array", () => {
+  assert.deepEqual(normaliseFile({ tags: '["budget", "q4"]' }).tags, ["budget", "q4"]);
+  assert.deepEqual(normaliseFile({ tags: null }).tags, []);
+  assert.deepEqual(normaliseFile({ tags: "not json" }).tags, []);
+  assert.deepEqual(normaliseFile({ tags: ["already", "an", "array"] }).tags, ["already", "an", "array"]);
+});
+
 test("countsByFolder groups files by folder and buckets them by state", () => {
   const files = [
-    { folder_id: "f1", index_state: "indexed" },
+    { folder_id: "f1", index_state: "indexed", public_state: "public" },
     { folder_id: "f1", index_state: "indexed" },
     { folder_id: "f1", index_state: "pending" },
     { folder_id: "f1", index_state: "failed" },
     { folder_id: "f2", index_state: "pending" },
   ];
   const counts = countsByFolder(files);
-  assert.deepEqual(countsFor(counts, "f1"), { total: 4, indexed: 2, pending: 1, failed: 1 });
-  assert.deepEqual(countsFor(counts, "f2"), { total: 1, indexed: 0, pending: 1, failed: 0 });
+  assert.deepEqual(countsFor(counts, "f1"), { total: 4, indexed: 2, pending: 1, failed: 1, public: 1 });
+  assert.deepEqual(countsFor(counts, "f2"), { total: 1, indexed: 0, pending: 1, failed: 0, public: 0 });
 });
 
 test("countsFor returns zeros for a folder with no files yet", () => {
-  assert.deepEqual(countsFor({}, "missing"), { total: 0, indexed: 0, pending: 0, failed: 0 });
+  assert.deepEqual(countsFor({}, "missing"), { total: 0, indexed: 0, pending: 0, failed: 0, public: 0 });
 });
 
 test("hasPendingWork is true only while a file is still pending", () => {

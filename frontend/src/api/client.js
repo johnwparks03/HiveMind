@@ -78,6 +78,15 @@ export const api = {
   removeFiles: (fileIds) =>
     request("/files/remove", { method: "POST", body: JSON.stringify({ file_ids: fileIds }) }),
   ping: () => request("/folders").then(() => true).catch(() => false),
+  // Publish/share a file or folder with the team (docs/stories BACKLOG.md E3-S4/S5/S6).
+  setTags: (fileId, tags) =>
+    request(`/files/${fileId}/tags`, { method: "PUT", body: JSON.stringify({ tags }) }).then(normaliseFile),
+  publishFile: (fileId) => request(`/files/${fileId}/publish`, { method: "POST" }).then(normaliseFile),
+  unpublishFile: (fileId) => request(`/files/${fileId}/unpublish`, { method: "POST" }).then(normaliseFile),
+  retryPublish: (fileId) => request(`/files/${fileId}/retry`, { method: "POST" }).then(normaliseFile),
+  sharePreview: (folderId) => request(`/folders/${folderId}/share-preview`).then((data) => data.file_count),
+  shareFolder: (folderId) => request(`/folders/${folderId}/share`, { method: "POST" }).then((data) => data.queued),
+  unshareFolder: (folderId) => request(`/folders/${folderId}/unshare`, { method: "POST" }).then((data) => data.queued),
   // Sign-in goes through the agent, which talks to Cognito. The frontend never sees Cognito tokens.
   logIn: (email, password) =>
     request("/auth/login", { method: "POST", body: JSON.stringify({ email, password }) }),

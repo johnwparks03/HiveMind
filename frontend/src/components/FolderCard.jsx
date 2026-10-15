@@ -1,6 +1,6 @@
 import { folderName } from "../lib/files";
 
-export default function FolderCard({ folder, counts, selected, onSelect, onRescan, onRemove, busy }) {
+export default function FolderCard({ folder, counts, selected, onSelect, onRescan, onRemove, onShare, onUnshare, busy }) {
   const percent = counts.total === 0 ? 0 : Math.round((counts.indexed / counts.total) * 100);
   const name = folderName(folder.path);
 
@@ -31,12 +31,26 @@ export default function FolderCard({ folder, counts, selected, onSelect, onResca
         <span className="progress-fill" style={{ width: `${percent}%` }} />
       </div>
 
+      {counts.public > 0 && (
+        <p className="folder-progress folder-public-progress" aria-label={`${counts.public} of ${counts.total} files shared with your team`}>
+          <strong>{counts.public}</strong> of {counts.total} public
+        </p>
+      )}
+
       <div className="folder-foot">
         <span className="folder-stats">
           {counts.pending > 0 && <span className="stat stat-pending">{counts.pending} pending</span>}
           {counts.failed > 0 && <span className="stat stat-failed">{counts.failed} failed</span>}
         </span>
         <div className="folder-actions">
+          <button type="button" className="btn btn-ghost btn-sm" onClick={onShare} disabled={busy}>
+            Share with team
+          </button>
+          {counts.public > 0 && (
+            <button type="button" className="btn btn-ghost btn-sm" onClick={onUnshare} disabled={busy}>
+              Unshare
+            </button>
+          )}
           <button type="button" className="btn btn-ghost btn-sm" onClick={onRescan} disabled={busy}>
             Rescan
           </button>

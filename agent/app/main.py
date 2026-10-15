@@ -15,6 +15,7 @@ from app.api import (
 )
 from app.auth import session
 from app.auth.security import token_matches
+from app.central import publish
 from app.config import FRONTEND_ORIGIN, HOST, PORT
 from app.db import init_db
 from app.errors import envelope, install_error_handlers
@@ -24,7 +25,11 @@ from app.errors import envelope, install_error_handlers
 async def lifespan(_: FastAPI):
     init_db()
     session.restore_from_keychain()  # silent sign-in if a refresh token is stored
-    yield
+    publish.start()
+    try:
+        yield
+    finally:
+        publish.stop()
 
 
 app = FastAPI(title="HiveMind Local Agent", lifespan=lifespan)

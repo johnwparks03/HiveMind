@@ -37,6 +37,18 @@ CREATE TABLE IF NOT EXISTS excluded_files (
     path        TEXT PRIMARY KEY,
     excluded_at TEXT NOT NULL
 );
+
+-- Durable publish/unpublish queue (agent/app/central/publish.py). One row per
+-- file_id: a repeat enqueue with a new intent overwrites the row ("latest intent
+-- wins" instead of queuing contradictory work), and survives an agent restart
+-- mid-publish.
+CREATE TABLE IF NOT EXISTS publish_queue (
+    file_id         TEXT PRIMARY KEY REFERENCES files(file_id),
+    intent          TEXT NOT NULL CHECK (intent IN ('publish', 'unpublish')),
+    attempts        INTEGER NOT NULL DEFAULT 0,
+    next_attempt_at TEXT NOT NULL,
+    last_error      TEXT
+);
 """
 
 

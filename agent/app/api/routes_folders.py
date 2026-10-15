@@ -3,11 +3,20 @@ import asyncio
 from fastapi import APIRouter
 from pydantic import BaseModel
 
+from app.central import teams
+from app.db import session
 from app.errors import ApiError
-from app.folders import picker
+from app.folders import picker, share
 from app.folders.scanner import add_folder, list_folders, remove_folder, scan_folder
 
 router = APIRouter()
+
+
+def _folder_exists(folder_id: str) -> bool:
+    with session() as conn:
+        return conn.execute(
+            "SELECT 1 FROM folders WHERE folder_id = ?", (folder_id,)
+        ).fetchone() is not None
 
 
 @router.post("/folders/pick")
@@ -51,10 +60,32 @@ def delete_folder(folder_id: str):
 
 @router.post("/folders/{folder_id}/rescan")
 def post_rescan(folder_id: str):
-    from app.db import session
     with session() as conn:
         row = conn.execute("SELECT path FROM folders WHERE folder_id = ?", (folder_id,)).fetchone()
     if not row:
         raise ApiError(404, "not_found", "folder not found")
     stats = scan_folder(folder_id, row["path"])
     return {"stats": stats}
+
+
+@router.get("/folders/{folder_id}/share-preview")
+def get_share_preview(folder_id: str):
+    if not _folder_exists(folder_id):
+        raise ApiError(404, "not_found", "folder not found")
+    return {"file_count": share.share_preview(folder_id)}
+
+
+@router.post("/folders/{folder_id}/share", status_code=202)
+def post_share_folder(folder_id: str):
+    if not _folder_exists(folder_id):
+        raise ApiError(404, "not_found", "folder not found")
+    if teams.current_team_or_none() is None:
+        raise ApiError(403, "no_team", "join a team before sharing")
+    return {"queued": share.share_folder(folder_id)}
+
+
+@router.post("/folders/{folder_id}/unshare", status_code=202)
+def post_unshare_folder(folder_id: str):
+    if not _folder_exists(folder_id):
+        raise ApiError(404, "not_found", "folder not found")
+    return {"queued": share.unshare_folder(folder_id)}

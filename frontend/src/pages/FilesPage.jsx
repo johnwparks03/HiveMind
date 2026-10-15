@@ -75,6 +75,33 @@ export default function FilesPage() {
     },
   });
 
+  const sharePreview = useMutation({ mutationFn: (id) => api.sharePreview(id) });
+  const shareFolder = useMutation({ mutationFn: (id) => api.shareFolder(id), onSuccess: refresh });
+  const unshareFolder = useMutation({ mutationFn: (id) => api.unshareFolder(id), onSuccess: refresh });
+
+  async function handleShare(folder) {
+    let count;
+    try {
+      count = await sharePreview.mutateAsync(folder.folder_id);
+    } catch {
+      window.alert("Couldn't check what's eligible to share. Try again in a moment.");
+      return;
+    }
+    if (count === 0) {
+      window.alert("Nothing new to share — every indexed file here is already public.");
+      return;
+    }
+    if (window.confirm(`Share ${count} file${count === 1 ? "" : "s"} with your team?`)) {
+      shareFolder.mutate(folder.folder_id);
+    }
+  }
+
+  function handleUnshare(folder) {
+    if (window.confirm(`Make all shared files in ${folderName(folder.path)} private again?`)) {
+      unshareFolder.mutate(folder.folder_id);
+    }
+  }
+
   const folderList = folders.data ?? [];
   const fileList = files.data ?? [];
   const counts = countsByFolder(fileList);
@@ -149,7 +176,9 @@ export default function FilesPage() {
                 onSelect={() => setFolderId(folderId === folder.folder_id ? null : folder.folder_id)}
                 onRescan={() => rescan.mutate(folder.folder_id)}
                 onRemove={() => handleRemove(folder)}
-                busy={rescan.isPending || removeFolder.isPending}
+                onShare={() => handleShare(folder)}
+                onUnshare={() => handleUnshare(folder)}
+                busy={rescan.isPending || removeFolder.isPending || sharePreview.isPending || shareFolder.isPending || unshareFolder.isPending}
               />
             </li>
           ))}

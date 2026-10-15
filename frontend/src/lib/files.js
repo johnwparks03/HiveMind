@@ -3,17 +3,29 @@
 
 // The agent's SQLite column is `index_status` and `index_failure_reason`; API_Contract.md
 // calls them `index_state` and `failure_reason`. Normalise to the contract names here.
+// `tags` is stored as a JSON string column too, but the contract says it's an array.
 export function normaliseFile(raw) {
+  let tags = raw.tags;
+  if (typeof tags === "string") {
+    try {
+      tags = JSON.parse(tags);
+    } catch {
+      tags = [];
+    }
+  }
   return {
     ...raw,
     index_state: raw.index_state ?? raw.index_status ?? "pending",
     failure_reason: raw.failure_reason ?? raw.index_failure_reason ?? null,
+    tags: Array.isArray(tags) ? tags : [],
   };
 }
 
-const EMPTY_COUNTS = { total: 0, indexed: 0, pending: 0, failed: 0 };
+const EMPTY_COUNTS = { total: 0, indexed: 0, pending: 0, failed: 0, public: 0 };
 
 // The agent's folder object has no counts yet, so derive them from the file list.
+// `public` is orthogonal to the indexed/pending/failed index-state bucket — a file
+// is counted in exactly one of those three, and separately counted as public or not.
 export function countsByFolder(files) {
   const counts = {};
   for (const file of files) {
@@ -22,6 +34,7 @@ export function countsByFolder(files) {
     if (file.index_state === "indexed") c.indexed += 1;
     else if (file.index_state === "failed") c.failed += 1;
     else c.pending += 1;
+    if (file.public_state === "public") c.public += 1;
   }
   return counts;
 }

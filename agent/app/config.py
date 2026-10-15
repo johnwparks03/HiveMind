@@ -39,6 +39,16 @@ KEYRING_SERVICE = "HiveMind"
 # refresh tokens are split into chunks of this many characters.
 KEYRING_CHUNK_CHARS = 1000
 
+# Publish queue (agent/app/central/publish.py). A durable SQLite queue, not an
+# in-memory one, so a crash mid-publish doesn't lose the intent.
+PUBLISH_CONCURRENCY = 5
+PUBLISH_MAX_ATTEMPTS = 5
+PUBLISH_BACKOFF_BASE_SECONDS = 2
+PUBLISH_WORKER_POLL_SECONDS = 2
+# How often the queue reconciles local publish_state against GET /files/mine, to
+# catch a crash mid-publish or a file deleted/moved locally that's still public.
+PUBLISH_RECONCILE_INTERVAL_SECONDS = 300
+
 # Embedding / chunking
 EMBEDDING_MODEL = "all-MiniLM-L6-v2"
 CHUNK_SIZE_CHARS = 800

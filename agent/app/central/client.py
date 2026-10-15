@@ -37,6 +37,27 @@ def request(method: str, path: str, **kwargs) -> httpx.Response:
     return resp
 
 
+def request_json(method: str, path: str, **kwargs) -> dict | None:
+    """Calls central and returns the parsed JSON body (None for 204). A non-2xx
+    central error envelope is re-raised one to one; anything unparseable is a 503.
+    Promoted from teams.py's original private `_call` so every central-calling
+    module (teams, publish, search merge, relay/download) shares one implementation
+    instead of each re-parsing the error envelope itself."""
+    resp = request(method, path, **kwargs)
+    if resp.status_code == 204:
+        return None
+    try:
+        body = resp.json()
+    except ValueError:
+        raise ApiError(503, "service_unavailable", "central returned an invalid response") from None
+    if resp.status_code >= 400:
+        err = body.get("error") if isinstance(body, dict) else None
+        if not isinstance(err, dict) or "code" not in err:
+            raise ApiError(503, "service_unavailable", "central returned an invalid response")
+        raise ApiError(resp.status_code, err["code"], err.get("message", ""), err.get("details") or {})
+    return body
+
+
 _health: tuple[float, bool] = (0.0, False)  # (checked_at, reachable)
 
 

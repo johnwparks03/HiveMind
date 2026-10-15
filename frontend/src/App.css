@@ -370,6 +370,62 @@ input:focus {
   color: var(--ink);
 }
 
+/* Publish toggle + editable tags, per file row (FileRow.jsx / PublishControl.jsx). */
+.publish-control {
+  margin-top: 8px;
+}
+
+.publish-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.no-tags-flag {
+  font-size: 12px;
+}
+
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  padding: 2px 4px 2px 8px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+
+.tag-chip button {
+  background: none;
+  border: none;
+  color: var(--ink-soft);
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+}
+
+.tag-add-form {
+  display: inline-flex;
+}
+
+.tag-input {
+  border: 1px dashed var(--line);
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 12px;
+  background: transparent;
+  width: 64px;
+}
+
+.tag-input:focus {
+  width: 110px;
+}
+
+.folder-public-progress {
+  color: var(--accent);
+}
+
 .result-foot {
   display: flex;
   justify-content: space-between;

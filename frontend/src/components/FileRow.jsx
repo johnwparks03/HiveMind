@@ -1,5 +1,6 @@
 import { formatDate } from "../lib/files";
 import OpenButton from "./OpenButton";
+import PublishControl from "./PublishControl";
 
 const STATE_LABEL = {
   indexed: "Indexed",
@@ -31,6 +32,7 @@ export default function FileRow({ file, selected, onToggle }) {
             <span className="failure-reason">{file.failure_reason}</span>
           )}
         </div>
+        {file.index_state === "indexed" && <PublishControl file={file} />}
       </div>
       <OpenButton fileId={file.file_id} filename={file.filename} />
     </li>

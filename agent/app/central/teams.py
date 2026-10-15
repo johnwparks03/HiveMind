@@ -5,27 +5,11 @@ import httpx
 
 from app import config
 from app.central import client as central_client
+from app.central import publish
 from app.db import session as db_session
 from app.errors import ApiError
 
-
-def _call(method: str, path: str, **kwargs):
-    """Calls central and returns the parsed JSON body (None for 204). A non-2xx
-    central error envelope is re-raised one to one; anything unparseable is a 503."""
-    resp = central_client.request(method, path, **kwargs)
-    if resp.status_code == 204:
-        return None
-    try:
-        body = resp.json()
-    except ValueError:
-        raise ApiError(503, "service_unavailable", "central returned an invalid response") from None
-    if resp.status_code >= 400:
-        err = body.get("error") if isinstance(body, dict) else None
-        if not isinstance(err, dict) or "code" not in err:
-            raise ApiError(503, "service_unavailable", "central returned an invalid response")
-        raise ApiError(resp.status_code, err["code"], err.get("message", ""), err.get("details") or {})
-    return body
-
+_call = central_client.request_json  # kept as a short local alias; call sites unchanged
 
 _cache: tuple[float, dict | None] | None = None
 
@@ -79,8 +63,10 @@ def leave_team() -> None:
 
 def clear_local_publish_state() -> None:
     """After leaving, nothing is public any more: reset publish state on every local
-    file. Tags are kept so a later re-publish doesn't regenerate them.
-    E3 extends this to cancel queued publishes once the publish queue exists."""
+    file. Tags are kept so a later re-publish doesn't regenerate them. Also cancels
+    anything still queued — without this, a pending publish would just keep
+    retrying into 403 no_team forever."""
+    publish.cancel_all()
     with db_session() as conn:
         conn.execute(
             "UPDATE files SET public_state = 'private', publish_state = NULL, "

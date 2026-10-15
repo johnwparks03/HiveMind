@@ -66,6 +66,16 @@ export const api = {
   // fileIds optionally scopes which files to consider; omitted/empty searches everything.
   ask: (question, fileIds) =>
     request("/ask", { method: "POST", body: JSON.stringify({ question, file_ids: fileIds ?? [] }) }),
+  // Saved Ask chats (agent-local). A chat is created on first question if the user hasn't started one.
+  listChats: () => request("/chats").then((data) => data.chats),
+  createChat: () => request("/chats", { method: "POST" }),
+  getChat: (chatId) => request(`/chats/${chatId}`),
+  deleteChat: (chatId) => request(`/chats/${chatId}`, { method: "DELETE" }),
+  askInChat: (chatId, question, fileIds) =>
+    request(`/chats/${chatId}/messages`, {
+      method: "POST",
+      body: JSON.stringify({ question, file_ids: fileIds ?? [] }),
+    }).then((data) => data.messages),
   listFolders: () => request("/folders").then((data) => data.folders),
   listFiles: () => request("/files").then((data) => data.files.map(normaliseFile)),
   addFolder: (path) => request("/folders", { method: "POST", body: JSON.stringify({ path }) }),

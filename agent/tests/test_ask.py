@@ -22,12 +22,12 @@ def searchable(isolated_store, corpus):
 def fake_bedrock(monkeypatch):
     seen = {}
 
-    def install(reply="a synthesized answer"):
+    def install(reply="a synthesized answer", truncated=False):
         def fake_invoke_text(system_prompt, user_text, max_tokens):
             seen["system"] = system_prompt
             seen["user"] = user_text
             seen["max_tokens"] = max_tokens
-            return reply
+            return reply, truncated
 
         monkeypatch.setattr(bedrock, "invoke_text", fake_invoke_text)
         return seen
@@ -42,6 +42,15 @@ def test_ask_with_no_topic_pulls_broadly_by_recency(searchable, fake_bedrock):
     assert result["sources"], "expected at least one source file in the date range"
     assert "untrusted" in ask_service.SYSTEM_PROMPT
     assert "what did we do last week" in seen["user"]
+
+
+def test_truncated_answer_gets_an_explicit_note_appended(searchable, fake_bedrock):
+    # Verified live 2026-10-15: a real answer hit the token cap and stopped mid-word
+    # with no indication anything was cut off. Must never fail silently like that again.
+    fake_bedrock(reply="this got cut off mid-sen", truncated=True)
+    result = ask_service.ask("what did we do last week")
+    assert result["answer"].startswith("this got cut off mid-sen")
+    assert "cut short" in result["answer"]
 
 
 def test_ask_with_a_topic_narrows_by_similarity(searchable, fake_bedrock):

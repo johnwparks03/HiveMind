@@ -126,5 +126,9 @@ def ask(question: str, folder_ids: list[str] | None = None, file_ids: list[str] 
 
     context, sources = _build_context(files)
     user_text = f"<question>\n{question}\n</question>\n\n<excerpts>\n{context}\n</excerpts>"
-    answer = bedrock.invoke_text(SYSTEM_PROMPT, user_text, ASK_MAX_ANSWER_TOKENS)
+    answer, truncated = bedrock.invoke_text(SYSTEM_PROMPT, user_text, ASK_MAX_ANSWER_TOKENS)
+    if truncated:
+        # Flag this explicitly rather than let the answer just stop mid-sentence with
+        # no explanation — verified live 2026-10-15, this really happens.
+        answer += "\n\n*(This answer was cut short by a length limit — try a narrower question or fewer files.)*"
     return {"answer": answer, "sources": sources}

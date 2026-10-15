@@ -125,7 +125,11 @@ BEDROCK_RETRIES = 1
 ASK_MAX_FILES = 8
 ASK_MAX_CHARS_PER_FILE = 1200
 ASK_MAX_TOTAL_CHARS = 8000
-ASK_MAX_ANSWER_TOKENS = 800
+# Verified live 2026-10-15: a detailed multi-file breakdown hit 800 and was cut off
+# mid-word with no indication anything was missing (stopReason: max_tokens, usage.
+# outputTokens: 800 exactly). Raised; ask_service.py also now detects and flags
+# truncation explicitly so this fails visibly instead of silently, if it recurs.
+ASK_MAX_ANSWER_TOKENS = 2000
 
 # Tag generation (agent/app/folders/scanner.py): runs automatically on add/rescan for
 # every newly indexed file (explicit product decision, 2026-10-15 — cost/latency

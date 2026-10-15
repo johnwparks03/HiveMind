@@ -13,23 +13,30 @@ def has_credentials(monkeypatch):
 
 
 class FakeClient:
-    def __init__(self, content):
+    def __init__(self, content, stop_reason="end_turn"):
         self.content = content
+        self.stop_reason = stop_reason
 
     def converse(self, **kwargs):
-        return {"output": {"message": {"content": self.content}}}
+        return {"output": {"message": {"content": self.content}}, "stopReason": self.stop_reason}
 
 
 def test_text_block_found_even_after_a_reasoning_block(monkeypatch):
     client = FakeClient([{"reasoningContent": {"text": "thinking..."}}, {"text": "the real answer"}])
     monkeypatch.setattr(bedrock, "_get_client", lambda: client)
-    assert bedrock.invoke_text("system", "user", 100) == "the real answer"
+    assert bedrock.invoke_text("system", "user", 100) == ("the real answer", False)
 
 
 def test_text_block_found_when_it_is_first(monkeypatch):
     client = FakeClient([{"text": "the real answer"}])
     monkeypatch.setattr(bedrock, "_get_client", lambda: client)
-    assert bedrock.invoke_text("system", "user", 100) == "the real answer"
+    assert bedrock.invoke_text("system", "user", 100) == ("the real answer", False)
+
+
+def test_truncated_reply_is_flagged(monkeypatch):
+    client = FakeClient([{"text": "cut off mid-sent"}], stop_reason="max_tokens")
+    monkeypatch.setattr(bedrock, "_get_client", lambda: client)
+    assert bedrock.invoke_text("system", "user", 100) == ("cut off mid-sent", True)
 
 
 def test_no_text_block_at_all_raises_unavailable(monkeypatch):

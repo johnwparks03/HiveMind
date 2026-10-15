@@ -51,7 +51,12 @@ def _get_client():
     return _client
 
 
-def _converse(system_prompt: str, user_text: str, max_tokens: int) -> str:
+def _converse(system_prompt: str, user_text: str, max_tokens: int) -> tuple[str, bool]:
+    """Returns (text, truncated) — truncated is True if the reply was cut off by
+    hitting max_tokens rather than finishing naturally. Verified live 2026-10-15: a
+    detailed multi-file breakdown hit the 800-token cap and stopped mid-word with no
+    indication anything was missing.
+    """
     _require_credentials()
     try:
         response = _get_client().converse(
@@ -68,7 +73,7 @@ def _converse(system_prompt: str, user_text: str, max_tokens: int) -> str:
         text = next((b["text"] for b in blocks if "text" in b), None)
         if text is None:
             raise BedrockUnavailable()
-        return text.strip()
+        return text.strip(), response.get("stopReason") == "max_tokens"
     except ApiError:
         raise
     except Exception as exc:  # noqa: BLE001
@@ -76,15 +81,15 @@ def _converse(system_prompt: str, user_text: str, max_tokens: int) -> str:
         raise BedrockUnavailable() from None
 
 
-def invoke_text(system_prompt: str, user_text: str, max_tokens: int) -> str:
-    """Freeform text reply (e.g. the /ask answer)."""
+def invoke_text(system_prompt: str, user_text: str, max_tokens: int) -> tuple[str, bool]:
+    """Freeform text reply (e.g. the /ask answer). Returns (text, truncated)."""
     return _converse(system_prompt, user_text, max_tokens)
 
 
 def invoke_json(system_prompt: str, user_text: str, max_tokens: int = 300) -> dict:
     """Ask the model for a JSON object and return it parsed. Raises BedrockUnavailable
     on any service error or if the reply is not a JSON object."""
-    text = _converse(system_prompt, user_text, max_tokens)
+    text, _truncated = _converse(system_prompt, user_text, max_tokens)
     try:
         fenced = _FENCE_RE.match(text)
         parsed = json.loads(fenced.group(1) if fenced else text)

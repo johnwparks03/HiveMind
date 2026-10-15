@@ -30,9 +30,27 @@ _RELATIVE_HINTS = re.compile(
 # happened to fall on that one specific day, instead of the whole week).
 _RANGE_PHRASE = re.compile(r"\b(last|past|this)\s+(week|month)\b", re.IGNORECASE)
 
-# "2 months ago" / "3 weeks ago" are also ranges, not a single anchor day — same bug
-# as _RANGE_PHRASE above, just with a number instead of last/past/this.
-_N_UNITS_AGO = re.compile(r"\b(\d+)\s+(week|month)s?\s+ago\b", re.IGNORECASE)
+# A count can be spelled out ("the last two weeks") instead of a digit — easy to
+# miss, but it's exactly how people actually phrase this out loud.
+_NUMBER_WORDS = {
+    "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6,
+    "seven": 7, "eight": 8, "nine": 9, "ten": 10, "eleven": 11, "twelve": 12,
+}
+_COUNT = rf"(\d+|{'|'.join(_NUMBER_WORDS)})"
+
+
+def _to_count(token: str) -> int:
+    return int(token) if token.isdigit() else _NUMBER_WORDS[token.lower()]
+
+
+# "2 months ago" / "three weeks ago" are also ranges, not a single anchor day — same
+# bug as _RANGE_PHRASE above, just with a count instead of last/past/this.
+_N_UNITS_AGO = re.compile(rf"\b{_COUNT}\s+(week|month)s?\s+ago\b", re.IGNORECASE)
+
+# "the last two weeks" / "the past 3 months" (no "ago") means a *rolling window up to
+# now*, not one specific calendar unit N back — a different meaning from _N_UNITS_AGO
+# above ("2 months ago" names that one specific month, not a span from then to now).
+_TRAILING_WINDOW = re.compile(rf"\b(?:last|past)\s+{_COUNT}\s+(week|month)s?\b", re.IGNORECASE)
 
 _MONTH_NAMES = {
     "jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6,
@@ -131,10 +149,21 @@ def _parse_n_units_ago(query: str, local_now: datetime) -> tuple[datetime, datet
     match = _N_UNITS_AGO.search(query)
     if not match:
         return None
-    n, unit = int(match.group(1)), match.group(2).lower()
+    n, unit = _to_count(match.group(1)), match.group(2).lower()
     if unit == "month":
         return _month_bounds(_add_months(local_now, -n))
     return _week_bounds(local_now - timedelta(weeks=n))
+
+
+def _parse_trailing_window(query: str, local_now: datetime) -> tuple[datetime, datetime] | None:
+    match = _TRAILING_WINDOW.search(query)
+    if not match:
+        return None
+    n, unit = _to_count(match.group(1)), match.group(2).lower()
+    start_anchor = _add_months(local_now, -n) if unit == "month" else local_now - timedelta(weeks=n)
+    start, _ = _day_bounds(start_anchor)
+    _, end = _day_bounds(local_now)
+    return start, end
 
 
 def _parse_month_only(query: str, local_now: datetime) -> tuple[tuple[datetime, datetime], re.Match] | None:
@@ -181,10 +210,19 @@ def parse_query_locally(query: str, local_now: datetime | None = None) -> Parsed
         topic = _drop_if_generic(topic)
         return ParsedQuery(topic=topic, date_from=date_from, date_to=date_to, source="local")
 
+    trailing_bounds = _parse_trailing_window(query, local_now)
+    if trailing_bounds is not None:
+        date_from, date_to = trailing_bounds
+        topic = _TRAILING_WINDOW.sub("", query, count=1)
+        topic = re.sub(r"\b(from|on|for|the)\b", "", topic, flags=re.IGNORECASE)
+        topic = re.sub(r"\s+", " ", topic).strip(" ,.-") or None
+        topic = _drop_if_generic(topic)
+        return ParsedQuery(topic=topic, date_from=date_from, date_to=date_to, source="local")
+
     n_units_bounds = _parse_n_units_ago(query, local_now)
     if n_units_bounds is not None:
         date_from, date_to = n_units_bounds
-        topic = _RELATIVE_HINTS.sub("", query, count=1)
+        topic = _N_UNITS_AGO.sub("", query, count=1)
         topic = re.sub(r"\b(from|on|for)\b", "", topic, flags=re.IGNORECASE)
         topic = re.sub(r"\s+", " ", topic).strip(" ,.-") or None
         topic = _drop_if_generic(topic)

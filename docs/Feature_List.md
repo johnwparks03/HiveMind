@@ -61,6 +61,8 @@ HiveMind is a team knowledge-finding tool. A user searches their own files first
 - Merge results, labeled local vs. teammate
 - **Local search never requires the central service.** If the agent is fully offline, local results still return; only the teammate portion is skipped (see 1.5 central-search behavior)
 - Open a local result in its default program via an agent endpoint
+- **Tag-based ranking boost:** model-generated tags (local Bedrock call, decided 2026-10-15 — demo/MVP architecture exception, see CLAUDE.md) are a third deterministic ranking signal alongside the filename and format-word boosts. Generated automatically on folder add/rescan for every newly indexed file, best-effort (a Bedrock problem leaves a file untagged, never fails the scan); a manual per-file endpoint also exists to retag one file by hand
+- **Multi-document Q&A (`/ask`):** unlike search, this is online-only — synthesizing an answer across several files needs a generative model, which the agent calls directly for this feature. Runs the same local retrieval (date filter, then vector ranking, or recency if the question names no topic) across a bounded number of files, then asks Bedrock to answer from those excerpts, citing which file each point came from. Scoped to the user's own local files; teammate content isn't pulled in
 
 ### 1.6 Publish and unpublish
 

@@ -198,6 +198,8 @@ File object:
 
 **`PUT /files/{file_id}/tags`** → request `{ "tags": ["meeting", "roadmap"] }`. `200 File`. If the file is public, queues a metadata re-sync. Changing tags does not extend expiry.
 
+**`POST /files/{file_id}/tags/generate`** (local-only, decided 2026-10-15, demo/MVP) → the agent calls Bedrock directly (see CLAUDE.md's architecture exception) with the file's extracted text and stores the result. `200 { "file_id", "tags": ["…"] }`. Runs automatically on every folder add/rescan for newly indexed files (and for any already-indexed file that doesn't have tags yet, without a full re-index) — best-effort, never fails the scan. This endpoint also exists to retag one file by hand, e.g. to retry one Bedrock couldn't reach the first time. Errors: `404 not_found`, `404 file_missing`, `409 conflict` (file couldn't be read), `503 service_unavailable` (AWS credentials unset, or the model's output didn't validate).
+
 **`POST /files/{file_id}/publish`** → `202 File` (`visibility: public`, `publish_state: pending`). Publishes immediately with no tag preview. If the file already has tags (generated earlier or edited by the user), tag generation is skipped and those tags are sent as they are; otherwise tags are generated first. Errors: `403 no_team`, `409 file_unavailable` (index state `missing`).
 
 **`POST /files/{file_id}/unpublish`** → `202 File`.
@@ -253,6 +255,20 @@ Flow: the agent parses the query itself with a local deterministic parser (alway
 ```
 
 Errors: `POST /search` itself does not return 503 for LLM-proxy failures — the local parser always produces a usable `interpreted` result, so local search always succeeds. A `503 service_unavailable` here means the **central search** portion failed after local results already came back with `include_teammates` true or a local miss; in that case `teammate.searched` is `false` with `skipped_reason: "central_unavailable"` rather than failing the whole request. Owner identity is not returned.
+
+### 2.5a Ask (local-only, decided 2026-10-15, demo/MVP)
+
+**`POST /ask`** → `{ "question": "what did we do the last two weeks" }`. Unlike `/search`, this is online-only (no offline fallback) — synthesizing an answer across documents genuinely needs a generative model, and there is no local one. The agent runs the same local retrieval as `/search` (date filter, then vector ranking — or, with no topic in the question, lists broadly by recency within the date range) across up to a few files' worth of content, then calls Bedrock directly (architecture exception, see `CLAUDE.md`) to synthesize an answer from those excerpts.
+
+```json
+// 200
+{
+  "answer": "…",
+  "sources": [ { "file_id": "…", "filename": "…" } ]
+}
+```
+
+`sources` lists the files whose content was actually given to the model, not a claim that every one was cited in the answer. Errors: `503 service_unavailable` if AWS credentials aren't configured or Bedrock is unreachable. A question that matches no files returns `200` with a plain "no files matched" answer and an empty `sources`, not an error — scoped to the user's own local files only; teammate content isn't pulled in (central search is metadata-only today, so there's no file content there to retrieve).
 
 ### 2.6 Transfers
 

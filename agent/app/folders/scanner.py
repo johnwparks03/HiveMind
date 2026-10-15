@@ -2,13 +2,35 @@
 detection so unchanged files aren't re-indexed. The continuous watcher (watchdog)
 lives in watcher.py and calls back into scan_folder on any change.
 """
+import json
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 
+from app.config import TAG_EXCERPT_MAX_CHARS
 from app.db import session
+from app.errors import ApiError
+from app.extraction.extract import extract_text
 from app.indexing.indexer import content_hash, index_file
 from app.indexing.vector_store import delete_file
+from app.llm import bedrock
+from app.llm.tags import generate_tags
 from app.sources.local_filesystem import LocalFilesystemSource
+
+
+def _generate_tags_best_effort(filename: str, excerpt: str | None) -> str | None:
+    """Tags are generated automatically on add/rescan (explicit product decision,
+    2026-10-15 — cost/latency accepted). Never lets a Bedrock problem fail the scan:
+    AWS credentials missing, Bedrock unreachable, or a rejected model reply all just
+    mean this file stays untagged until the next scan, same as any other file that
+    hasn't been tagged yet.
+    """
+    if not excerpt:
+        return None
+    try:
+        return json.dumps(generate_tags(filename, excerpt))
+    except (bedrock.BedrockUnavailable, ApiError):
+        return None
 
 
 def add_folder(path: str) -> str:
@@ -90,21 +112,33 @@ def scan_folder(folder_id: str, path: str) -> dict:
 
             if existing_row and existing_row["content_hash"] == new_hash:
                 stats["unchanged"] += 1
+                # Content didn't change, so re-extracting/re-chunking/re-embedding would be
+                # wasted work — but a file added before AWS credentials existed (or whose
+                # tagging failed last time) should still get tagged on the next rescan,
+                # without a full re-index.
+                if not existing_row["tags"] and existing_row["index_status"] == "indexed":
+                    excerpt_result = extract_text(Path(source_file.source_path))
+                    tags = _generate_tags_best_effort(
+                        source_file.filename, excerpt_result.text[:TAG_EXCERPT_MAX_CHARS]
+                    )
+                    if tags:
+                        conn.execute("UPDATE files SET tags=? WHERE file_id=?", (tags, existing_row["file_id"]))
                 continue
 
             file_id = existing_row["file_id"] if existing_row else str(uuid.uuid4())
             index_result = index_file(
                 file_id=file_id,
-                path=__import__("pathlib").Path(source_file.source_path),
+                path=Path(source_file.source_path),
                 filename=source_file.filename,
                 file_created_at=source_file.created_at,
                 file_modified_at=source_file.modified_at,
             )
+            tags = _generate_tags_best_effort(source_file.filename, index_result["excerpt"])
 
             if existing_row:
                 conn.execute(
                     """UPDATE files SET content_hash=?, file_created_at=?, file_modified_at=?,
-                       in_document_date=?, index_status=?, index_failure_reason=? WHERE file_id=?""",
+                       in_document_date=?, index_status=?, index_failure_reason=?, tags=? WHERE file_id=?""",
                     (
                         new_hash,
                         source_file.created_at.isoformat(),
@@ -112,6 +146,7 @@ def scan_folder(folder_id: str, path: str) -> dict:
                         index_result["in_document_date"],
                         index_result["index_status"],
                         index_result["index_failure_reason"],
+                        tags,
                         file_id,
                     ),
                 )
@@ -120,8 +155,8 @@ def scan_folder(folder_id: str, path: str) -> dict:
                 conn.execute(
                     """INSERT INTO files
                        (file_id, folder_id, path, filename, content_hash, file_created_at,
-                        file_modified_at, in_document_date, index_status, index_failure_reason)
-                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                        file_modified_at, in_document_date, index_status, index_failure_reason, tags)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                     (
                         file_id,
                         folder_id,
@@ -133,6 +168,7 @@ def scan_folder(folder_id: str, path: str) -> dict:
                         index_result["in_document_date"],
                         index_result["index_status"],
                         index_result["index_failure_reason"],
+                        tags,
                     ),
                 )
                 stats["added"] += 1

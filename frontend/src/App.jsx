@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import BeeLogo from "./components/BeeLogo";
 import StatusIndicator from "./components/StatusIndicator";
 import AccountPage from "./pages/AccountPage";
+import AskPage from "./pages/AskPage";
 import FilesPage from "./pages/FilesPage";
 import GroupsPage from "./pages/GroupsPage";
 import SearchPage from "./pages/SearchPage";
@@ -11,6 +12,7 @@ import "./App.css";
 
 const TABS = [
   { id: "search", label: "Search" },
+  { id: "ask", label: "Ask" },
   { id: "files", label: "Files" },
   { id: "groups", label: "Groups" },
   { id: "account", label: "Sign in" },
@@ -74,6 +76,7 @@ export default function App() {
         <div hidden={tab !== "search"}>
           <SearchPage key={searchKey} />
         </div>
+        {tab === "ask" && <AskPage />}
         {tab === "files" && <FilesPage />}
         {tab === "groups" && <GroupsPage />}
         {tab === "account" && <AccountPage />}

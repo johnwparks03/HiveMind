@@ -106,3 +106,41 @@ QUERY_EXPANSION_MAX_SYNONYMS_PER_WORD = 2
 QUERY_EXPANSION_MAX_TOTAL_WORDS = 6
 
 SUPPORTED_EXTENSIONS = {".pdf", ".docx", ".pptx", ".txt"}
+
+# Local Bedrock (decided 2026-10-15, demo/MVP only — see CLAUDE.md). Credentials come
+# from the standard AWS env vars (AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY /
+# AWS_DEFAULT_REGION), set in agent/.env alongside the Cognito values; boto3 reads
+# them automatically, no custom loading needed. Blank counts as unset, same as the
+# Cognito/central config above — the features that need it return 503 instead of a
+# confusing boto3 exception.
+BEDROCK_MODEL_ID = "us.anthropic.claude-sonnet-5-5"
+BEDROCK_CONNECT_TIMEOUT_SECONDS = 5
+BEDROCK_READ_TIMEOUT_SECONDS = 20
+BEDROCK_RETRIES = 1
+
+# POST /ask: multi-document Q&A. No offline fallback — unlike /search's optional
+# central LLM upgrade, there is no local generative model, so this endpoint is
+# honestly online-only. Caps below bound Bedrock cost/latency regardless of corpus
+# size: files are added in recency order until the total budget is hit.
+ASK_MAX_FILES = 8
+ASK_MAX_CHARS_PER_FILE = 1200
+ASK_MAX_TOTAL_CHARS = 8000
+ASK_MAX_ANSWER_TOKENS = 800
+
+# Tag generation (agent/app/folders/scanner.py): runs automatically on add/rescan for
+# every newly indexed file (explicit product decision, 2026-10-15 — cost/latency
+# accepted). Best-effort: a Bedrock problem leaves a file untagged, never fails the
+# scan. POST /files/{id}/tags/generate (routes_files.py) also exists for retagging a
+# single file by hand. Same validation shape as central/lambdas/llm.py's tag
+# generation (mirrored, not imported — agent and central are separate deployables).
+TAG_EXCERPT_MAX_CHARS = 3000
+TAG_MIN_COUNT = 5
+TAG_MAX_COUNT = 8
+TAG_MAX_GENERATION_TOKENS = 200
+
+# Tag boost: a third deterministic signal alongside the filename and format-word
+# boosts above — word overlap between the query topic and a file's (model-generated)
+# tags. Same reasoning as those two: a short, exact keyword match is a cheap signal
+# that whole-chunk embedding similarity alone can miss.
+TAG_BOOST_PER_WORD = 0.15
+TAG_BOOST_MAX = 0.3

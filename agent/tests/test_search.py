@@ -12,7 +12,7 @@ import pytest
 from app.config import SEARCH_RESULT_LIMIT
 from app.folders.scanner import add_folder
 from app.search.query_parser import parse_query_locally
-from app.search.search_service import _filename_boost, search_local
+from app.search.search_service import _filename_boost, _tag_boost, search_local
 from corpus_generator import TOTAL_DOCX, TOTAL_PPTX
 
 
@@ -93,6 +93,15 @@ def test_filename_boost_rewards_title_overlap():
     assert _filename_boost("Budget plan 012 2026-02-01.docx", "budget plan") == pytest.approx(0.3)
     assert _filename_boost("Roadmap 003 2026-02-05.docx", "budget plan") == 0.0
     assert _filename_boost("Budget plan.docx", "") == 0.0
+
+
+def test_tag_boost_rewards_topic_overlap_with_tags():
+    assert _tag_boost(["budget", "q4", "finance"], "budget plan") == pytest.approx(0.15)
+    assert _tag_boost(["roadmap", "engineering"], "budget plan") == 0.0
+    # Most files won't have tags yet (generation is on-demand) — no tags, no boost,
+    # not a penalty.
+    assert _tag_boost([], "budget plan") == 0.0
+    assert _tag_boost(["budget"], "") == 0.0
 
 
 # --- Query parser -----------------------------------------------------------------------

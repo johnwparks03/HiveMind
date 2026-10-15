@@ -71,6 +71,28 @@ class FakeCognito:
 
 
 @pytest.fixture(autouse=True)
+def no_real_bedrock_calls(monkeypatch):
+    """Tests must never hit the real Bedrock/AWS API. scan_folder now calls Bedrock
+    automatically for every newly indexed file (scanner.py, 2026-10-15), so any test
+    that adds a folder would otherwise make real, billed AWS calls the moment real
+    credentials exist in the environment (as they now do, in agent/.env).
+
+    Patches only client creation, not invoke_json/invoke_text themselves — those
+    still run their real logic (including the AWS-credentials check), so a test like
+    test_generate_tags_without_aws_credentials_is_503 still sees the real missing-
+    credentials error rather than this generic stand-in. Tests that want tagging/ask
+    to actually succeed override invoke_json/invoke_text themselves (see test_tags.py,
+    test_ask.py), which bypasses this patch entirely since it's a different function.
+    """
+    from app.llm import bedrock
+
+    def _blocked_client():
+        raise RuntimeError("tests must not create a real Bedrock client")
+
+    monkeypatch.setattr(bedrock, "_get_client", _blocked_client)
+
+
+@pytest.fixture(autouse=True)
 def configured(monkeypatch):
     monkeypatch.setattr(config, "COGNITO_CLIENT_ID", "test-client")
     monkeypatch.setattr(config, "CENTRAL_API_URL", "https://central.test")

@@ -53,6 +53,20 @@ If they're unset or blank the agent still starts and local search works. `/auth/
 `/auth/login` return 503 `service_unavailable` with `details.missing` naming the variable, and
 `/session` reports `central_reachable: false`.
 
+## Local Bedrock config
+
+Decided 2026-10-15, demo/MVP only (see `CLAUDE.md`): `POST /ask` and
+`POST /files/{id}/tags/generate` call Bedrock directly from the agent, not through
+central. Add to the same `.env` file:
+
+- `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION` (standard boto3
+  env vars — no `HIVEMIND_` prefix, boto3 reads them itself)
+
+If unset, both endpoints return 503 `service_unavailable` with
+`details.missing: "AWS_ACCESS_KEY_ID"` instead of a confusing boto3 exception. Local
+search, folders, and everything else keep working with no AWS credentials at all —
+only these two features need them.
+
 ## Tests
 
 ```
@@ -104,6 +118,14 @@ Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8420/team/leave -Headers $h
 - Local search: date filter first, then vector ranking, grouped to one result per file
 - `POST /files/{id}/open` launches the file in its Windows default app
 - Startup-token auth on every endpoint except `GET /auth/token`
+- `POST /ask`: multi-document Q&A (e.g. "what did we do the last two weeks") — local
+  retrieval (date filter + vector ranking, same pipeline as `/search`) handed to
+  Bedrock to synthesize an answer. Online-only, no offline fallback (there's no
+  local generative model) — needs the AWS credentials above.
+- Model-generated tags: runs automatically on folder add/rescan for every newly
+  indexed file (best-effort — a Bedrock problem leaves a file untagged, never fails
+  the scan), used as a third search-ranking boost alongside the filename/format-word
+  boosts. `POST /files/{id}/tags/generate` also retags one file by hand.
 
 ## Not built yet
 

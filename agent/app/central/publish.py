@@ -21,6 +21,19 @@ from app.llm.tags import generate_tags
 _worker_task: asyncio.Task | None = None
 
 
+def _as_aware_iso(value: str | None) -> str | None:
+    """file_created_at/file_modified_at are stored as naive local-time ISO strings
+    (filesystem stat times have no timezone concept at all) — confirmed live
+    2026-10-15: central's validator rejects a timestamp with no tzinfo as
+    invalid_request, which was silently failing every publish attempt. Attaching
+    the system's actual local offset (not assuming UTC) keeps the represented
+    moment correct, it just makes the existing offset explicit.
+    """
+    if value is None:
+        return None
+    return datetime.fromisoformat(value).astimezone().isoformat()
+
+
 def enqueue(file_id: str, intent: str) -> None:
     """intent: 'publish' or 'unpublish'. Overwrites any existing queued row for this
     file_id ('latest intent wins' — toggling publish/unpublish quickly just replaces
@@ -86,8 +99,8 @@ def _publish(file_id: str) -> None:
         json={
             "filename": row["filename"],
             "tags": tags,
-            "file_created_at": row["file_created_at"],
-            "file_modified_at": row["file_modified_at"],
+            "file_created_at": _as_aware_iso(row["file_created_at"]),
+            "file_modified_at": _as_aware_iso(row["file_modified_at"]),
         },
     ) or {}
     with db_session() as conn:

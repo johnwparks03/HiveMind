@@ -3,6 +3,7 @@ publish/unpublish queue and folder share/unshare (docs/stories/BACKLOG.md E3-S4/
 """
 import asyncio
 import json
+from datetime import datetime
 
 import httpx
 import pytest
@@ -51,7 +52,9 @@ def _seed_file(file_id="a", path="C:/x/a.txt", tags='["budget"]', index_status="
         conn.execute(
             "INSERT INTO files (file_id, folder_id, path, filename, index_status, tags, "
             "public_state, publish_state, file_created_at, file_modified_at) VALUES "
-            "(?, ?, ?, ?, ?, ?, ?, ?, 'c', 'm')",
+            # Naive (no tzinfo) local-time strings, same shape scanner.py actually stores -
+            # this is exactly the shape that silently failed central's validator in real use.
+            "(?, ?, ?, ?, ?, ?, ?, ?, '2026-10-01T09:00:00', '2026-10-10T14:30:00')",
             (file_id, folder_id, path, path.rsplit("/", 1)[-1], index_status, tags, public_state, publish_state),
         )
 
@@ -115,13 +118,32 @@ def test_publish_sends_existing_tags_without_regenerating(isolated_store, centra
     _seed_file(tags='["budget", "q4"]')
     central.reply("PUT /files/a", 200, {"published_at": "p", "expires_at": "e", "last_confirmed": "c"})
     publish._publish("a")
-    assert central.calls[-1] == ("PUT /files/a", {
-        "filename": "a.txt", "tags": ["budget", "q4"], "file_created_at": "c", "file_modified_at": "m",
-    })
+    sent = central.calls[-1][1]
+    assert sent["filename"] == "a.txt"
+    assert sent["tags"] == ["budget", "q4"]
     row = _file_row()
     assert row["public_state"] == "public"
     assert row["publish_state"] == "published"
     assert row["expires_at"] == "e"
+
+
+def test_publish_sends_timezone_aware_timestamps(isolated_store, central):
+    # Verified live 2026-10-15: file_created_at/file_modified_at are stored as naive
+    # local-time strings (filesystem stat times), which central's validator rejects
+    # outright (400 invalid_request) - every publish attempt was silently failing on
+    # this before it was caught. The represented moment must stay correct, not just
+    # gain a fake "Z" suffix.
+    _seed_file()
+    central.reply("PUT /files/a", 200, {"published_at": "p", "expires_at": "e", "last_confirmed": "c"})
+    publish._publish("a")
+    sent = central.calls[-1][1]
+    created = datetime.fromisoformat(sent["file_created_at"])
+    modified = datetime.fromisoformat(sent["file_modified_at"])
+    assert created.tzinfo is not None
+    assert modified.tzinfo is not None
+    # Same wall-clock moment as stored, just now explicit about which timezone.
+    assert created.replace(tzinfo=None) == datetime(2026, 10, 1, 9, 0, 0)
+    assert modified.replace(tzinfo=None) == datetime(2026, 10, 10, 14, 30, 0)
 
 
 def test_publish_generates_tags_when_none_exist(isolated_store, central, tmp_path, monkeypatch):

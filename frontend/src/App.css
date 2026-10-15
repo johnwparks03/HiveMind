@@ -230,12 +230,28 @@ input:focus {
 .search-form {
   display: flex;
   gap: 8px;
-  margin-bottom: 20px;
+  margin-bottom: 8px;
 }
 
 .search-form input {
   font-size: 15px;
   padding: 12px 14px;
+}
+
+.include-teammates {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--ink-soft);
+  margin-bottom: 12px;
+  cursor: pointer;
+}
+
+.teammate-section {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
 }
 
 .search-form .btn {

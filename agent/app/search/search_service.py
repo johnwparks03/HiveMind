@@ -1,12 +1,14 @@
 """Local search orchestration. Technical_Blueprint.md section 04:
-"Filter first, then rank" and "comes up short" -> central (not built today;
-the agent track is being built standalone per docs/stories/BACKLOG.md's E2 note).
+"Filter first, then rank" and "comes up short" -> central (docs/stories/BACKLOG.md
+E3-S8: the merge was built 2026-10-16, once central search itself existed).
 """
 import json
 import re
 from datetime import datetime
 from pathlib import Path
 
+from app.central import client as central_client
+from app.central import teams
 from app.config import (
     FILENAME_BOOST_MAX,
     FILENAME_BOOST_PER_WORD,
@@ -20,6 +22,7 @@ from app.config import (
     TOTAL_BOOST_MAX,
 )
 from app.db import session
+from app.errors import ApiError
 from app.indexing.embeddings import embed
 from app.indexing.vector_store import _date_range_where, iter_chunks, query as vector_query
 from app.search.query_expansion import expand_topic
@@ -117,7 +120,25 @@ def _list_by_recency(date_from_ts, date_to_ts) -> list[dict]:
     return sorted(seen.values(), key=lambda r: r["file_modified_at"], reverse=True)[:SEARCH_RESULT_LIMIT]
 
 
-def search_local(raw_query: str) -> dict:
+def _central_search(topic: str | None, date_from: datetime | None, date_to: datetime | None):
+    """Returns (results, skipped_reason) — skipped_reason is None on success. Dates
+    must stay timezone-aware (central's validator rejects naive ones outright, the
+    same gotcha that silently broke every publish attempt earlier this build)."""
+    if teams.current_team_or_none() is None:
+        return [], "no_team"
+    body = {
+        "topic": topic,
+        "date_from": date_from.isoformat() if date_from else None,
+        "date_to": date_to.isoformat() if date_to else None,
+    }
+    try:
+        resp = central_client.request_json("POST", "/search", json=body)
+    except ApiError as exc:
+        return [], "no_team" if exc.code == "no_team" else "central_unavailable"
+    return (resp or {}).get("results", []), None
+
+
+def search_local(raw_query: str, include_teammates: bool = False) -> dict:
     parsed: ParsedQuery = parse_query_locally(raw_query)
     date_from_ts = parsed.date_from.timestamp() if parsed.date_from else None
     date_to_ts = parsed.date_to.timestamp() if parsed.date_to else None
@@ -143,6 +164,19 @@ def search_local(raw_query: str) -> dict:
             results.sort(key=lambda r: r["score"])
             results = [r for r in results if r["score"] <= SIMILARITY_DISTANCE_THRESHOLD][:SEARCH_RESULT_LIMIT]
 
+    # Central is only asked when local came up short, or the user explicitly asked
+    # to include teammates — never as a matter of course (Technical_Blueprint.md
+    # section 04).
+    if include_teammates or not results:
+        teammate_results, skipped_reason = _central_search(parsed.topic, parsed.date_from, parsed.date_to)
+        teammate = {
+            "searched": skipped_reason is None,
+            "skipped_reason": skipped_reason,
+            "results": teammate_results,
+        }
+    else:
+        teammate = {"searched": False, "skipped_reason": "local_sufficient", "results": []}
+
     return {
         "interpreted": {
             "topic": parsed.topic,
@@ -151,6 +185,5 @@ def search_local(raw_query: str) -> dict:
             "source": parsed.source,
         },
         "local_results": results,
-        # Central/teammate search isn't built yet — see docs/stories/BACKLOG.md E2 note.
-        "teammate": {"searched": False, "skipped_reason": "central_not_built", "results": []},
+        "teammate": teammate,
     }

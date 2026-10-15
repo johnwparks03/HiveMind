@@ -4,6 +4,7 @@ import { api, isAgentUnreachable } from "../api/client";
 import Loading, { Spinner } from "../components/Loading";
 import ResultCard from "../components/ResultCard";
 import SearchIllustration from "../components/SearchIllustration";
+import TeammateResultCard from "../components/TeammateResultCard";
 import { interpretedCaption } from "../lib/files";
 import { addRecent, loadRecent, removeRecent, saveRecent } from "../lib/recent";
 
@@ -17,7 +18,8 @@ export default function SearchPage() {
   const [text, setText] = useState("");
   const [recent, setRecent] = useState(loadRecent);
   const [recentOpen, setRecentOpen] = useState(false);
-  const search = useMutation({ mutationFn: api.search });
+  const [includeTeammates, setIncludeTeammates] = useState(false);
+  const search = useMutation({ mutationFn: ({ query, includeTeammates }) => api.search(query, includeTeammates) });
 
   function run(query) {
     const q = query.trim();
@@ -27,7 +29,7 @@ export default function SearchPage() {
     const next = addRecent(recent, q);
     setRecent(next);
     saveRecent(next);
-    search.mutate(q);
+    search.mutate({ query: q, includeTeammates });
   }
 
   function clearRecent() {
@@ -75,6 +77,15 @@ export default function SearchPage() {
             {search.isPending ? "Searching…" : "Search"}
           </button>
         </form>
+
+        <label className="include-teammates">
+          <input
+            type="checkbox"
+            checked={includeTeammates}
+            onChange={(e) => setIncludeTeammates(e.target.checked)}
+          />
+          Also search teammates' shared files
+        </label>
 
         {recentOpen && recent.length > 0 && (
           <div className="recent" aria-label="Recent searches">
@@ -169,7 +180,31 @@ export default function SearchPage() {
                 ))}
               </div>
             )}
-            <p className="footnote">Teammate search isn't available yet. Only your own files are searched.</p>
+            {results.teammate.searched ? (
+              <div className="teammate-section">
+                <p className="caption">
+                  {results.teammate.results.length} teammate {results.teammate.results.length === 1 ? "result" : "results"}
+                </p>
+                {results.teammate.results.length > 0 ? (
+                  <div className="result-list">
+                    {results.teammate.results.map((r) => (
+                      <TeammateResultCard key={r.file_id} result={r} />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="muted">No teammate files matched.</p>
+                )}
+                <p className="footnote">Downloading a teammate's file isn't built yet — this just shows what's shared.</p>
+              </div>
+            ) : (
+              <p className="footnote">
+                {results.teammate.skipped_reason === "no_team"
+                  ? "Join a group (see the Groups tab) to search teammates' files."
+                  : results.teammate.skipped_reason === "central_unavailable"
+                  ? "Couldn't reach teammate search just now. Your own files are still shown above."
+                  : "Only your own files are searched. Check \"also search teammates\" above to include shared files."}
+              </p>
+            )}
           </>
         )}
       </div>

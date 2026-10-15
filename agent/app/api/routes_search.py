@@ -8,8 +8,9 @@ router = APIRouter()
 
 class SearchRequest(BaseModel):
     query: str
+    include_teammates: bool = False
 
 
 @router.post("/search")
 def post_search(body: SearchRequest):
-    return search_local(body.query)
+    return search_local(body.query, include_teammates=body.include_teammates)

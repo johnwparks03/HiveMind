@@ -60,7 +60,8 @@ export function isAgentUnreachable(err) {
 }
 
 export const api = {
-  search: (query) => request("/search", { method: "POST", body: JSON.stringify({ query }) }),
+  search: (query, includeTeammates) =>
+    request("/search", { method: "POST", body: JSON.stringify({ query, include_teammates: Boolean(includeTeammates) }) }),
   // Online-only (local Bedrock call, decided 2026-10-15, demo/MVP) — unlike search,
   // there's no offline fallback for synthesizing an answer across files.
   // fileIds optionally scopes which files to consider; omitted/empty searches everything.

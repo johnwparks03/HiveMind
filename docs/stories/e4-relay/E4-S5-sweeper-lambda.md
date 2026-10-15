@@ -29,6 +29,8 @@ Implemented, deployed and verified against the shared stack.
 - **Schedule:** a plain EventBridge rule (`rate(1 minute)`), not EventBridge Scheduler: stable CDK construct, same behaviour.
 - **Orphans:** objects with no transfer row (for example a failed insert) are not found; the bucket's one-day lifecycle rule remains the backstop. The sweeper never lists the bucket.
 - **Test hook:** a direct invocation may pass `{"max_age_minutes": N}` to override the config; the scheduled event carries none. Only principals allowed to invoke the function can use it.
+- **Review follow-up (2026-10-15):** the sweeper also fails `uploading` transfers older than `TRANSFER_UPLOAD_TIMEOUT_SECONDS` after the ack (`failed_stalled` in its result), and pages through due rows with a keyset cursor `(created_at, transfer_id)`. A page of rows whose delete keeps failing used to be reselected on every run and starve newer rows; now they are skipped for the run (and retried next minute). A direct invocation may also pass `{"upload_timeout_seconds": N}`.
+- **Verified after the review follow-up was deployed (2026-10-15):** 247 offline, 49 non-slow and 5 slow integration tests pass. Measured: the schedule alone expired a transfer 932 s after the request (15 min plus the next run); a silent upload failed as `upload_failed` after 612 s (600 s timeout plus polling); the sweeper path also passes with an `upload_timeout_seconds: 0` override.
 - Logs only counts (`failed_unacked`, `swept`, `delete_errors`), never keys or ids.
 - verify-in-AWS results:
   - The VPC Lambda deletes through the S3 gateway endpoint (no NAT): the direct-invoke tests saw the object return 404 and the transfer become `expired`, with `delete_errors: 0`.

@@ -194,13 +194,14 @@ def test_malformed_json_is_400(fake_db):
 def test_one_log_row_per_matched_file_with_ids_only(fake_db):
     cur = fake_db([TEAM, [row("f1"), row("f2")]])
     _call({"topic": SECRET_TOPIC, "date_from": "2026-09-29T00:00:00Z"})
-    assert cur.log_rows() == [("search", "user-1", TEAM[0], "f1"), ("search", "user-1", TEAM[0], "f2")]
+    assert cur.log_rows() == [("search", "user-1", TEAM[0], "f1", None, None),
+                              ("search", "user-1", TEAM[0], "f2", None, None)]
 
 
 def test_an_empty_search_is_still_logged_once_without_a_file(fake_db):
     cur = fake_db([TEAM, []])
     _call({"topic": "nothing"})
-    assert cur.log_rows() == [("search", "user-1", TEAM[0], None)]
+    assert cur.log_rows() == [("search", "user-1", TEAM[0], None, None, None)]
 
 
 def test_the_topic_is_never_logged_or_stored(fake_db, capsys):

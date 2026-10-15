@@ -112,6 +112,32 @@ def test_a_failed_transfer_keeps_its_status_but_is_still_swept(ws_url, cfg, team
     asyncio.run(run())
 
 
+def test_the_sweeper_fails_an_upload_that_never_completes(ws_url, cfg, team_of_two, sweeper_name):  # noqa: F811
+    requester, owner = team_of_two
+    file_id = _publish(cfg, owner, FILE)
+
+    async def run():
+        ws = await _owner_online(ws_url, owner)
+        try:
+            transfer_id = (await _request(cfg, requester, file_id))[1]["transfer_id"]
+            await _next_upload_request(ws)
+            assert _post(cfg, owner, f"/transfers/{transfer_id}/ack")[0] == 204  # then the owner goes silent
+            # Sweep before any GET, which would apply the timeout lazily itself.
+            result = await asyncio.to_thread(run_sweeper, sweeper_name, upload_timeout_seconds=0)
+            assert result["failed_stalled"] >= 1
+            _, body = _call(cfg, "GET", f"/transfers/{transfer_id}", requester)
+            assert body["status"] == "failed" and body["error_code"] == "upload_failed"
+            assert _post(cfg, owner, f"/transfers/{transfer_id}/complete")[1]["error"]["code"] == "conflict"
+            # The requester is no longer stuck on the dead transfer.
+            status, fresh = await _request(cfg, requester, file_id)
+            assert status == 202 and fresh["transfer_id"] != transfer_id
+            await _next_upload_request(ws)
+        finally:
+            await ws.close()
+
+    asyncio.run(run())
+
+
 @pytest.mark.slow
 def test_the_sweeper_fails_an_unacked_request_without_anyone_reading_it(ws_url, cfg, team_of_two, sweeper_name):  # noqa: F811
     requester, owner = team_of_two
@@ -173,3 +199,31 @@ def test_the_rule_invokes_the_sweeper_about_once_a_minute(sweeper_name):
             break
         time.sleep(20)
     assert len(events) >= 3, f"only {len(events)} scheduled runs in the last 5 minutes"
+
+
+@pytest.mark.slow
+def test_an_upload_that_never_completes_fails_after_the_configured_timeout(ws_url, cfg, team_of_two):  # noqa: F811
+    """The real TRANSFER_UPLOAD_TIMEOUT_SECONDS (600) with no override. Takes about 10 minutes."""
+    requester, owner = team_of_two
+    file_id = _publish(cfg, owner, FILE)
+
+    async def run():
+        ws = await _owner_online(ws_url, owner)
+        try:
+            transfer_id = (await _request(cfg, requester, file_id))[1]["transfer_id"]
+            await _next_upload_request(ws)
+            assert _post(cfg, owner, f"/transfers/{transfer_id}/ack")[0] == 204
+            started = time.time()
+            while True:
+                _, body = _call(cfg, "GET", f"/transfers/{transfer_id}", requester)
+                if body["status"] != "uploading":
+                    break
+                assert time.time() - started < 12 * 60, "still uploading after 12 minutes"
+                await asyncio.sleep(20)
+            print(f"upload failed after {int(time.time() - started)} s")
+            assert body["status"] == "failed" and body["error_code"] == "upload_failed"
+            assert time.time() - started >= 9 * 60  # not before the configured 600 s (less slack)
+        finally:
+            await ws.close()
+
+    asyncio.run(run())

@@ -9,9 +9,8 @@ from common.access_log import log_event
 from common.auth import get_caller_sub
 from common.errors import ApiError, Unauthorized, error_response, unauthorized_response
 from common.http import get_membership, invalid_request, iso, json_response, parse_body
-from common.transfer_state import ack_timeout_seconds, expire_unacked as _expire_unacked
+from common.transfer_state import IN_FLIGHT, ack_timeout_seconds, apply_timeouts
 
-IN_FLIGHT = "('requested', 'uploading', 'ready')"
 FAIL_ERROR_CODES = {"file_not_found": "file_unavailable", "not_public": "file_unavailable",
                     "upload_error": "upload_failed"}
 
@@ -56,7 +55,7 @@ def _check_and_record(cur, user_id, file_id):
     owner_id = row[0]
     if owner_id == user_id:
         raise ApiError(400, "own_file", "this is your own file")
-    _expire_unacked(cur, "file_id = %s AND requester_id = %s", (file_id, user_id))
+    apply_timeouts(cur, "file_id = %s AND requester_id = %s", (file_id, user_id))
     existing = _existing_in_flight(cur, file_id, user_id)
     if existing:
         log_event(cur, "transfer_request", user_id, team_id, file_id, str(existing[0]), "reused")
@@ -92,31 +91,43 @@ def create_transfer(user_id, event, body):
     _, transfer_id, owner_id, team_id = result
 
     # The row is committed, so the owner's ack cannot race ahead of it.
-    delivered, failure = False, "owner_offline"
     try:
         upload_url, expires_at = transit.presign_put(transfer_id)
+    except Exception as exc:  # noqa: BLE001
+        print(f"transfer presign error: {type(exc).__name__}")  # never log urls or ids
+        _fail_unsent(user_id, team_id, file_id, transfer_id, "send_failed")
+        raise ApiError(503, "service_unavailable", "could not reach the file's owner")
+    try:
         delivered = relay.send_to_user(owner_id, {
             "action": "upload_request", "transfer_id": transfer_id, "file_id": file_id,
             "upload_url": upload_url, "upload_url_expires_at": iso(expires_at),
             "ack_deadline_seconds": ack_timeout_seconds()})
     except Exception as exc:  # noqa: BLE001
+        # The outcome is unknown: the owner may have received the message before the error. Failing
+        # the transfer could waste a working upload, so leave it `requested`. If the owner never got
+        # it, the ack timeout fails it as owner_unresponsive.
         print(f"transfer notify error: {type(exc).__name__}")  # never log urls or ids
-        failure = "send_failed"
+        with db.transaction() as cur:
+            log_event(cur, "transfer_request", user_id, team_id, file_id, transfer_id, "send_unconfirmed")
+        return _accepted(transfer_id, "requested")
     if delivered:
         return _accepted(transfer_id, "requested")
+    _fail_unsent(user_id, team_id, file_id, transfer_id, "owner_offline")
+    raise ApiError(409, "owner_offline", "the file's owner is not online")
+
+
+def _fail_unsent(user_id, team_id, file_id, transfer_id, outcome):
+    """The owner certainly did not receive the request: fail the transfer and log why."""
     with db.transaction() as cur:
         cur.execute("UPDATE transfers SET status = 'failed', error_code = 'owner_unresponsive', "
                     "updated_at = now() WHERE transfer_id = %s AND status = 'requested'", (transfer_id,))
-        log_event(cur, "transfer_request", user_id, team_id, file_id, transfer_id, failure)
-    if failure == "send_failed":
-        raise ApiError(503, "service_unavailable", "could not reach the file's owner")
-    raise ApiError(409, "owner_offline", "the file's owner is not online")
+        log_event(cur, "transfer_request", user_id, team_id, file_id, transfer_id, outcome)
 
 
 def get_transfer(user_id, event, body):
     transfer_id = _transfer_id(event)
     with db.transaction() as cur:
-        _expire_unacked(cur, "transfer_id = %s AND requester_id = %s", (transfer_id, user_id))
+        apply_timeouts(cur, "transfer_id = %s AND requester_id = %s", (transfer_id, user_id))
         cur.execute("SELECT file_id, status, s3_key, error_code FROM transfers "
                     "WHERE transfer_id = %s AND requester_id = %s", (transfer_id, user_id))
         row = cur.fetchone()
@@ -135,7 +146,7 @@ def _transition(user_id, event, to_status, from_statuses, set_sql="", set_params
     safe); any other state is 409 conflict. Not the owner, or no such transfer, is 404."""
     transfer_id = _transfer_id(event)
     with db.transaction() as cur:
-        _expire_unacked(cur, "transfer_id = %s AND owner_id = %s", (transfer_id, user_id))
+        apply_timeouts(cur, "transfer_id = %s AND owner_id = %s", (transfer_id, user_id))
         placeholders = ", ".join(["%s"] * len(from_statuses))
         cur.execute(
             f"UPDATE transfers SET status = %s, updated_at = now(){set_sql} "

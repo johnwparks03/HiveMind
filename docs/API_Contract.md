@@ -420,7 +420,7 @@ The excerpt is truncated server-side to the configured maximum. Output is valida
 { "transfer_id": "…", "status": "requested" }
 ```
 
-Server checks: file exists, not expired, same team as the caller, caller is not the owner, owner has a live connection. Reuses an in-flight transfer for the same file and requester. Creates the transfer record and presigned PUT URL, then sends `upload_request` to the owner's connection (section 4). Errors: `404 not_found`, `400 own_file`, `403 no_team`, `409 owner_offline`.
+Server checks: file exists, not expired, same team as the caller, caller is not the owner, owner has a live connection. Reuses an in-flight transfer for the same file and requester. Creates the transfer record and presigned PUT URL, then sends `upload_request` to the owner's connection (section 4). Errors: `404 not_found`, `400 own_file`, `403 no_team`, `409 owner_offline`. If the notification to the owner fails with an unclear result (the owner may or may not have received it), the transfer stays `requested` and the response is still `202`: the owner's ack still works, and if the owner never got the message the ack timeout below fails it as `owner_unresponsive`. Only a failure before anything was sent returns `503 service_unavailable` and fails the transfer.
 
 **`GET /transfers/{transfer_id}`** (requester only)
 
@@ -441,6 +441,8 @@ The presigned GET URL is issued at the moment the requester polls and sees `read
 **Owner endpoints** (`ack`, `complete`, `fail`): a transfer that does not exist, or whose owner is not the caller, returns `404 not_found` (same as the requester rule, so existence is not revealed). Repeating the transition already made returns `204`, so retries are safe. Any other state returns `409 conflict` with `details.status`. `fail` maps `file_not_found` and `not_public` to `error_code: file_unavailable`, and `upload_error` to `upload_failed`. A malformed `transfer_id` or an unknown `reason` or negative `size_bytes` returns `400 invalid_request`.
 
 **Ack timeout:** a transfer still `requested` after 60 seconds becomes `failed` / `owner_unresponsive`. This is applied lazily on the next read or owner call, and by the sweeper.
+
+**Upload timeout:** a transfer still `uploading` 600 seconds (`TRANSFER_UPLOAD_TIMEOUT_SECONDS`) after the owner's ack becomes `failed` / `upload_failed`, applied the same way. The owner's later `complete` then returns `409 conflict`, and the requester can start a new transfer. An upload still running at that point is failed.
 
 **`POST /transfers/{transfer_id}/ack`** (owner) → `204`. Moves status to `uploading`.
 
@@ -527,7 +529,7 @@ Acknowledgment, completion, and failure go over HTTP, not the WebSocket, so they
 
 **Scheduled jobs (not part of any API)**
 
-- Transfer sweeper, every minute: deletes the S3 object of every transfer more than 15 minutes old and marks it `expired` (a transfer already `failed` keeps that status), and marks transfers with no acknowledgment after 60 seconds `failed` / `owner_unresponsive`. Repeated runs change nothing further.
+- Transfer sweeper, every minute: deletes the S3 object of every transfer more than 15 minutes old and marks it `expired` (a transfer already `failed` keeps that status), marks transfers with no acknowledgment after 60 seconds `failed` / `owner_unresponsive`, and marks transfers still `uploading` 600 seconds after the ack `failed` / `upload_failed`. Repeated runs change nothing further.
 - Nightly purge: deletes expired `public_files` rows, expired invites, and stale `connections` rows.
 
 ---

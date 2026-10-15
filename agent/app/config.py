@@ -117,6 +117,9 @@ QUERY_EXPANSION_MAX_TOTAL_WORDS = 6
 
 SUPPORTED_EXTENSIONS = {".pdf", ".docx", ".pptx", ".txt"}
 
+# Saved Ask chats: how much of the first question becomes the sidebar title.
+CHAT_TITLE_MAX_CHARS = 60
+
 # Local Bedrock (decided 2026-10-15, demo/MVP only — see CLAUDE.md). Credentials come
 # from the standard AWS env vars (AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY /
 # AWS_DEFAULT_REGION), set in agent/.env alongside the Cognito values; boto3 reads

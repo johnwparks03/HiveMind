@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api import (
     routes_ask,
     routes_auth,
+    routes_chats,
     routes_files,
     routes_folders,
     routes_search,
@@ -66,6 +67,7 @@ app.include_router(routes_folders.router)
 app.include_router(routes_files.router)
 app.include_router(routes_search.router)
 app.include_router(routes_ask.router)
+app.include_router(routes_chats.router)
 
 
 if __name__ == "__main__":

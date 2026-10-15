@@ -2,6 +2,7 @@
 "Filter first, then rank" and "comes up short" -> central (not built today;
 the agent track is being built standalone per docs/stories/BACKLOG.md's E2 note).
 """
+import json
 import re
 from datetime import datetime
 from pathlib import Path
@@ -14,8 +15,11 @@ from app.config import (
     QUERY_EXPANSION_ENABLED,
     SEARCH_RESULT_LIMIT,
     SIMILARITY_DISTANCE_THRESHOLD,
+    TAG_BOOST_MAX,
+    TAG_BOOST_PER_WORD,
     TOTAL_BOOST_MAX,
 )
+from app.db import session
 from app.indexing.embeddings import embed
 from app.indexing.vector_store import _date_range_where, iter_chunks, query as vector_query
 from app.search.query_expansion import expand_topic
@@ -50,6 +54,28 @@ def _format_boost(filename: str, topic: str) -> float:
     if not trigger_words:
         return 0.0
     return FORMAT_WORD_BOOST if _words(topic) & trigger_words else 0.0
+
+
+def _tags_by_file_id(file_ids: list[str]) -> dict[str, list[str]]:
+    if not file_ids:
+        return {}
+    with session() as conn:
+        placeholders = ",".join("?" * len(file_ids))
+        rows = conn.execute(
+            f"SELECT file_id, tags FROM files WHERE file_id IN ({placeholders})", file_ids
+        ).fetchall()
+    return {row["file_id"]: json.loads(row["tags"]) if row["tags"] else [] for row in rows}
+
+
+def _tag_boost(tags: list[str], topic: str) -> float:
+    """A third deterministic signal alongside the filename/format boosts above —
+    word overlap between the query and a file's (model-generated, on-demand) tags.
+    Most files won't have tags at all yet, since generation is on-demand; this is a
+    no-op for those, not a penalty."""
+    if not topic or not tags:
+        return 0.0
+    matches = _words(topic) & _words(" ".join(tags))
+    return min(len(matches) * TAG_BOOST_PER_WORD, TAG_BOOST_MAX)
 
 
 def _group_best_per_file(ids, documents, metadatas, distances) -> list[dict]:
@@ -106,8 +132,13 @@ def search_local(raw_query: str) -> dict:
         results = []
         if ids:
             results = _group_best_per_file(ids, raw["documents"][0], raw["metadatas"][0], raw["distances"][0])
+            tags_by_id = _tags_by_file_id([r["file_id"] for r in results])
             for r in results:
-                boost = _filename_boost(r["filename"], parsed.topic) + _format_boost(r["filename"], parsed.topic)
+                boost = (
+                    _filename_boost(r["filename"], parsed.topic)
+                    + _format_boost(r["filename"], parsed.topic)
+                    + _tag_boost(tags_by_id.get(r["file_id"], []), parsed.topic)
+                )
                 r["score"] = max(0.0, r["score"] - min(boost, TOTAL_BOOST_MAX))
             results.sort(key=lambda r: r["score"])
             results = [r for r in results if r["score"] <= SIMILARITY_DISTANCE_THRESHOLD][:SEARCH_RESULT_LIMIT]

@@ -15,7 +15,7 @@ If the docs disagree, `API_Contract.md` wins for paths, field names and status c
 ## Architecture (hard rules)
 - Three parts: **local agent** (`agent/`, Python + FastAPI on `127.0.0.1`), **React frontend** (`frontend/`, React + Vite), **central service** (`infra/` + `central/` or similar, AWS). The exact central code layout is set in E0-S1.
 - The frontend talks **only** to the local agent. The agent talks to the central service. The frontend never calls the central service.
-- Bedrock (Claude Sonnet 5.5) is called **only** from the central `/llm/*` endpoints. The agent never calls Bedrock or holds AWS credentials.
+- Bedrock (Claude Sonnet 5.5) is called from the central `/llm/*` endpoints, and (decided 2026-10-15, demo/MVP only — not a production design) also directly from the local agent for features that need to reason over file content on the user's own machine (e.g. multi-document Q&A). Where it's called from, it reads AWS credentials from `agent/.env` (`AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`/`AWS_DEFAULT_REGION`) — never commit real values there, same as every other credential in this file.
 - The server derives `team_id` from membership. The agent never sends it.
 - File bytes touch AWS only as a short-lived S3 transit object (random key = transfer ID, swept after 15 minutes).
 - Embeddings are computed locally (sentence-transformers all-MiniLM-L6-v2). File content is never sent centrally for indexing. Only a tag-generation excerpt (default 3,000 characters) passes through the central proxy, and it is never stored or logged.

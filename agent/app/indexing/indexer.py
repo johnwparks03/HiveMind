@@ -3,6 +3,7 @@ import hashlib
 from datetime import datetime
 from pathlib import Path
 
+from app.config import TAG_EXCERPT_MAX_CHARS
 from app.extraction.extract import extract_text
 from app.indexing.chunking import chunk_text
 from app.indexing.embeddings import embed
@@ -21,7 +22,8 @@ def index_file(
     file_modified_at: datetime,
 ) -> dict:
     """Returns a dict of fields the caller should persist to the registry row:
-    index_status, index_failure_reason, in_document_date.
+    index_status, index_failure_reason, in_document_date, excerpt (for tag
+    generation — None on failure, since there's no text to tag).
     """
     result = extract_text(path)
     if result.failure_reason:
@@ -32,6 +34,7 @@ def index_file(
             "index_status": "failed",
             "index_failure_reason": result.failure_reason,
             "in_document_date": None,
+            "excerpt": None,
         }
 
     chunks = chunk_text(result.text)
@@ -56,4 +59,5 @@ def index_file(
         "index_status": "indexed",
         "index_failure_reason": None,
         "in_document_date": result.in_document_date.isoformat() if result.in_document_date else None,
+        "excerpt": result.text[:TAG_EXCERPT_MAX_CHARS],
     }

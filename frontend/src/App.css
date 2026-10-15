@@ -286,6 +286,36 @@ input:focus {
   gap: 12px;
 }
 
+.ask-answer {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  margin: 4px 0 16px;
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
+.ask-sources {
+  list-style: none;
+  margin: 4px 0 16px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ask-source-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+}
+
 .result-card {
   background: var(--surface);
   border: 1px solid var(--line);

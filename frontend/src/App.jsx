@@ -72,11 +72,13 @@ export default function App() {
       </header>
 
       <main className="page">
-        {/* Search stays mounted so its query and results survive a trip to Files. */}
+        {/* Search and Ask stay mounted so their query/answer survive a trip to another tab. */}
         <div hidden={tab !== "search"}>
           <SearchPage key={searchKey} />
         </div>
-        {tab === "ask" && <AskPage />}
+        <div hidden={tab !== "ask"}>
+          <AskPage />
+        </div>
         {tab === "files" && <FilesPage />}
         {tab === "groups" && <GroupsPage />}
         {tab === "account" && <AccountPage />}

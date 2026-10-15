@@ -91,3 +91,11 @@ def test_filename_and_tags_are_searchable_and_status_is_constrained(fresh_db):
         with fresh_db, fresh_db.cursor() as cur:
             cur.execute("INSERT INTO transfers (transfer_id, file_id, requester_id, owner_id, status) "
                         "VALUES (%s, 'f1', 'u2', 'u1', 'bogus')", (str(uuid.uuid4()),))
+
+
+def test_0003_adds_transfer_api_columns_and_the_in_flight_index():
+    sql = _sql("0003_transfers_api.sql")
+    assert "ALTER TABLE transfers ADD COLUMN error_code text, ADD COLUMN size_bytes bigint" in sql
+    assert re.search(r"CREATE UNIQUE INDEX uq_transfers_in_flight ON transfers \(file_id, requester_id\)\s+"
+                     r"WHERE status IN \('requested', 'uploading', 'ready'\)", sql)
+    assert "ALTER TABLE access_log ADD COLUMN transfer_id uuid, ADD COLUMN outcome text" in sql

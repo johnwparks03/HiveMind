@@ -36,6 +36,8 @@ class HiveMindStack(Stack):
             "BEDROCK_MODEL_ID": "us.anthropic.claude-sonnet-5-5",
             "TRANSFER_ACK_TIMEOUT_SECONDS": "60",
             "SWEEPER_MAX_AGE_MINUTES": "15",
+            "UPLOAD_URL_EXPIRY_SECONDS": "600",
+            "DOWNLOAD_URL_EXPIRY_SECONDS": "300",
         }
         for key, value in config.items():
             ssm.StringParameter(self, f"Param{key}",
@@ -279,6 +281,42 @@ class HiveMindStack(Stack):
             web_socket_api=ws_api, stage_name="dev", auto_deploy=True,
         )
 
+        # ── Transfer API (E4-S2) ─────────────────────────────────────────────
+        # Notifying the owner means calling the WebSocket management API. From inside the VPC that
+        # call was refused (ForbiddenException) when routed through an execute-api interface
+        # endpoint, though IAM allowed it and the same call works outside the VPC. So the send is
+        # done by a small non-VPC Lambda (no DB access), which the VPC-bound transfers Lambda
+        # invokes through a Lambda interface endpoint.
+        notify_role = iam.Role(self, "NotifyRole",
+            assumed_by=iam.ServicePrincipal("lambda.amazonaws.com"),
+            managed_policies=[
+                iam.ManagedPolicy.from_aws_managed_policy_name(
+                    "service-role/AWSLambdaBasicExecutionRole"
+                ),
+            ],
+        )
+        notify_role.add_to_policy(iam.PolicyStatement(
+            actions=["execute-api:ManageConnections"],
+            resources=[f"arn:{self.partition}:execute-api:{self.region}:{self.account}:"
+                       f"{ws_api.api_id}/{ws_stage.stage_name}/POST/@connections/*"],
+        ))
+        notify_fn = lambda_.Function(self, "NotifyFn",
+            runtime=lambda_.Runtime.PYTHON_3_12,
+            handler="notify.handler",
+            code=lambda_.Code.from_asset(lambdas_dir),
+            role=notify_role,
+            environment={"WS_MANAGEMENT_URL": ws_stage.callback_url},
+            timeout=Duration.seconds(15),
+        )
+        vpc.add_interface_endpoint("LambdaEndpoint",
+            service=ec2.InterfaceVpcEndpointAwsService.LAMBDA_,
+            subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_ISOLATED),
+            security_groups=[endpoint_sg],
+        )
+        notify_fn.grant_invoke(lambda_role)
+        transfers_fn = vpc_function("TransfersFn", "transfers.handler")
+        transfers_fn.add_environment("NOTIFY_FUNCTION_NAME", notify_fn.function_name)
+
         # Runs migrate_fn on every deploy where its code changed. Idempotent
         # (applies each migrations/*.sql once); a failure fails the deploy.
         triggers.Trigger(self, "RunMigrations",
@@ -332,6 +370,16 @@ class HiveMindStack(Stack):
             ("/files/mine", [apigwv2.HttpMethod.GET], "FilesMineIntegration"),
         ]:
             add_authed_route(path, methods, files_fn, integration_id)
+
+        # Transfer API (E4-S2)
+        for path, methods, integration_id in [
+            ("/transfers", [apigwv2.HttpMethod.POST], "TransfersCreateIntegration"),
+            ("/transfers/{transfer_id}", [apigwv2.HttpMethod.GET], "TransfersGetIntegration"),
+            ("/transfers/{transfer_id}/ack", [apigwv2.HttpMethod.POST], "TransfersAckIntegration"),
+            ("/transfers/{transfer_id}/complete", [apigwv2.HttpMethod.POST], "TransfersCompleteIntegration"),
+            ("/transfers/{transfer_id}/fail", [apigwv2.HttpMethod.POST], "TransfersFailIntegration"),
+        ]:
+            add_authed_route(path, methods, transfers_fn, integration_id)
 
         # Central search (E3-S7)
         add_authed_route("/search", [apigwv2.HttpMethod.POST], search_fn, "SearchIntegration")

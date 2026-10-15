@@ -438,7 +438,7 @@ The excerpt is truncated server-side to the configured maximum. Output is valida
 { "transfer_id": "…", "status": "requested" }
 ```
 
-Server checks: file exists, not expired, same team as the caller, caller is not the owner, owner has a live connection. Reuses an in-flight transfer for the same file and requester. Creates the transfer record and presigned PUT URL, then sends `upload_request` to the owner's connection (section 4). Errors: `404 not_found`, `400 own_file`, `403 no_team`, `409 owner_offline`.
+Server checks: file exists, not expired, same team as the caller, caller is not the owner, owner has a live connection. Reuses an in-flight transfer for the same file and requester. Creates the transfer record and presigned PUT URL, then sends `upload_request` to the owner's connection (section 4). Errors: `404 not_found`, `400 own_file`, `403 no_team`, `409 owner_offline`. If the notification to the owner fails with an unclear result (the owner may or may not have received it), the transfer stays `requested` and the response is still `202`: the owner's ack still works, and if the owner never got the message the ack timeout below fails it as `owner_unresponsive`. Only a failure before anything was sent returns `503 service_unavailable` and fails the transfer.
 
 **`GET /transfers/{transfer_id}`** (requester only)
 
@@ -456,6 +456,12 @@ Server checks: file exists, not expired, same team as the caller, caller is not 
 
 The presigned GET URL is issued at the moment the requester polls and sees `ready`. If the owner never acknowledges within 60 seconds, status becomes `failed` with `owner_unresponsive`. Other users get `404 not_found`.
 
+**Owner endpoints** (`ack`, `complete`, `fail`): a transfer that does not exist, or whose owner is not the caller, returns `404 not_found` (same as the requester rule, so existence is not revealed). Repeating the transition already made returns `204`, so retries are safe. Any other state returns `409 conflict` with `details.status`. `fail` maps `file_not_found` and `not_public` to `error_code: file_unavailable`, and `upload_error` to `upload_failed`. A malformed `transfer_id` or an unknown `reason` or negative `size_bytes` returns `400 invalid_request`.
+
+**Ack timeout:** a transfer still `requested` after 60 seconds becomes `failed` / `owner_unresponsive`. This is applied lazily on the next read or owner call, and by the sweeper.
+
+**Upload timeout:** a transfer still `uploading` 600 seconds (`TRANSFER_UPLOAD_TIMEOUT_SECONDS`) after the owner's ack becomes `failed` / `upload_failed`, applied the same way. The owner's later `complete` then returns `409 conflict`, and the requester can start a new transfer. An upload still running at that point is failed.
+
 **`POST /transfers/{transfer_id}/ack`** (owner) → `204`. Moves status to `uploading`.
 
 **`POST /transfers/{transfer_id}/complete`** (owner) → request `{ "size_bytes": 482113 }` (optional). `204`. Moves status to `ready`.
@@ -464,9 +470,9 @@ The presigned GET URL is issued at the moment the requester polls and sees `read
 
 **S3 presigned URLs**
 
-- Upload: the owner's agent streams the file with `PUT` to the `upload_url`. No auth header.
+- Upload: the owner's agent streams the file with `PUT` to the `upload_url`. No auth header. Only the bucket and key are signed, so any (or no) `Content-Type` and `Content-Length` is accepted.
 - Download: the requester's agent issues `GET` on `download_url`. No auth header.
-- Object key is the transfer ID. The sweeper deletes the object after 15 minutes.
+- Object key is the transfer ID. The sweeper deletes the object once the transfer is 15 minutes old (counted from `POST /transfers`, not from the upload), so an object lives at most about 16 minutes. The transfer then reports `expired` and no `download_url`; the requester may start a new transfer for the same file.
 
 ---
 
@@ -477,7 +483,7 @@ The presigned GET URL is issued at the moment the requester polls and sees `read
 **Connect**
 
 - The agent connects after login and reconnects automatically on drop.
-- A Lambda authorizer validates the Cognito JWT on `$connect`. The mechanism for passing the token (query string or `Authorization` header) must be verified; the agent is not a browser, so a header may work.
+- A Lambda authorizer validates the Cognito **access** token on `$connect`. The agent sends it as `Authorization: Bearer <token>` (header, not query string, so it stays out of URLs and logs). A missing, invalid, expired or ID token is rejected at the handshake (401/403). Verified on the deployed API (E4-S1): missing token returns 401, invalid token or ID token returns 403.
 - On connect the server stores `connection_id`, `user_id`, `connected_at`. On disconnect it removes the row.
 - A user with no team can still connect.
 
@@ -541,7 +547,7 @@ Acknowledgment, completion, and failure go over HTTP, not the WebSocket, so they
 
 **Scheduled jobs (not part of any API)**
 
-- Transfer sweeper, every minute: deletes S3 objects older than 15 minutes, marks stale transfers `expired`, and marks transfers with no acknowledgment after 60 seconds `failed`.
+- Transfer sweeper, every minute: deletes the S3 object of every transfer more than 15 minutes old and marks it `expired` (a transfer already `failed` keeps that status), marks transfers with no acknowledgment after 60 seconds `failed` / `owner_unresponsive`, and marks transfers still `uploading` 600 seconds after the ack `failed` / `upload_failed`. Repeated runs change nothing further.
 - Nightly purge: deletes expired `public_files` rows, expired invites, and stale `connections` rows.
 
 ---
@@ -579,9 +585,9 @@ Acknowledgment, completion, and failure go over HTTP, not the WebSocket, so they
 2. **Opening a downloaded file** (`POST /transfers/{id}/open`) is my addition and not confirmed.
 3. **Header name, port, and token type.** I used `X-HiveMind-Token`. I don't know which Cognito token (access or ID) your JWT authorizer will accept, and the port is undecided.
 4. **Pagination.** Cursors on `GET /files` and `GET /files/mine` could be dropped for demo-size data.
-5. **WebSocket token passing** needs verifying against API Gateway's authorizer options.
+5. **WebSocket token passing: resolved.** The `Authorization` header works on `$connect` (verified in E4-S1). Still to confirm: the idle timeout (documented 10 min) and max connection duration (documented 2 h), which set the agent's ping interval and require a reconnect after 2 h.
 6. **Team-removal notification.** Nothing is pushed over the WebSocket when a user leaves a team. The agent learns through its own `POST /team/leave` call, or through reconciliation if the change happens another way.
-7. **Presigned PUT headers.** Whether the signed URL requires a specific `Content-Type` or `Content-Length` depends on how the server generates it. Check this during the relay prototype.
+7. **Presigned PUT headers: resolved by design (E4-S2).** Only bucket and key are signed, so no specific `Content-Type` or `Content-Length` is required. Confirmed by the integration test once deployed.
 8. **Tag edits on private files.** Setting tags before publishing now means those tags are used as-is (see settled item 3). I haven't checked whether you want the UI to make that clear.
 
 If you'd like this as an OpenAPI (YAML) spec so the frontend and agent can generate types and mocks, I can convert it once the open items are settled.

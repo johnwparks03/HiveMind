@@ -7,6 +7,8 @@ from aws_cdk import (
     RemovalPolicy,
     aws_cognito as cognito,
     aws_ec2 as ec2,
+    aws_events as events,
+    aws_events_targets as targets,
     aws_iam as iam,
     aws_lambda as lambda_,
     aws_apigatewayv2 as apigwv2,
@@ -35,7 +37,10 @@ class HiveMindStack(Stack):
             "PUBLISH_CONCURRENCY": "5",
             "BEDROCK_MODEL_ID": "us.anthropic.claude-sonnet-5-5",
             "TRANSFER_ACK_TIMEOUT_SECONDS": "60",
+            "TRANSFER_UPLOAD_TIMEOUT_SECONDS": "600",
             "SWEEPER_MAX_AGE_MINUTES": "15",
+            "UPLOAD_URL_EXPIRY_SECONDS": "600",
+            "DOWNLOAD_URL_EXPIRY_SECONDS": "300",
         }
         for key, value in config.items():
             ssm.StringParameter(self, f"Param{key}",
@@ -226,6 +231,110 @@ class HiveMindStack(Stack):
             environment={k: config[k] for k in ("BEDROCK_MODEL_ID", "EXCERPT_MAX_CHARS")},
             timeout=Duration.seconds(25),
         )
+        # ── Relay WebSocket (E4-S1) ──────────────────────────────────────────
+        # The authorizer is outside the VPC for the same reason as llm_fn: it must fetch
+        # Cognito's JWKS over the internet. It needs no DB, so it gets a basic role only.
+        auth_layer = lambda_.LayerVersion(self, "AuthLayer",
+            code=lambda_.Code.from_asset(os.path.join(os.path.dirname(__file__), "auth_layer")),
+            compatible_runtimes=[lambda_.Runtime.PYTHON_3_12],
+            description="PyJWT + cryptography for the WebSocket authorizer (manylinux)",
+        )
+        ws_authorizer_role = iam.Role(self, "WsAuthorizerRole",
+            assumed_by=iam.ServicePrincipal("lambda.amazonaws.com"),
+            managed_policies=[
+                iam.ManagedPolicy.from_aws_managed_policy_name(
+                    "service-role/AWSLambdaBasicExecutionRole"
+                ),
+            ],
+        )
+        ws_authorizer_fn = lambda_.Function(self, "WsAuthorizerFn",
+            runtime=lambda_.Runtime.PYTHON_3_12,
+            handler="ws_authorizer.handler",
+            code=lambda_.Code.from_asset(lambdas_dir),
+            role=ws_authorizer_role,
+            layers=[auth_layer],
+            environment={
+                "USER_POOL_ID": user_pool.user_pool_id,
+                "USER_POOL_CLIENT_ID": user_pool_client.user_pool_client_id,
+            },
+            timeout=Duration.seconds(10),
+        )
+        relay_fn = vpc_function("RelayFn", "relay.handler", timeout=10)
+
+        ws_api = apigwv2.WebSocketApi(self, "RelayWsApi",
+            route_selection_expression="$request.body.action",
+        )
+        ws_api.add_route("$connect",
+            integration=apigwv2_integrations.WebSocketLambdaIntegration("WsConnectIntegration", relay_fn),
+            # Agents are not browsers, so the token travels in the Authorization header
+            # rather than a query string that would end up in URLs and logs.
+            authorizer=apigwv2_auth.WebSocketLambdaAuthorizer(
+                "WsJwtAuthorizer", ws_authorizer_fn,
+                identity_source=["route.request.header.Authorization"],
+            ),
+        )
+        ws_api.add_route("$disconnect",
+            integration=apigwv2_integrations.WebSocketLambdaIntegration("WsDisconnectIntegration", relay_fn),
+        )
+        ws_api.add_route("ping",
+            integration=apigwv2_integrations.WebSocketLambdaIntegration("WsPingIntegration", relay_fn),
+            return_response=True,  # the handler's body is sent back to the client as the pong
+        )
+        ws_stage = apigwv2.WebSocketStage(self, "RelayWsStage",
+            web_socket_api=ws_api, stage_name="dev", auto_deploy=True,
+        )
+
+        # ── Transfer API (E4-S2) ─────────────────────────────────────────────
+        # Notifying the owner means calling the WebSocket management API. From inside the VPC that
+        # call was refused (ForbiddenException) when routed through an execute-api interface
+        # endpoint, though IAM allowed it and the same call works outside the VPC. So the send is
+        # done by a small non-VPC Lambda (no DB access), which the VPC-bound transfers Lambda
+        # invokes through a Lambda interface endpoint.
+        notify_role = iam.Role(self, "NotifyRole",
+            assumed_by=iam.ServicePrincipal("lambda.amazonaws.com"),
+            managed_policies=[
+                iam.ManagedPolicy.from_aws_managed_policy_name(
+                    "service-role/AWSLambdaBasicExecutionRole"
+                ),
+            ],
+        )
+        notify_role.add_to_policy(iam.PolicyStatement(
+            actions=["execute-api:ManageConnections"],
+            resources=[f"arn:{self.partition}:execute-api:{self.region}:{self.account}:"
+                       f"{ws_api.api_id}/{ws_stage.stage_name}/POST/@connections/*"],
+        ))
+        notify_fn = lambda_.Function(self, "NotifyFn",
+            runtime=lambda_.Runtime.PYTHON_3_12,
+            handler="notify.handler",
+            code=lambda_.Code.from_asset(lambdas_dir),
+            role=notify_role,
+            environment={"WS_MANAGEMENT_URL": ws_stage.callback_url},
+            timeout=Duration.seconds(15),
+        )
+        vpc.add_interface_endpoint("LambdaEndpoint",
+            service=ec2.InterfaceVpcEndpointAwsService.LAMBDA_,
+            subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_ISOLATED),
+            security_groups=[endpoint_sg],
+        )
+        notify_fn.grant_invoke(lambda_role)
+        transfers_fn = vpc_function("TransfersFn", "transfers.handler")
+        transfers_fn.add_environment("NOTIFY_FUNCTION_NAME", notify_fn.function_name)
+
+        # ── Transfer sweeper (E4-S5) ─────────────────────────────────────────
+        # Needs the DB, so it lives in the VPC, and the VPC has no NAT: a free S3 gateway
+        # endpoint lets it delete transit objects. lambda_role already has bucket read/write.
+        vpc.add_gateway_endpoint("S3Endpoint",
+            service=ec2.GatewayVpcEndpointAwsService.S3,
+            subnets=[ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_ISOLATED)],
+        )
+        sweeper_fn = vpc_function("SweeperFn", "sweeper.handler", timeout=60)
+        events.Rule(self, "SweeperSchedule",
+            schedule=events.Schedule.rate(Duration.minutes(1)),
+            targets=[targets.LambdaFunction(sweeper_fn)],
+        )
+        cdk.CfnOutput(self, "SweeperFunctionName", value=sweeper_fn.function_name,
+                       description="Transfer sweeper Lambda (integration tests invoke it directly)")
+
         # Runs migrate_fn on every deploy where its code changed. Idempotent
         # (applies each migrations/*.sql once); a failure fails the deploy.
         triggers.Trigger(self, "RunMigrations",
@@ -280,6 +389,16 @@ class HiveMindStack(Stack):
         ]:
             add_authed_route(path, methods, files_fn, integration_id)
 
+        # Transfer API (E4-S2)
+        for path, methods, integration_id in [
+            ("/transfers", [apigwv2.HttpMethod.POST], "TransfersCreateIntegration"),
+            ("/transfers/{transfer_id}", [apigwv2.HttpMethod.GET], "TransfersGetIntegration"),
+            ("/transfers/{transfer_id}/ack", [apigwv2.HttpMethod.POST], "TransfersAckIntegration"),
+            ("/transfers/{transfer_id}/complete", [apigwv2.HttpMethod.POST], "TransfersCompleteIntegration"),
+            ("/transfers/{transfer_id}/fail", [apigwv2.HttpMethod.POST], "TransfersFailIntegration"),
+        ]:
+            add_authed_route(path, methods, transfers_fn, integration_id)
+
         # Central search (E3-S7)
         add_authed_route("/search", [apigwv2.HttpMethod.POST], search_fn, "SearchIntegration")
 
@@ -304,6 +423,8 @@ class HiveMindStack(Stack):
         # ── Outputs ──────────────────────────────────────────────────────────
         cdk.CfnOutput(self, "HttpApiUrl", value=http_api.api_endpoint,
                        description="Central HTTP API base URL — put in agent config")
+        cdk.CfnOutput(self, "WebSocketUrl", value=ws_stage.url,
+                       description="Relay WebSocket URL (wss) — put in agent config")
         cdk.CfnOutput(self, "UserPoolId", value=user_pool.user_pool_id,
                        description="Cognito User Pool ID — put in agent config")
         cdk.CfnOutput(self, "UserPoolClientId", value=user_pool_client.user_pool_client_id,

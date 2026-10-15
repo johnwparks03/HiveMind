@@ -43,3 +43,19 @@ def presign_put(key):
 def presign_get(key):
     """(url, expires_at) for the requester to download the file."""
     return _presign("get_object", key, download_url_expiry_seconds())
+
+
+DELETE_BATCH = 1000  # the S3 DeleteObjects API limit
+
+
+def delete_objects(keys):
+    """Delete transit objects. Returns (keys S3 reports deleted, number of keys that failed).
+    A key that is already gone counts as deleted, so repeating a call is safe."""
+    deleted, errors = set(), 0
+    for start in range(0, len(keys), DELETE_BATCH):
+        batch = keys[start:start + DELETE_BATCH]
+        result = _s3().delete_objects(Bucket=os.environ["TRANSIT_BUCKET"],
+                                      Delete={"Objects": [{"Key": key} for key in batch]})
+        deleted.update(item["Key"] for item in result.get("Deleted", []))
+        errors += len(result.get("Errors", []))
+    return deleted, errors

@@ -24,6 +24,7 @@ class FakeCursor:
     def __init__(self, answers):
         self.answers = {k: list(v) for k, v in answers.items()}
         self.executed = []
+        self.rowcount = 0
 
     def execute(self, sql, params=None):
         self.executed.append((sql, params))

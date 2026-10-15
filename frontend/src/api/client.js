@@ -63,7 +63,9 @@ export const api = {
   search: (query) => request("/search", { method: "POST", body: JSON.stringify({ query }) }),
   // Online-only (local Bedrock call, decided 2026-10-15, demo/MVP) — unlike search,
   // there's no offline fallback for synthesizing an answer across files.
-  ask: (question) => request("/ask", { method: "POST", body: JSON.stringify({ question }) }),
+  // fileIds optionally scopes which files to consider; omitted/empty searches everything.
+  ask: (question, fileIds) =>
+    request("/ask", { method: "POST", body: JSON.stringify({ question, file_ids: fileIds ?? [] }) }),
   listFolders: () => request("/folders").then((data) => data.folders),
   listFiles: () => request("/files").then((data) => data.files.map(normaliseFile)),
   addFolder: (path) => request("/folders", { method: "POST", body: JSON.stringify({ path }) }),

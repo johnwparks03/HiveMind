@@ -258,7 +258,9 @@ Errors: `POST /search` itself does not return 503 for LLM-proxy failures — the
 
 ### 2.5a Ask (local-only, decided 2026-10-15, demo/MVP)
 
-**`POST /ask`** → `{ "question": "what did we do the last two weeks" }`. Unlike `/search`, this is online-only (no offline fallback) — synthesizing an answer across documents genuinely needs a generative model, and there is no local one. The agent runs the same local retrieval as `/search` (date filter, then vector ranking — or, with no topic in the question, lists broadly by recency within the date range) across up to a few files' worth of content, then calls Bedrock directly (architecture exception, see `CLAUDE.md`) to synthesize an answer from those excerpts.
+**`POST /ask`** → `{ "question": "what did we do the last two weeks", "folder_ids": ["…"], "file_ids": ["…"] }`. Unlike `/search`, this is online-only (no offline fallback) — synthesizing an answer across documents genuinely needs a generative model, and there is no local one. The agent runs the same local retrieval as `/search` (date filter, then vector ranking — or, with no topic in the question, lists broadly by recency within the date range) across up to a few files' worth of content, then calls Bedrock directly (architecture exception, see `CLAUDE.md`) to synthesize an answer from those excerpts.
+
+`folder_ids`/`file_ids` are both optional (decided 2026-10-16) and additive — the union of every file in a selected folder plus every individually selected file, not an intersection. Both omitted or empty means no restriction: search every indexed file, same as before this existed. The frontend's Ask page scope picker sends whichever files are checked (a checked folder resolves client-side to all of its files' `file_ids`; the agent also accepts `folder_ids` directly for any other caller). A scope that resolves to zero real files returns the same "no files matched" response as a genuinely empty result, without calling Bedrock.
 
 ```json
 // 200

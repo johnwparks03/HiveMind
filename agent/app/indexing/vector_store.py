@@ -63,6 +63,21 @@ def _date_range_where(date_from_ts: float | None, date_to_ts: float | None) -> d
     ]}
 
 
+def with_file_scope(where: dict | None, file_ids: set[str] | None) -> dict | None:
+    """Combines an existing `where` clause with an optional file_id allowlist (the
+    /ask folder/file scope picker). Filtering at the Chroma level instead of after
+    retrieval matters for recall: a narrow scope (one small folder in a big corpus)
+    could otherwise lose real matches to the n_results cutoff before they're ever
+    checked against the scope.
+    """
+    if file_ids is None:
+        return where
+    scope_clause = {"file_id": {"$in": list(file_ids)}}
+    if where is None:
+        return scope_clause
+    return {"$and": [where, scope_clause]}
+
+
 def iter_chunks(where: dict | None) -> Iterator[tuple[dict, str]]:
     """Yields (metadata, document) for every chunk matching `where`, one page at a time."""
     collection = get_collection()
@@ -76,9 +91,15 @@ def iter_chunks(where: dict | None) -> Iterator[tuple[dict, str]]:
         offset += CHROMA_PAGE_SIZE
 
 
-def query(embedding: list[float], date_from_ts: float | None, date_to_ts: float | None, n_results: int = 50):
+def query(
+    embedding: list[float],
+    date_from_ts: float | None,
+    date_to_ts: float | None,
+    n_results: int = 50,
+    file_id_scope: set[str] | None = None,
+):
     collection = get_collection()
-    where = _date_range_where(date_from_ts, date_to_ts)
+    where = with_file_scope(_date_range_where(date_from_ts, date_to_ts), file_id_scope)
     kwargs = {"query_embeddings": [embedding], "n_results": n_results}
     if where is not None:
         kwargs["where"] = where

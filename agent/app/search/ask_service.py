@@ -9,10 +9,33 @@ from app.config import (
     ASK_MAX_TOTAL_CHARS,
     SEARCH_RESULT_LIMIT,
 )
+from app.db import session
 from app.indexing.embeddings import embed
-from app.indexing.vector_store import _date_range_where, iter_chunks, query as vector_query
+from app.indexing.vector_store import _date_range_where, iter_chunks, query as vector_query, with_file_scope
 from app.llm import bedrock
 from app.search.query_parser import ParsedQuery, parse_query_locally
+
+
+def _resolve_scope(folder_ids: list[str] | None, file_ids: list[str] | None) -> set[str] | None:
+    """None means no restriction (search everything, the default). Otherwise the
+    union of every file in a selected folder plus every individually selected file —
+    "folders and/or files," not an intersection.
+    """
+    folder_ids = [f for f in (folder_ids or []) if f]
+    file_ids = [f for f in (file_ids or []) if f]
+    if not folder_ids and not file_ids:
+        return None
+
+    with session() as conn:
+        allowed: set[str] = set(file_ids)
+        if folder_ids:
+            placeholders = ",".join("?" * len(folder_ids))
+            rows = conn.execute(
+                f"SELECT file_id FROM files WHERE folder_id IN ({placeholders})", folder_ids
+            ).fetchall()
+            allowed.update(row["file_id"] for row in rows)
+    return allowed
+
 
 SYSTEM_PROMPT = (
     "You answer questions about the user's own files using only the excerpts given "
@@ -22,11 +45,13 @@ SYSTEM_PROMPT = (
 )
 
 
-def _gather_by_recency(date_from_ts: float | None, date_to_ts: float | None) -> list[dict]:
+def _gather_by_recency(
+    date_from_ts: float | None, date_to_ts: float | None, scope: set[str] | None
+) -> list[dict]:
     """No topic in the question (e.g. 'what did we do the last two weeks') — pull
     broadly by recency within the date range rather than narrowing by similarity,
     same reasoning as _list_by_recency in search_service.py."""
-    where = _date_range_where(date_from_ts, date_to_ts)
+    where = with_file_scope(_date_range_where(date_from_ts, date_to_ts), scope)
     by_file: dict[str, dict] = {}
     for metadata, document in iter_chunks(where):
         file_id = metadata["file_id"]
@@ -40,11 +65,13 @@ def _gather_by_recency(date_from_ts: float | None, date_to_ts: float | None) -> 
     return sorted(by_file.values(), key=lambda f: f["file_modified_at"], reverse=True)
 
 
-def _gather_by_topic(topic: str, date_from_ts: float | None, date_to_ts: float | None) -> list[dict]:
+def _gather_by_topic(
+    topic: str, date_from_ts: float | None, date_to_ts: float | None, scope: set[str] | None
+) -> list[dict]:
     """A real topic narrows by similarity, same as /search — but keeps every matching
     chunk per file (not just the single best one), since synthesis needs breadth."""
     [embedding] = embed([topic])
-    raw = vector_query(embedding, date_from_ts, date_to_ts, n_results=SEARCH_RESULT_LIMIT * 5)
+    raw = vector_query(embedding, date_from_ts, date_to_ts, n_results=SEARCH_RESULT_LIMIT * 5, file_id_scope=scope)
     ids = raw["ids"][0]
     by_file: dict[str, dict] = {}
     for document, metadata, distance in zip(raw["documents"][0], raw["metadatas"][0], raw["distances"][0]):
@@ -77,15 +104,21 @@ def _build_context(files: list[dict]) -> tuple[str, list[dict]]:
     return "\n\n".join(parts), sources
 
 
-def ask(question: str) -> dict:
+def ask(question: str, folder_ids: list[str] | None = None, file_ids: list[str] | None = None) -> dict:
+    scope = _resolve_scope(folder_ids, file_ids)
+    if scope is not None and not scope:
+        # A scope was given (folders and/or files selected) but it resolved to
+        # nothing real — distinct from scope=None, which means "search everything."
+        return {"answer": "No files matched that question.", "sources": []}
+
     parsed: ParsedQuery = parse_query_locally(question)
     date_from_ts = parsed.date_from.timestamp() if parsed.date_from else None
     date_to_ts = parsed.date_to.timestamp() if parsed.date_to else None
 
     files = (
-        _gather_by_topic(parsed.topic, date_from_ts, date_to_ts)
+        _gather_by_topic(parsed.topic, date_from_ts, date_to_ts, scope)
         if parsed.topic
-        else _gather_by_recency(date_from_ts, date_to_ts)
+        else _gather_by_recency(date_from_ts, date_to_ts, scope)
     )
 
     if not files:

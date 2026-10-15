@@ -3,6 +3,7 @@ import { useState } from "react";
 import { api, isAgentUnreachable } from "../api/client";
 import Loading from "../components/Loading";
 import OpenButton from "../components/OpenButton";
+import ScopePicker from "../components/ScopePicker";
 
 const EXAMPLES = [
   "what did we do the last two weeks",
@@ -12,13 +13,14 @@ const EXAMPLES = [
 
 export default function AskPage() {
   const [text, setText] = useState("");
-  const ask = useMutation({ mutationFn: api.ask });
+  const [scopeFileIds, setScopeFileIds] = useState(() => new Set());
+  const ask = useMutation({ mutationFn: ({ question, fileIds }) => api.ask(question, fileIds) });
 
   function run(question) {
     const q = question.trim();
     if (!q) return;
     setText(q);
-    ask.mutate(q);
+    ask.mutate({ question: q, fileIds: Array.from(scopeFileIds) });
   }
 
   function handleSubmit(e) {
@@ -35,6 +37,8 @@ export default function AskPage() {
         Ask a question across multiple files, like a summary of recent notes. This needs an
         internet connection — unlike Search, there's no offline fallback.
       </p>
+
+      <ScopePicker selectedFileIds={scopeFileIds} onChange={setScopeFileIds} />
 
       <div className="search-box">
         <form className="search-form" onSubmit={handleSubmit}>

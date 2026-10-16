@@ -1377,6 +1377,9 @@ input:focus {
 /* Before the first question the composer sits right under the examples; once a chat starts it drops to the bottom. */
 .ask-thread.is-empty { flex: 0 0 auto; }
 
+/* Once a question is asked (including while it loads) the page fills the window, so the composer sits at the bottom of it. */
+.ask-page.is-chatting { min-height: calc(100vh - 170px); }
+
 .ask-empty {
   margin-top: 8px;
 }
@@ -1416,8 +1419,36 @@ input:focus {
   border-bottom-left-radius: 4px;
 }
 
-.ask-msg .ask-sources {
+.ask-sources-block {
+  width: 100%;
   margin-top: 8px;
+}
+
+/* Same look as the folder headers on the Files page. */
+.ask-sources-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ask-sources-toggle:hover { border-color: var(--accent); }
+
+.ask-sources-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.ask-msg .ask-sources {
+  margin: 6px 0 0;
   width: 100%;
 }
 

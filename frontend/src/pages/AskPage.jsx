@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api, isAgentUnreachable } from "../api/client";
 import Loading from "../components/Loading";
+import Markdown from "../components/Markdown";
 import OpenButton from "../components/OpenButton";
 import ScopePicker from "../components/ScopePicker";
 
@@ -154,7 +155,7 @@ export default function AskPage() {
               </div>
             ) : (
               <div key={m.message_id} className="ask-msg ask-msg-assistant">
-                <div className="ask-bubble ask-answer">{m.content}</div>
+                <div className="ask-bubble ask-answer"><Markdown>{m.content}</Markdown></div>
                 {m.sources?.length > 0 && (
                   <ul className="ask-sources" aria-label="Based on these files">
                     {m.sources.map((s) => (

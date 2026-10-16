@@ -5,6 +5,7 @@ import Loading, { Spinner } from "../components/Loading";
 import ResultCard from "../components/ResultCard";
 import SearchIllustration from "../components/SearchIllustration";
 import TeammateResultCard from "../components/TeammateResultCard";
+import Switch from "../components/Switch";
 import { interpretedCaption } from "../lib/files";
 import { addRecent, loadRecent, removeRecent, saveRecent } from "../lib/recent";
 
@@ -78,14 +79,11 @@ export default function SearchPage() {
           </button>
         </form>
 
-        <label className="include-teammates">
-          <input
-            type="checkbox"
-            checked={includeTeammates}
-            onChange={(e) => setIncludeTeammates(e.target.checked)}
-          />
-          Also search teammates' shared files
-        </label>
+        <div className="include-teammates">
+          <Switch checked={includeTeammates} onChange={setIncludeTeammates}>
+            Also search teammates' shared files
+          </Switch>
+        </div>
 
         {recentOpen && recent.length > 0 && (
           <div className="recent" aria-label="Recent searches">
@@ -202,7 +200,7 @@ export default function SearchPage() {
                   ? "Join a group (see the Groups tab) to search teammates' files."
                   : results.teammate.skipped_reason === "central_unavailable"
                   ? "Couldn't reach teammate search just now. Your own files are still shown above."
-                  : "Only your own files are searched. Check \"also search teammates\" above to include shared files."}
+                  : "Only your own files are searched. Turn on \"Also search teammates' shared files\" above to include shared files."}
               </p>
             )}
           </>

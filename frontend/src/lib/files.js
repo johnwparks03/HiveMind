@@ -62,6 +62,41 @@ export function totalsByState(files) {
   return totals;
 }
 
+const isShared = (file) => file.public_state === "public";
+
+export function totalsByShare(files) {
+  const shared = files.filter(isShared).length;
+  return { all: files.length, shared, unshared: files.length - shared };
+}
+
+// `active` is the set of share filters switched on ("shared", "unshared"). Neither on, or
+// both on, means no filtering.
+export function matchesShareFilter(file, active) {
+  const shared = active.includes("shared");
+  const unshared = active.includes("unshared");
+  if (shared === unshared) return true;
+  return shared ? isShared(file) : !isShared(file);
+}
+
+// True when every indexed file in the folder is already public, so there is nothing left to
+// share. Pending and failed files can't be shared, so they don't count.
+export function allShared(counts) {
+  return counts.indexed > 0 && counts.public >= counts.indexed;
+}
+
+// Groups files under their folder, in folder order. Folders with no files are skipped,
+// so a filter that empties a folder hides its header too.
+export function groupByFolder(files, folders) {
+  const byFolder = new Map();
+  for (const file of files) {
+    if (!byFolder.has(file.folder_id)) byFolder.set(file.folder_id, []);
+    byFolder.get(file.folder_id).push(file);
+  }
+  return folders
+    .filter((folder) => byFolder.has(folder.folder_id))
+    .map((folder) => ({ folder, files: byFolder.get(folder.folder_id) }));
+}
+
 export function folderName(path) {
   return path.split(/[\\/]/).filter(Boolean).pop() ?? path;
 }

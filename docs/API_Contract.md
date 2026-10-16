@@ -106,7 +106,7 @@ Errors: `401 invalid_credentials`, `503 service_unavailable`. Credentials are ne
 
 ### 2.2 Team
 
-**`GET /team`** → `200 { "team": { "team_id", "name" } }` or `{ "team": null }`
+**`GET /team`** → `200 { "team": { "team_id", "name", "members": [ { "email", "is_you" } ] } }` or `{ "team": null }`. `email` is `null` for a member who has not signed in since emails were added; the agent fills in the caller's own email on the next `GET /team`.
 
 **`POST /team`** → create. Request `{ "name": "Project Alpha" }`. `201 { "team_id", "name" }`. Errors: `409 already_in_team`.
 
@@ -306,7 +306,8 @@ Base URL: API Gateway HTTP API (config). All requests need `Authorization: Beare
 |Method & path|Request|Response|Errors|
 |---|---|---|---|
 |`POST /teams`|`{ "name" }`|`201 { "team_id", "name", "created_at" }`|`409 already_in_team`|
-|`GET /teams/me`|none|`200 { "team": { "team_id", "name" } }` or `{ "team": null }`|none|
+|`GET /teams/me`|none|`200 { "team": { "team_id", "name", "members": [ { "email", "is_you" } ] } }` or `{ "team": null }`|none|
+|`PUT /teams/me/email`|`{ "email" }`|`204`. Stores the caller's email on their membership so teammates can see it. The email is supplied by the agent, not verified.|`400 invalid_request`, `403 no_team`|
 |`POST /teams/me/invites`|none|`201 { "code", "expires_at" }` (7 days, multi-use)|`403 no_team`|
 |`POST /teams/join`|`{ "code" }`|`200 { "team_id", "name" }`|`404 invalid_code`, `410 invite_expired`, `409 already_in_team`|
 |`POST /teams/me/leave`|none|`204`|`403 no_team`|

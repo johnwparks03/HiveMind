@@ -2,7 +2,11 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   countsByFolder,
+  allShared,
   countsFor,
+  groupByFolder,
+  matchesShareFilter,
+  totalsByShare,
   folderName,
   hasPendingWork,
   interpretedCaption,
@@ -132,4 +136,34 @@ test("scopeFiles narrows to one folder, or keeps everything when no folder is se
 test("totalsByState reports the scope the status chips show", () => {
   const scoped = scopeFiles(syntheticFiles(), "f2");
   assert.deepEqual(totalsByState(scoped), { all: 40, indexed: 30, pending: 0, failed: 10 });
+});
+
+test("totalsByShare and matchesShareFilter split files by public_state", () => {
+  const files = [{ public_state: "public" }, { public_state: "private" }, { public_state: null }];
+  assert.deepEqual(totalsByShare(files), { all: 3, shared: 1, unshared: 2 });
+  assert.equal(files.filter((f) => matchesShareFilter(f, ["shared"])).length, 1);
+  assert.equal(files.filter((f) => matchesShareFilter(f, ["unshared"])).length, 2);
+  // Neither or both switched on means no filtering.
+  assert.equal(files.filter((f) => matchesShareFilter(f, [])).length, 3);
+  assert.equal(files.filter((f) => matchesShareFilter(f, ["shared", "unshared"])).length, 3);
+});
+
+test("allShared is true only when every indexed file is public", () => {
+  assert.equal(allShared({ indexed: 3, public: 3 }), true);
+  assert.equal(allShared({ indexed: 3, public: 2 }), false);
+  assert.equal(allShared({ indexed: 0, public: 0 }), false);
+  // A failed file in the folder doesn't stop it counting as fully shared.
+  assert.equal(allShared({ total: 4, indexed: 3, failed: 1, public: 3 }), true);
+});
+
+test("groupByFolder keeps folder order and skips empty folders", () => {
+  const folders = [{ folder_id: "a" }, { folder_id: "b" }, { folder_id: "c" }];
+  const files = [
+    { file_id: 1, folder_id: "c" },
+    { file_id: 2, folder_id: "a" },
+    { file_id: 3, folder_id: "c" },
+  ];
+  const groups = groupByFolder(files, folders);
+  assert.deepEqual(groups.map((g) => g.folder.folder_id), ["a", "c"]);
+  assert.deepEqual(groups[1].files.map((f) => f.file_id), [1, 3]);
 });

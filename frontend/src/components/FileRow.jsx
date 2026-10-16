@@ -8,7 +8,7 @@ const STATE_LABEL = {
   failed: "Failed",
 };
 
-export default function FileRow({ file, selected, onToggle }) {
+export default function FileRow({ file, selected, onToggle, canShare }) {
   return (
     <li className={`file-row${selected ? " is-selected" : ""}`}>
       <input
@@ -32,7 +32,7 @@ export default function FileRow({ file, selected, onToggle }) {
             <span className="failure-reason">{file.failure_reason}</span>
           )}
         </div>
-        {file.index_state === "indexed" && <PublishControl file={file} />}
+        {file.index_state === "indexed" && <PublishControl file={file} canShare={canShare} />}
       </div>
       <OpenButton fileId={file.file_id} filename={file.filename} />
     </li>

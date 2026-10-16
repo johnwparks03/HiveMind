@@ -176,6 +176,14 @@ input:focus-visible,
 
 .btn-danger-ghost:hover:not(:disabled) { background: var(--error-soft); }
 
+.btn-danger-outline {
+  background: var(--surface);
+  color: var(--error);
+  border-color: var(--error);
+}
+
+.btn-danger-outline:hover:not(:disabled) { background: var(--error-soft); }
+
 .btn-sm {
   padding: 5px 10px;
   font-size: 12.5px;
@@ -239,13 +247,52 @@ input:focus {
 }
 
 .include-teammates {
-  display: flex;
+  margin-bottom: 12px;
+}
+
+/* Toggle switch (components/Switch.jsx). */
+.switch {
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 10px;
+  padding: 0;
+  background: none;
+  border: none;
   font-size: 13px;
   color: var(--ink-soft);
-  margin-bottom: 12px;
   cursor: pointer;
+}
+
+.switch-track {
+  position: relative;
+  flex: none;
+  width: 36px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--line);
+  transition: background 150ms ease;
+}
+
+.switch-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  transition: transform 150ms ease;
+}
+
+.switch[aria-checked="true"] .switch-track { background: var(--accent); }
+.switch[aria-checked="true"] .switch-thumb { transform: translateX(16px); }
+.switch[aria-checked="true"] .switch-label { color: var(--ink); }
+
+.switch:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 999px;
 }
 
 .teammate-section {
@@ -504,8 +551,20 @@ input:focus {
 
 .add-folder-row {
   display: flex;
-  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
 }
+
+.add-folder-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  font-size: 13.5px;
+}
+
+.add-folder-text strong { font-size: 15px; }
 
 .add-folder .inline-error { margin: 8px 0 0; }
 
@@ -578,24 +637,42 @@ input:focus {
   transition: width 300ms ease;
 }
 
-.folder-foot {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-  margin-top: auto;
-  flex-wrap: wrap;
-}
-
 .folder-actions {
   display: flex;
-  gap: 4px;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  min-width: 0;
+}
+
+.folder-share-row {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 6px;
+}
+
+.folder-manage-row {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 6px;
 }
 
 .folder-stats {
   display: flex;
   gap: 8px;
+  margin: 0;
   font-size: 12px;
+}
+
+/* Spinner inside a light button: the default is tuned for the green primary button. */
+.btn-outline .spinner,
+.btn-ghost .spinner {
+  border-color: var(--line);
+  border-top-color: var(--accent);
 }
 
 .stat-pending { color: var(--pending); }
@@ -633,6 +710,34 @@ input:focus {
   background: var(--ink);
   border-color: var(--ink);
   color: #fff;
+}
+
+/* Status and Sharing are separate filter groups: labelled, divided, and styled differently. */
+.filter-block { margin: 0 0 12px; }
+.filter-block .filter-row { margin-bottom: 0; align-items: center; }
+.filter-block .filter-row + .filter-row {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--line);
+}
+
+.filter-label {
+  width: 58px;
+  flex: none;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.filter-chip-share { border-radius: 8px; }
+
+.filter-chip-share[aria-pressed="true"] {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--ink);
+  font-weight: 600;
 }
 
 .chip-count {
@@ -1281,6 +1386,12 @@ input:focus {
   padding: 4px 4px 16px;
 }
 
+/* Before the first question the composer sits right under the examples; once a chat starts it drops to the bottom. */
+.ask-thread.is-empty { flex: 0 0 auto; }
+
+/* Once a question is asked (including while it loads) the page fills the window, so the composer sits at the bottom of it. */
+.ask-page.is-chatting { min-height: calc(100vh - 170px); }
+
 .ask-empty {
   margin-top: 8px;
 }
@@ -1320,8 +1431,36 @@ input:focus {
   border-bottom-left-radius: 4px;
 }
 
-.ask-msg .ask-sources {
+.ask-sources-block {
+  width: 100%;
   margin-top: 8px;
+}
+
+/* Same look as the folder headers on the Files page. */
+.ask-sources-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ask-sources-toggle:hover { border-color: var(--accent); }
+
+.ask-sources-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.ask-msg .ask-sources {
+  margin: 6px 0 0;
   width: 100%;
 }
 
@@ -1372,3 +1511,120 @@ input:focus {
     max-width: 100%;
   }
 }
+
+/* Files grouped under collapsible folder headers. */
+.group-controls {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+  margin: 0 0 8px;
+}
+
+.file-group { margin: 0 0 12px; }
+
+.file-group-head {
+  display: flex;
+  align-items: center;
+  margin: 0 0 6px;
+  padding: 0 14px;
+  min-height: 46px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.file-group-head:hover { border-color: var(--accent); }
+
+.file-group-toggle {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  align-self: stretch;
+  gap: 10px;
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+}
+
+.file-group-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.file-group-chevron { width: 18px; font-size: 18px; line-height: 1; text-align: center; color: var(--ink-soft); }
+.file-group-name { font-weight: 600; font-size: 15px; }
+.file-group-count { font-size: 13px; }
+
+/* Markdown inside assistant answers. The bubble's pre-wrap would double the spacing, so turn it off here. */
+.ask-bubble.ask-answer { white-space: normal; }
+
+.markdown { overflow-wrap: anywhere; }
+.markdown > :first-child { margin-top: 0; }
+.markdown > :last-child { margin-bottom: 0; }
+.markdown p { margin: 0 0 10px; }
+.markdown h1, .markdown h2, .markdown h3, .markdown h4 { margin: 16px 0 6px; line-height: 1.3; }
+.markdown h1 { font-size: 18px; }
+.markdown h2 { font-size: 16px; }
+.markdown h3, .markdown h4 { font-size: 14.5px; }
+.markdown ul, .markdown ol { margin: 0 0 10px; padding-left: 22px; }
+.markdown li { margin: 2px 0; }
+.markdown li > p { margin: 0; }
+.markdown a { color: var(--ink); text-decoration: underline; text-decoration-color: var(--accent); text-underline-offset: 2px; }
+.markdown code { font-family: ui-monospace, Consolas, monospace; font-size: 0.9em; background: var(--bg); padding: 1px 5px; border-radius: 4px; }
+.markdown pre { margin: 0 0 10px; padding: 10px 12px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; overflow-x: auto; }
+.markdown pre code { background: none; padding: 0; }
+.markdown blockquote { margin: 0 0 10px; padding: 2px 12px; border-left: 3px solid var(--line); color: var(--ink-soft); }
+.markdown hr { border: none; border-top: 1px solid var(--line); margin: 14px 0; }
+.markdown table { border-collapse: collapse; margin: 0 0 10px; display: block; overflow-x: auto; max-width: 100%; }
+.markdown th, .markdown td { border: 1px solid var(--line); padding: 5px 10px; text-align: left; }
+.markdown th { background: var(--bg); font-weight: 600; }
+
+/* Group card: member list and a quiet footer for Leave. */
+.members-label { margin: 12px 0 6px; }
+
+.member-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.member-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  font-size: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.member-row:first-child { border-top: none; }
+.member-email { overflow: hidden; text-overflow: ellipsis; }
+
+.member-you {
+  flex: none;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.card-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.card-footer .inline-error { margin: 0 auto 0 0; }

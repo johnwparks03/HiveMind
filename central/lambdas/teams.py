@@ -15,6 +15,8 @@ from common.http import get_membership, json_response, parse_body
 CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
 CODE_RE = re.compile(r"^[A-Z0-9]{4}-[A-Z0-9]{4}$")
 NAME_MAX_CHARS = 100
+EMAIL_MAX_CHARS = 254
+EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+$")
 
 
 def invite_lifetime_days():
@@ -51,7 +53,21 @@ def create_team(cur, user_id, body):
 
 def get_my_team(cur, user_id):
     row = get_membership(cur, user_id)
-    return json_response(200, {"team": {"team_id": str(row[0]), "name": row[1]} if row else None})
+    if not row:
+        return json_response(200, {"team": None})
+    cur.execute("SELECT user_id, email FROM memberships WHERE team_id = %s ORDER BY joined_at, user_id", (row[0],))
+    members = [{"email": email, "is_you": member_id == user_id} for member_id, email in cur.fetchall()]
+    return json_response(200, {"team": {"team_id": str(row[0]), "name": row[1], "members": members}})
+
+
+def set_my_email(cur, user_id, body):
+    email = body.get("email")
+    if not isinstance(email, str) or not EMAIL_RE.match(email.strip()) or len(email.strip()) > EMAIL_MAX_CHARS:
+        raise ApiError(400, "invalid_request", "email is required")
+    if not get_membership(cur, user_id):
+        raise ApiError(403, "no_team", "you are not in a team")
+    cur.execute("UPDATE memberships SET email = %s WHERE user_id = %s", (email.strip(), user_id))
+    return {"statusCode": 204, "headers": {}, "body": ""}
 
 
 def create_invite(cur, user_id):
@@ -108,6 +124,7 @@ def leave_team(cur, user_id):
 ROUTES = {
     "POST /teams": lambda cur, user, body: create_team(cur, user, body),
     "GET /teams/me": lambda cur, user, body: get_my_team(cur, user),
+    "PUT /teams/me/email": lambda cur, user, body: set_my_email(cur, user, body),
     "POST /teams/me/invites": lambda cur, user, body: create_invite(cur, user),
     "POST /teams/join": lambda cur, user, body: join_team(cur, user, body),
     "POST /teams/me/leave": lambda cur, user, body: leave_team(cur, user),

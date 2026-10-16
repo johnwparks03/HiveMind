@@ -32,3 +32,9 @@ Still to do (acceptance boxes stay unticked until then):
 - [ ] Synthetic load (e.g. 50k x 384) for HNSW build time and top-20 cosine latency at 0.5-2 ACU.
 - [ ] Run the DB-backed tests against a pgvector Postgres.
 - [ ] `cdk diff`, then a coordinated `cdk deploy`; confirm `schema_migrations` lists `0006_chunk_index.sql`.
+
+Post-deploy check (added after the first deploy; the migration ran and the cluster is 0.5-2 ACU): the migrate Lambda has a read-only `verify` action. It reports the pgvector version, `public_chunks` columns and the HNSW index, runs the cascade / dimension / cosine smoke tests, and times an HNSW build and top-20 query on random vectors in a temp table. It runs in one transaction that is always rolled back.
+
+    aws lambda invoke --function-name <MigrateFn> --region us-east-1 --cli-binary-format raw-in-base64-out --payload '{"action":"verify","rows":5000}' out.json; cat out.json
+
+Needs a deploy of this commit first. Record the output here. `rows` is clamped to 100-50000; the Lambda timeout is 120 s, so raise `rows` gradually.

@@ -1374,6 +1374,9 @@ input:focus {
   padding: 4px 4px 16px;
 }
 
+/* Before the first question the composer sits right under the examples; once a chat starts it drops to the bottom. */
+.ask-thread.is-empty { flex: 0 0 auto; }
+
 .ask-empty {
   margin-top: 8px;
 }

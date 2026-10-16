@@ -125,7 +125,7 @@ export default function AskPage() {
       </aside>
 
       <div className="ask-main">
-        <div className="ask-thread" aria-live="polite">
+        <div className={`ask-thread${showExamples ? " is-empty" : ""}`} aria-live="polite">
           {showExamples && (
             <div className="ask-empty">
               <h2 className="page-title">Ask about <span className="accent-word">your files</span></h2>

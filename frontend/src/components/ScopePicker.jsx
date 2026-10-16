@@ -49,7 +49,7 @@ export default function ScopePicker({ selectedFileIds, onChange }) {
   return (
     <div className="scope-picker">
       <button type="button" className="scope-toggle" onClick={() => setOpen((v) => !v)}>
-        {scopedCount === 0 ? "Searching all folders" : `Searching ${scopedCount} selected file${scopedCount === 1 ? "" : "s"}`}
+        {scopedCount === 0 ? "Using all your files" : `Using ${scopedCount} selected file${scopedCount === 1 ? "" : "s"}`}
         <span aria-hidden="true">{open ? " ▲" : " ▼"}</span>
       </button>
 

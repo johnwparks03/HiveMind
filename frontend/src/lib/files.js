@@ -107,20 +107,35 @@ export function formatDate(iso) {
 }
 
 // The agent returns a distance-style `score`; the UI shows similarity as a percentage.
+// The agent's failure messages are written for developers ("no extractable text", "File is not a zip
+// file"). Show people what it means, and keep the original text in the tooltip.
+export function plainFailure(reason) {
+  if (!reason) return "This file couldn't be read.";
+  const text = reason.toLowerCase();
+  if (text.includes("extractable") || text.includes("empty")) return "This file is empty, or has no text to read.";
+  if (text.includes("zip") || text.includes("corrupt") || text.includes("not a")) {
+    return "This file looks damaged, so it can't be opened.";
+  }
+  return "This file couldn't be read.";
+}
+
 export function matchPercent(score) {
   if (score == null) return null;
   return Math.round(Math.min(1, Math.max(0, 1 - score)) * 100);
 }
 
+// Plain-English summary of what a search was understood to mean, e.g.
+// 'Looking for "budget plan" from last week' or 'Showing files on 10/10/2026'.
 export function interpretedCaption(interpreted) {
   if (!interpreted) return null;
-  const parts = [];
-  if (interpreted.topic) parts.push(`topic "${interpreted.topic}"`);
+  let when = null;
   if (interpreted.date_from) {
     const from = new Date(interpreted.date_from).toLocaleDateString();
     const to = interpreted.date_to ? new Date(interpreted.date_to).toLocaleDateString() : from;
-    parts.push(from === to ? `on ${from}` : `${from} – ${to}`);
+    when = from === to ? `on ${from}` : `from ${from} to ${to}`;
   }
-  if (parts.length === 0) return "Searched everything, most recent first";
-  return `Searched for ${parts.join(", ")}`;
+  if (interpreted.topic && when) return `Looking for "${interpreted.topic}" ${when}`;
+  if (interpreted.topic) return `Looking for "${interpreted.topic}"`;
+  if (when) return `Showing files ${when}`;
+  return "Showing everything, newest first";
 }

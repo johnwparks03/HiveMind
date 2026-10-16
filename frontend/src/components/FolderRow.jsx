@@ -25,8 +25,8 @@ export default function FolderRow({
   const name = folderName(folder.path);
   const percent = counts.total === 0 ? 0 : Math.round((counts.indexed / counts.total) * 100);
   const attention = [
-    counts.pending > 0 && `${counts.pending} pending`,
-    counts.failed > 0 && `${counts.failed} failed`,
+    counts.pending > 0 && `${counts.pending} still reading`,
+    counts.failed > 0 && `${counts.failed} couldn't be read`,
   ].filter(Boolean);
 
   const checkRef = useRef(null);
@@ -60,7 +60,7 @@ export default function FolderRow({
 
         <div className="folder-row-actions">
           <button type="button" className="btn btn-outline btn-sm" onClick={onRescan} disabled={busy}>
-            Rescan
+            Check for new files
           </button>
           {canShare && !allShared(counts) && (
             <button type="button" className="btn btn-outline btn-sm" onClick={onShare} disabled={busy}>
@@ -84,7 +84,7 @@ export default function FolderRow({
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={percent}
-        aria-label={`${name} indexing progress`}
+        aria-label={`${name} reading progress`}
       >
         <span className="progress-fill" style={{ width: `${percent}%` }} />
       </div>

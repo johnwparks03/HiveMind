@@ -22,9 +22,9 @@ const IDLE_POLL_MS = 15000;
 
 const FILTERS = [
   { id: "all", label: "All" },
-  { id: "indexed", label: "Indexed" },
-  { id: "pending", label: "Indexing" },
-  { id: "failed", label: "Failed" },
+  { id: "indexed", label: "Ready" },
+  { id: "pending", label: "Reading" },
+  { id: "failed", label: "Couldn't read" },
 ];
 
 const SHARE_FILTERS = [
@@ -131,7 +131,7 @@ export default function FilesPage() {
       return;
     }
     if (count === 0) {
-      window.alert("Nothing new to make public. Every indexed file here is already public.");
+      window.alert("Nothing new to make public. Every readable file here is already public.");
       return;
     }
     if (window.confirm(`Make ${count} file${count === 1 ? "" : "s"} public?`)) {
@@ -162,7 +162,7 @@ export default function FilesPage() {
   const selectedShown = selectedInView(selected, visible.map((f) => f.file_id));
 
   function handleRemove(folder) {
-    const ok = window.confirm(`Stop watching ${folder.path}? Its index entries will be removed. Your files are not touched.`);
+    const ok = window.confirm(`Remove ${folderName(folder.path)} from HiveMind? Its files stay on your computer.`);
     if (ok) removeFolder.mutate(folder.folder_id);
   }
 
@@ -225,13 +225,13 @@ export default function FilesPage() {
     <section className="files-page" aria-labelledby="files-title">
       <h2 id="files-title" className="page-title">Your folders</h2>
       <p className="page-lede">Add a folder of files to your HiveMind agent so you can search them and make them public to your team.</p>
-      <HowTo steps={['Choose a folder to add it.', 'Wait for it to finish indexing.', 'Make files public to share them with your team.']} />
+      <HowTo steps={['Choose a folder to add it.', 'Wait while HiveMind reads your files.', 'Make files public to share them with your team.']} />
 
       <div className="add-folder">
         <div className="add-folder-row">
           <div className="add-folder-text">
             <strong>Add a folder</strong>
-            <span className="muted">PDF, Word, PowerPoint and text files inside it are indexed.</span>
+            <span className="muted">PDF, Word, PowerPoint and text files inside it get read so you can search them.</span>
           </div>
           <button
             type="button"
@@ -252,7 +252,7 @@ export default function FilesPage() {
       {loadError && (
         <div className="banner banner-error" role="alert">
           {isAgentUnreachable(folders.error ?? files.error)
-            ? "The local agent isn't running. Start it, then refresh this page."
+            ? "HiveMind isn't running. Start it, then refresh this page."
             : "Couldn't load your folders. Try again in a moment."}
         </div>
       )}
@@ -262,7 +262,7 @@ export default function FilesPage() {
       {folderList.length === 0 && !loadError && !folders.isPending && (
         <div className="empty">
           <p>No folders yet.</p>
-          <p className="muted">Add one above to start indexing.</p>
+          <p className="muted">Add one above to get started.</p>
         </div>
       )}
 

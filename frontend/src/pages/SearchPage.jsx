@@ -136,7 +136,7 @@ export default function SearchPage() {
         {search.isError && (
           <div className="banner banner-error" role="alert">
             {isAgentUnreachable(search.error)
-              ? "The local agent isn't running. Start it, then try again."
+              ? "HiveMind isn't running. Start it, then try again."
               : `Search failed: ${search.error.message}`}
           </div>
         )}
@@ -172,7 +172,7 @@ export default function SearchPage() {
             {results.local_results.length === 0 ? (
               <div className="empty">
                 <p>No files matched.</p>
-                <p className="muted">Check that the folder has finished indexing on the Files page, or try a broader topic.</p>
+                <p className="muted">Check that the folder has finished reading on the Files page, or try a broader topic.</p>
               </div>
             ) : (
               <div className="result-list">

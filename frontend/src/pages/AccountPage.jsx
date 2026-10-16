@@ -71,7 +71,7 @@ export default function AccountPage() {
       {session.isError && (
         <div className="banner banner-error" role="alert">
           {isAgentUnreachable(session.error)
-            ? "The local agent isn't running. Start it, then try again."
+            ? "HiveMind isn't running. Start it, then try again."
             : "Couldn't check your sign-in status. Try again in a moment."}
         </div>
       )}

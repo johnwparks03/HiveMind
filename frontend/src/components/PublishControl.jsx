@@ -26,7 +26,7 @@ export default function PublishControl({ file, canShare }) {
       <div className="publish-row">
         {!canShare ? null : failed ? (
           <>
-            <span className="pill pill-failed">Publish failed</span>
+            <span className="pill pill-failed">Couldn't make public</span>
             <button type="button" className="btn btn-outline btn-sm" onClick={() => retry.mutate()} disabled={busy}>
               {retry.isPending ? <><Spinner />Retrying…</> : "Retry"}
             </button>

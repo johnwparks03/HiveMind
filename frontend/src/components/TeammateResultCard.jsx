@@ -52,7 +52,7 @@ export default function TeammateResultCard({ result }) {
         <h3 className="result-name">{result.filename}</h3>
         <span className={`pill ${result.owner_online ? "pill-indexed" : "pill-pending"}`}>
           <span className="pill-dot" aria-hidden="true" />
-          {result.owner_online ? "Owner online" : "Owner offline"}
+          {result.owner_online ? "Online now" : "Offline"}
         </span>
       </div>
 

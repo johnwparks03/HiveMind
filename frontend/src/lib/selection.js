@@ -22,7 +22,7 @@ export function bulkEligible(files, action) {
 
 export function bulkResultText(action, ok, failed) {
   const verb = action === "share" ? "made public" : "made private";
-  return `${ok} of ${ok + failed} ${verb}; ${failed} failed. Try those again.`;
+  return `${ok} of ${ok + failed} ${verb}. ${failed} couldn't be changed. Try those again.`;
 }
 
 export function removeConfirmText(count) {

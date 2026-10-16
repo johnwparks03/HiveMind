@@ -33,3 +33,8 @@ Implemented (2026-10-16), not yet deployed or verified on AWS, so the other acce
 - The migrate Lambda's `verify` action now also runs the real `put_chunks` against Aurora in a rolled-back transaction (`ingest` section). After deploy, run it as described in E6-S2, then tick the remaining boxes.
 - Postman: the `Test Chunk Ingest` folder (37 requests) is in the HiveMind collection, parks45 account. It follows the existing conventions (users A and B, `{{AWS_URL}}`, bearer auth). Pre-request scripts build 384-float vectors. A runtime variable `chunk_file_id` is set with `pm.collectionVariables.set`; no collection variables were declared or changed. Run it top to bottom after the deploy (requests 07-35 depend on each other). Not yet run against the deployed stack.
 - Still to do: deploy, run `verify`, run the Postman folder, integration test.
+
+## Verification on the deployed stack (2026-10-16)
+`verify` action (real `put_chunks` against Aurora, rolled back): migrations 0001-0007 applied; staging table has the expected columns. Smoke and `ingest` checks all true: batches not committed early, hidden until the final batch, final batch commits, the old set stays visible mid-upload, a re-upload swaps atomically, a retried final batch is rejected with the committed set intact, `chunk_count` and `chunks_indexed_at` set, a missing batch is rejected with the set intact, stale staging is cleared, and deleting the file cascades to chunks and staging. A 2,000-row HNSW build took 0.6 s with ~1 ms top-20 queries.
+
+Not covered by `verify`: the API Gateway route, JWT authorizer and request size. Those are exercised by the Postman `Test Chunk Ingest` folder, which the story owner runs next. Tick the acceptance boxes once it passes.

@@ -31,4 +31,5 @@ Implemented (2026-10-16), not yet deployed or verified on AWS, so the other acce
 - `chunks_put` logs `file_id` only (the access log has no details column).
 - Tests: `central/tests/test_chunks_put.py` (35 cases), plus migration, sweeper and `files/mine` tests. `python -m pytest tests` in `central/`: 297 passed, 5 skipped.
 - The migrate Lambda's `verify` action now also runs the real `put_chunks` against Aurora in a rolled-back transaction (`ingest` section). After deploy, run it as described in E6-S2, then tick the remaining boxes.
-- Still to do: deploy, run `verify`, integration test, and the Postman `Test Chunk Ingest` folder (users A and B, `{{AWS_URL}}`, 384-float vectors from a pre-request script).
+- Postman: the `Test Chunk Ingest` folder (37 requests) is in the HiveMind collection, parks45 account. It follows the existing conventions (users A and B, `{{AWS_URL}}`, bearer auth). Pre-request scripts build 384-float vectors. A runtime variable `chunk_file_id` is set with `pm.collectionVariables.set`; no collection variables were declared or changed. Run it top to bottom after the deploy (requests 07-35 depend on each other). Not yet run against the deployed stack.
+- Still to do: deploy, run `verify`, run the Postman folder, integration test.

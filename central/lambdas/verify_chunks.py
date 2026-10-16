@@ -171,10 +171,63 @@ def _ingest(cur):
             "stale_staging_cleared": stale_staging_cleared, "cascade_clears_chunks_and_staging": cascade_clears_chunks}
 
 
+def _retrieval(cur, other_team_chunks):
+    """The real search.retrieval_search against real tables (rolled back by the caller). Another team
+    holds many chunks nearer to the query than the caller's own team: the HNSW index filters after
+    its scan, so without iterative scans the caller's results would be starved."""
+    import search
+
+    seeker, owner, outsider = ("verify-" + uuid.uuid4().hex[:8] for _ in range(3))
+    mine, theirs = str(uuid.uuid4()), str(uuid.uuid4())
+    files = {name: str(uuid.uuid4()) for name in ("mine", "own", "expired", "theirs")}
+    for team in (mine, theirs):
+        cur.execute("INSERT INTO teams (id, name, created_by) VALUES (%s, 'verify', 'verify')", (team,))
+    for user, team in ((seeker, mine), (owner, mine), (outsider, theirs)):
+        cur.execute("INSERT INTO memberships (user_id, team_id) VALUES (%s, %s)", (user, team))
+    for name, who, team, days in (("mine", owner, mine, 45), ("own", seeker, mine, 45),
+                                  ("expired", owner, mine, -1), ("theirs", outsider, theirs, 45)):
+        cur.execute("INSERT INTO public_files (file_id, owner_id, team_id, filename, tags, expires_at) "
+                    "VALUES (%s, %s, %s, %s, ARRAY['v'], now() + make_interval(days => %s))",
+                    (files[name], who, team, name + ".docx", days))
+    near_query = _vec(1)
+    for i in range(5):  # the caller's team: moderately far from the query
+        cur.execute("INSERT INTO public_chunks (file_id, chunk_index, text, embedding) VALUES (%s, %s, %s, %s::vector)",
+                    (files["mine"], i, f"mine {i}", _vec(0.5, 0.5 + i / 100)))
+    for name in ("own", "expired"):  # identical to the query, but must be excluded
+        cur.execute("INSERT INTO public_chunks (file_id, chunk_index, text, embedding) VALUES (%s, 0, 'x', %s::vector)",
+                    (files[name], near_query))
+    cur.execute("INSERT INTO public_chunks (file_id, chunk_index, text, embedding) "
+                "SELECT %s, i, 'theirs', ('[1,' || string_agg((random() * 0.01)::text, ',') || ']')::vector "
+                "FROM generate_series(0, %s - 1) i, generate_series(1, 383) d GROUP BY i",
+                (files["theirs"], other_team_chunks))
+    params = {"q": near_query, "team_id": mine, "user_id": seeker, "file_ids": None, "limit": 5}
+    cur.execute("SET LOCAL enable_seqscan = off")  # make the planner use the HNSW index
+    cur.execute("EXPLAIN " + search.RETRIEVAL_SQL, params)
+    index_used = "idx_public_chunks_embedding" in " ".join(r[0] for r in cur.fetchall())
+    cur.execute("SET LOCAL hnsw.iterative_scan = 'off'")
+    cur.execute(search.RETRIEVAL_SQL, params)
+    without_iterative_scan = len(cur.fetchall())  # informational: how many rows the filter leaves
+    import json
+
+    body = {"query_embedding": [1.0] + [0.0] * 383, "limit": 5}
+    results = json.loads(search.retrieval_search(cur, seeker, body)["body"])["results"]
+    scoped = json.loads(search.retrieval_search(cur, seeker, {**body, "file_ids": [files["theirs"]]})["body"])
+    distances = [r["distance"] for r in results]
+    return {"other_team_chunks": other_team_chunks, "index_used_by_planner": index_used,
+            "rows_without_iterative_scan": without_iterative_scan,
+            "caller_gets_full_limit": len(results) == 5,
+            "only_own_team_files_returned": {r["file_id"] for r in results} == {files["mine"]},
+            "ordered_by_distance": distances == sorted(distances),
+            "no_owner_identity": all(set(r) == {"file_id", "filename", "chunk_index", "text", "distance"}
+                                     for r in results),
+            "foreign_file_ids_match_nothing": scoped["results"] == []}
+
+
 def run(conn, rows=DEFAULT_ROWS):
     rows = max(100, min(int(rows), MAX_ROWS))
     try:
         with conn.cursor() as cur:
-            return {"schema": _schema(cur), "smoke": _smoke(cur), "load": _load(cur, rows), "ingest": _ingest(cur)}
+            return {"schema": _schema(cur), "smoke": _smoke(cur), "load": _load(cur, rows), "ingest": _ingest(cur),
+                    "retrieval": _retrieval(cur, min(rows, 3000))}
     finally:
         conn.rollback()  # never commit: the check leaves no data behind

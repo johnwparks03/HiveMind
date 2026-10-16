@@ -447,7 +447,9 @@ Rules:
 Rules:
 
 - Scope: the caller's team only, excluding the caller's own files, rows past `expires_at`, and files with no indexed chunks. The team is derived from membership.
-- Ordering: ascending cosine `distance` across all matching chunks. `limit` defaults to `RETRIEVAL_LIMIT_DEFAULT` and is capped at `RETRIEVAL_LIMIT_MAX` (config).
+- Ordering: ascending cosine `distance` across all matching chunks (ties broken by `file_id`, then `chunk_index`). `limit` defaults to `RETRIEVAL_LIMIT_DEFAULT` (20) and a larger value is clamped to `RETRIEVAL_LIMIT_MAX` (50), both config; a `limit` below 1 or that is not an integer is `400 invalid_request`.
+- `file_ids` (optional, at most 200 non-empty strings): ids that are unknown, expired, the caller's own, or on another team match nothing. They are not an error and reveal nothing. An empty list matches nothing.
+- The HNSW index filters after its scan, so the query runs with pgvector's iterative scan (`hnsw.iterative_scan = strict_order`, pgvector 0.8+) and still returns up to `limit` rows when the filter is selective.
 - Owner identity is not returned.
 - `query_embedding` must have `EMBEDDING_DIMENSION` (384) entries, produced with all-MiniLM-L6-v2 (normalized), or the call fails `400 invalid_request`.
 - The vector and the returned text are never logged. Audit event: `retrieval_search` (section 5).
@@ -596,7 +598,7 @@ Acknowledgment, completion, and failure go over HTTP, not the WebSocket, so they
 |---|---|---|
 |`POST /search`|`search`|`topic`, `date_from`, `date_to`, `count`, `matched_file_ids`|
 |`PUT /files/{id}/chunks` (final batch)|`chunks_put`|`file_id`|
-|`POST /retrieval/search`|`retrieval_search`|`count`, `matched_file_ids`|
+|`POST /retrieval/search`|`retrieval_search`|matched `file_id`s only (one row per distinct file; one row with no file when empty)|
 |`PUT /files/{id}` (first publish)|`publish`|`file_id`|
 |`DELETE /files/{id}`|`unpublish`|`file_id`|
 |`POST /files/{id}/confirm`|`confirm`|`file_id`|

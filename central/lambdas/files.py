@@ -2,7 +2,6 @@
 routeKey. owner_id comes from the token and team_id from membership, never from input."""
 import base64
 import binascii
-import math
 import os
 import uuid
 
@@ -11,6 +10,7 @@ from common.access_log import log_event
 from common.auth import get_caller_sub
 from common.errors import ApiError, Unauthorized, error_response, unauthorized_response
 from common.http import get_membership, invalid_request, iso, json_response, optional_timestamp, parse_body
+from common.vectors import embedding_dimension, is_embedding, is_int, vector_literal
 
 FILENAME_MAX_CHARS = 255
 TAGS_MAX_COUNT = 50
@@ -29,10 +29,6 @@ def chunk_batch_size():
 
 def max_chunks_per_file():
     return int(os.environ.get("MAX_CHUNKS_PER_FILE", "2000"))
-
-
-def embedding_dimension():
-    return int(os.environ.get("EMBEDDING_DIMENSION", "384"))
 
 
 def _file_id(event):
@@ -123,23 +119,15 @@ def confirm_file(cur, user_id, event, body):
     return json_response(200, {"expires_at": iso(expires_at), "last_confirmed": iso(last_confirmed)})
 
 
-def _is_int(value):
-    return isinstance(value, int) and not isinstance(value, bool)
-
-
-def _is_number(value):
-    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
-
-
 def _validate_chunks(body):
     """Returns (batch, total_batches, [(chunk_index, text, vector_literal)]). Bad fields are reported
     by name only, never by value."""
     bad = []
     batch, total = body.get("batch"), body.get("total_batches")
     max_total = -(-max_chunks_per_file() // chunk_batch_size())
-    if not _is_int(batch) or batch < 1:
+    if not is_int(batch) or batch < 1:
         bad.append("batch")
-    if not _is_int(total) or not 1 <= total <= max_total:
+    if not is_int(total) or not 1 <= total <= max_total:
         bad.append("total_batches")
     elif "batch" not in bad and batch > total:
         bad.append("batch")
@@ -153,17 +141,16 @@ def _validate_chunks(body):
                 bad.append(f"chunks[{i}]")
                 continue
             index, text, embedding = chunk.get("chunk_index"), chunk.get("text"), chunk.get("embedding")
-            if not _is_int(index) or not 0 <= index < cap or index in seen:
+            if not is_int(index) or not 0 <= index < cap or index in seen:
                 bad.append(f"chunks[{i}].chunk_index")
             else:
                 seen.add(index)
             if not isinstance(text, str) or not text.strip():
                 bad.append(f"chunks[{i}].text")
-            if (not isinstance(embedding, list) or len(embedding) != dimension
-                    or not all(_is_number(x) for x in embedding)):
+            if not is_embedding(embedding, dimension):
                 bad.append(f"chunks[{i}].embedding")
                 continue
-            rows.append((index, text, "[" + ",".join(repr(float(x)) for x in embedding) + "]"))
+            rows.append((index, text, vector_literal(embedding)))
     if bad:
         raise invalid_request(*bad[:20])
     return batch, total, rows

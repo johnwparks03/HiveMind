@@ -45,6 +45,8 @@ class HiveMindStack(Stack):
             "MAX_CHUNKS_PER_FILE": "2000",
             "EMBEDDING_DIMENSION": "384",
             "CHUNK_STAGING_TTL_MINUTES": "60",
+            "RETRIEVAL_LIMIT_DEFAULT": "20",
+            "RETRIEVAL_LIMIT_MAX": "50",
         }
         for key, value in config.items():
             ssm.StringParameter(self, f"Param{key}",
@@ -408,6 +410,7 @@ class HiveMindStack(Stack):
 
         # Central search (E3-S7)
         add_authed_route("/search", [apigwv2.HttpMethod.POST], search_fn, "SearchIntegration")
+        add_authed_route("/retrieval/search", [apigwv2.HttpMethod.POST], search_fn, "RetrievalSearchIntegration")
 
         # LLM proxy (E3-S3)
         add_authed_route("/llm/tags", [apigwv2.HttpMethod.POST], llm_fn, "LlmTagsIntegration")

@@ -57,7 +57,7 @@ export default function PublishControl({ file }) {
               <><Spinner />Unsharing…</>
             ) : publish.isPending || working ? (
               <><Spinner />Sharing…</>
-            ) : isPublic ? "Unpublish" : "Share with team"}
+            ) : isPublic ? "Unshare" : "Share with team"}
           </button>
         )}
         {isPublic && file.tags.length === 0 && <span className="muted no-tags-flag">No tags</span>}

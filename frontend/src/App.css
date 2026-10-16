@@ -1791,3 +1791,11 @@ input:focus {
   font-size: 19px;
   padding: 5px 10px;
 }
+
+/* Folder row actions: a little room between Check for new files, Make public, Make private and Remove. */
+.folder-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}

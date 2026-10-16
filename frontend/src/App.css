@@ -578,24 +578,41 @@ input:focus {
   transition: width 300ms ease;
 }
 
-.folder-foot {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-  margin-top: auto;
-  flex-wrap: wrap;
-}
-
 .folder-actions {
   display: flex;
-  gap: 4px;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  min-width: 0;
+}
+
+.folder-share-row {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 6px;
+}
+
+.folder-manage-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
 }
 
 .folder-stats {
   display: flex;
   gap: 8px;
+  margin: 0;
   font-size: 12px;
+}
+
+/* Spinner inside a light button: the default is tuned for the green primary button. */
+.btn-outline .spinner,
+.btn-ghost .spinner {
+  border-color: var(--line);
+  border-top-color: var(--accent);
 }
 
 .stat-pending { color: var(--pending); }
@@ -1372,3 +1389,41 @@ input:focus {
     max-width: 100%;
   }
 }
+
+/* Files grouped under collapsible folder headers. */
+.group-controls {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+  margin: 0 0 8px;
+}
+
+.file-group { margin: 0 0 12px; }
+
+.file-group-head {
+  display: flex;
+  align-items: center;
+  padding: 8px 4px;
+}
+
+.file-group-toggle {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+  color: inherit;
+}
+
+.file-group-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.file-group-chevron { width: 12px; color: var(--ink-soft); }
+.file-group-name { font-weight: 600; font-size: 14px; }
+.file-group-count { font-size: 12.5px; }

@@ -62,6 +62,33 @@ export function totalsByState(files) {
   return totals;
 }
 
+const isShared = (file) => file.public_state === "public";
+
+export function totalsByShare(files) {
+  const shared = files.filter(isShared).length;
+  return { all: files.length, shared, unshared: files.length - shared };
+}
+
+// `id` is one of "all" | "shared" | "unshared".
+export function matchesShareFilter(file, id) {
+  if (id === "shared") return isShared(file);
+  if (id === "unshared") return !isShared(file);
+  return true;
+}
+
+// Groups files under their folder, in folder order. Folders with no files are skipped,
+// so a filter that empties a folder hides its header too.
+export function groupByFolder(files, folders) {
+  const byFolder = new Map();
+  for (const file of files) {
+    if (!byFolder.has(file.folder_id)) byFolder.set(file.folder_id, []);
+    byFolder.get(file.folder_id).push(file);
+  }
+  return folders
+    .filter((folder) => byFolder.has(folder.folder_id))
+    .map((folder) => ({ folder, files: byFolder.get(folder.folder_id) }));
+}
+
 export function folderName(path) {
   return path.split(/[\\/]/).filter(Boolean).pop() ?? path;
 }

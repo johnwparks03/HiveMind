@@ -1,6 +1,7 @@
 import { folderName } from "../lib/files";
+import { Spinner } from "./Loading";
 
-export default function FolderCard({ folder, counts, selected, onSelect, onRescan, onRemove, onShare, onUnshare, busy }) {
+export default function FolderCard({ folder, counts, selected, onSelect, onRescan, onRemove, onShare, onUnshare, busy, sharing, unsharing }) {
   const percent = counts.total === 0 ? 0 : Math.round((counts.indexed / counts.total) * 100);
   const name = folderName(folder.path);
 
@@ -37,20 +38,25 @@ export default function FolderCard({ folder, counts, selected, onSelect, onResca
         </p>
       )}
 
-      <div className="folder-foot">
-        <span className="folder-stats">
+      {(counts.pending > 0 || counts.failed > 0) && (
+        <p className="folder-stats">
           {counts.pending > 0 && <span className="stat stat-pending">{counts.pending} pending</span>}
           {counts.failed > 0 && <span className="stat stat-failed">{counts.failed} failed</span>}
-        </span>
-        <div className="folder-actions">
-          <button type="button" className="btn btn-ghost btn-sm" onClick={onShare} disabled={busy}>
-            Share with team
+        </p>
+      )}
+
+      <div className="folder-actions">
+        <div className="folder-share-row">
+          <button type="button" className="btn btn-outline btn-sm" onClick={onShare} disabled={busy}>
+            {sharing ? <><Spinner />Sharing…</> : "Share with team"}
           </button>
           {counts.public > 0 && (
-            <button type="button" className="btn btn-ghost btn-sm" onClick={onUnshare} disabled={busy}>
-              Unshare
+            <button type="button" className="btn btn-outline btn-sm" onClick={onUnshare} disabled={busy}>
+              {unsharing ? <><Spinner />Unsharing…</> : "Unshare"}
             </button>
           )}
+        </div>
+        <div className="folder-manage-row">
           <button type="button" className="btn btn-ghost btn-sm" onClick={onRescan} disabled={busy}>
             Rescan
           </button>

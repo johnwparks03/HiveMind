@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
+import { Spinner } from "./Loading";
 
 // Per-file publish toggle + tag editor (docs/stories BACKLOG.md E3-S9). Tags are
 // editable whether or not the file is public — editing a public file's tags
@@ -42,7 +43,7 @@ export default function PublishControl({ file }) {
           <>
             <span className="pill pill-failed">Publish failed</span>
             <button type="button" className="btn btn-outline btn-sm" onClick={() => retry.mutate()} disabled={busy}>
-              Retry
+              {retry.isPending ? <><Spinner />Retrying…</> : "Retry"}
             </button>
           </>
         ) : (
@@ -52,7 +53,11 @@ export default function PublishControl({ file }) {
             onClick={() => (isPublic ? unpublish.mutate() : publish.mutate())}
             disabled={busy}
           >
-            {working ? "Working…" : isPublic ? "Unpublish" : "Share with team"}
+            {unpublish.isPending || (working && isPublic) ? (
+              <><Spinner />Unsharing…</>
+            ) : publish.isPending || working ? (
+              <><Spinner />Sharing…</>
+            ) : isPublic ? "Unpublish" : "Share with team"}
           </button>
         )}
         {isPublic && file.tags.length === 0 && <span className="muted no-tags-flag">No tags</span>}

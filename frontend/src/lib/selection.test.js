@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { removeConfirmText, selectedInView, toggleSelected } from "./selection.js";
+import { bulkEligible, bulkResultText, removeConfirmText, selectedInView, toggleSelected } from "./selection.js";
 
 test("toggleSelected adds an id, then removes it when toggled again", () => {
   let selected = toggleSelected([], "a");
@@ -20,4 +20,19 @@ test("removeConfirmText says what happens and handles one or many", () => {
   assert.match(removeConfirmText(1), /Remove 1 file from HiveMind/);
   assert.match(removeConfirmText(3), /Remove 3 files from HiveMind/);
   assert.match(removeConfirmText(2), /stay on your computer/);
+});
+
+test("bulkEligible picks what each action can act on", () => {
+  const files = [
+    { file_id: "a", index_state: "indexed", public_state: "private" },
+    { file_id: "b", index_state: "indexed", public_state: "public" },
+    { file_id: "c", index_state: "pending", public_state: "private" },
+    { file_id: "d", index_state: "indexed", public_state: "private", publish_state: "failed" },
+  ];
+  assert.deepEqual(bulkEligible(files, "share").map((f) => f.file_id), ["a"]);
+  assert.deepEqual(bulkEligible(files, "unshare").map((f) => f.file_id), ["b"]);
+});
+
+test("bulkResultText reports partial failure", () => {
+  assert.equal(bulkResultText("share", 3, 2), "3 of 5 shared; 2 failed. Try those again.");
 });

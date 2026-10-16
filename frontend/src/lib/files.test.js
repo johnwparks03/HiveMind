@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   countsByFolder,
+  allShared,
   countsFor,
   groupByFolder,
   matchesShareFilter,
@@ -140,9 +141,19 @@ test("totalsByState reports the scope the status chips show", () => {
 test("totalsByShare and matchesShareFilter split files by public_state", () => {
   const files = [{ public_state: "public" }, { public_state: "private" }, { public_state: null }];
   assert.deepEqual(totalsByShare(files), { all: 3, shared: 1, unshared: 2 });
-  assert.equal(files.filter((f) => matchesShareFilter(f, "shared")).length, 1);
-  assert.equal(files.filter((f) => matchesShareFilter(f, "unshared")).length, 2);
-  assert.equal(files.filter((f) => matchesShareFilter(f, "all")).length, 3);
+  assert.equal(files.filter((f) => matchesShareFilter(f, ["shared"])).length, 1);
+  assert.equal(files.filter((f) => matchesShareFilter(f, ["unshared"])).length, 2);
+  // Neither or both switched on means no filtering.
+  assert.equal(files.filter((f) => matchesShareFilter(f, [])).length, 3);
+  assert.equal(files.filter((f) => matchesShareFilter(f, ["shared", "unshared"])).length, 3);
+});
+
+test("allShared is true only when every indexed file is public", () => {
+  assert.equal(allShared({ indexed: 3, public: 3 }), true);
+  assert.equal(allShared({ indexed: 3, public: 2 }), false);
+  assert.equal(allShared({ indexed: 0, public: 0 }), false);
+  // A failed file in the folder doesn't stop it counting as fully shared.
+  assert.equal(allShared({ total: 4, indexed: 3, failed: 1, public: 3 }), true);
 });
 
 test("groupByFolder keeps folder order and skips empty folders", () => {

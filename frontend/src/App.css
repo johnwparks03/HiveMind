@@ -176,6 +176,14 @@ input:focus-visible,
 
 .btn-danger-ghost:hover:not(:disabled) { background: var(--error-soft); }
 
+.btn-danger-outline {
+  background: var(--surface);
+  color: var(--error);
+  border-color: var(--error);
+}
+
+.btn-danger-outline:hover:not(:disabled) { background: var(--error-soft); }
+
 .btn-sm {
   padding: 5px 10px;
   font-size: 12.5px;
@@ -635,8 +643,9 @@ input:focus {
 }
 
 .folder-manage-row {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
   gap: 6px;
 }
 
@@ -689,6 +698,34 @@ input:focus {
   background: var(--ink);
   border-color: var(--ink);
   color: #fff;
+}
+
+/* Status and Sharing are separate filter groups: labelled, divided, and styled differently. */
+.filter-block { margin: 0 0 12px; }
+.filter-block .filter-row { margin-bottom: 0; align-items: center; }
+.filter-block .filter-row + .filter-row {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--line);
+}
+
+.filter-label {
+  width: 58px;
+  flex: none;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.filter-chip-share { border-radius: 8px; }
+
+.filter-chip-share[aria-pressed="true"] {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--ink);
+  font-weight: 600;
 }
 
 .chip-count {
@@ -1442,20 +1479,29 @@ input:focus {
 .file-group-head {
   display: flex;
   align-items: center;
-  padding: 8px 4px;
+  margin: 0 0 6px;
+  padding: 0 14px;
+  min-height: 46px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
 }
+
+.file-group-head:hover { border-color: var(--accent); }
 
 .file-group-toggle {
   flex: 1;
   min-width: 0;
   display: flex;
-  align-items: baseline;
-  gap: 8px;
+  align-items: center;
+  align-self: stretch;
+  gap: 10px;
   background: none;
   border: none;
   padding: 0;
   text-align: left;
   color: inherit;
+  cursor: pointer;
 }
 
 .file-group-toggle:focus-visible {
@@ -1463,9 +1509,9 @@ input:focus {
   outline-offset: 2px;
 }
 
-.file-group-chevron { width: 12px; color: var(--ink-soft); }
-.file-group-name { font-weight: 600; font-size: 14px; }
-.file-group-count { font-size: 12.5px; }
+.file-group-chevron { width: 18px; font-size: 18px; line-height: 1; text-align: center; color: var(--ink-soft); }
+.file-group-name { font-weight: 600; font-size: 15px; }
+.file-group-count { font-size: 13px; }
 
 /* Markdown inside assistant answers. The bubble's pre-wrap would double the spacing, so turn it off here. */
 .ask-bubble.ask-answer { white-space: normal; }

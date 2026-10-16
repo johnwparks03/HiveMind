@@ -69,11 +69,19 @@ export function totalsByShare(files) {
   return { all: files.length, shared, unshared: files.length - shared };
 }
 
-// `id` is one of "all" | "shared" | "unshared".
-export function matchesShareFilter(file, id) {
-  if (id === "shared") return isShared(file);
-  if (id === "unshared") return !isShared(file);
-  return true;
+// `active` is the set of share filters switched on ("shared", "unshared"). Neither on, or
+// both on, means no filtering.
+export function matchesShareFilter(file, active) {
+  const shared = active.includes("shared");
+  const unshared = active.includes("unshared");
+  if (shared === unshared) return true;
+  return shared ? isShared(file) : !isShared(file);
+}
+
+// True when every indexed file in the folder is already public, so there is nothing left to
+// share. Pending and failed files can't be shared, so they don't count.
+export function allShared(counts) {
+  return counts.indexed > 0 && counts.public >= counts.indexed;
 }
 
 // Groups files under their folder, in folder order. Folders with no files are skipped,

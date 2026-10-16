@@ -214,7 +214,7 @@ function GroupDetail({ group, onChanged }) {
         )}
         <div className="card-footer">
           {leave.isError && <p className="inline-error" role="alert">{groupErrorMessage(leave.error)}</p>}
-          <button type="button" className="btn btn-danger-ghost btn-sm" onClick={handleLeave} disabled={leave.isPending}>
+          <button type="button" className="btn btn-danger-outline" onClick={handleLeave} disabled={leave.isPending}>
             {leave.isPending ? <><Spinner />Leaving…</> : "Leave group"}
           </button>
         </div>

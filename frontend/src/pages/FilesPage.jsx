@@ -29,7 +29,6 @@ const FILTERS = [
 ];
 
 const SHARE_FILTERS = [
-  { id: "all", label: "Any sharing" },
   { id: "shared", label: "Shared" },
   { id: "unshared", label: "Not shared" },
 ];
@@ -41,7 +40,7 @@ export default function FilesPage() {
   const queryClient = useQueryClient();
   const [folderId, setFolderId] = useState(null); // null = all folders
   const [filter, setFilter] = useState("all");
-  const [shareFilter, setShareFilter] = useState("all");
+  const [shareFilters, setShareFilters] = useState([]); // "shared" / "unshared"; none or both = show all
   const [selected, setSelected] = useState([]); // file_ids ticked in the list
   const [openOverrides, setOpenOverrides] = useState(() => new Map()); // folder_id -> open, once the user toggles it
 
@@ -149,7 +148,7 @@ export default function FilesPage() {
 
   const inScope = scopeFiles(fileList, folderId);
   const visible = inScope.filter(
-    (f) => (filter === "all" || f.index_state === filter) && matchesShareFilter(f, shareFilter),
+    (f) => (filter === "all" || f.index_state === filter) && matchesShareFilter(f, shareFilters),
   );
   const scopeTotals = totalsByState(inScope);
   const shareTotals = totalsByShare(inScope);
@@ -290,7 +289,9 @@ export default function FilesPage() {
             )}
           </div>
 
+          <div className="filter-block">
           <div className="filter-row" role="group" aria-label="Filter files by status">
+            <span className="filter-label">Status</span>
             {FILTERS.map((f) => (
               <button
                 key={f.id}
@@ -304,18 +305,22 @@ export default function FilesPage() {
             ))}
           </div>
 
-          <div className="filter-row" role="group" aria-label="Filter files by sharing">
+          <div className="filter-row filter-row-share" role="group" aria-label="Filter files by sharing">
+            <span className="filter-label">Sharing</span>
             {SHARE_FILTERS.map((f) => (
               <button
                 key={f.id}
                 type="button"
-                className="filter-chip"
-                aria-pressed={shareFilter === f.id}
-                onClick={() => setShareFilter(f.id)}
+                className="filter-chip filter-chip-share"
+                aria-pressed={shareFilters.includes(f.id)}
+                onClick={() =>
+                  setShareFilters((prev) => (prev.includes(f.id) ? prev.filter((x) => x !== f.id) : [...prev, f.id]))
+                }
               >
                 {f.label} <span className="chip-count">{shareTotals[f.id]}</span>
               </button>
             ))}
+          </div>
           </div>
 
           {selectedShown.length > 0 && (
@@ -386,10 +391,10 @@ export default function FilesPage() {
                 <>
                   {groups.length > 1 && (
                     <div className="group-controls">
-                      <button type="button" className="btn btn-ghost btn-sm" onClick={() => setAllGroups(true)}>
+                      <button type="button" className="btn btn-outline" onClick={() => setAllGroups(true)}>
                         Expand all
                       </button>
-                      <button type="button" className="btn btn-ghost btn-sm" onClick={() => setAllGroups(false)}>
+                      <button type="button" className="btn btn-outline" onClick={() => setAllGroups(false)}>
                         Collapse all
                       </button>
                     </div>

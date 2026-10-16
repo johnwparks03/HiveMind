@@ -1,4 +1,4 @@
-import { folderName } from "../lib/files";
+import { allShared, folderName } from "../lib/files";
 import { Spinner } from "./Loading";
 
 export default function FolderCard({ folder, counts, selected, onSelect, onRescan, onRemove, onShare, onUnshare, busy, sharing, unsharing }) {
@@ -47,9 +47,11 @@ export default function FolderCard({ folder, counts, selected, onSelect, onResca
 
       <div className="folder-actions">
         <div className="folder-share-row">
-          <button type="button" className="btn btn-outline btn-sm" onClick={onShare} disabled={busy}>
-            {sharing ? <><Spinner />Sharing…</> : "Share with team"}
-          </button>
+          {(sharing || !allShared(counts)) && (
+            <button type="button" className="btn btn-outline btn-sm" onClick={onShare} disabled={busy}>
+              {sharing ? <><Spinner />Sharing…</> : "Share with team"}
+            </button>
+          )}
           {counts.public > 0 && (
             <button type="button" className="btn btn-outline btn-sm" onClick={onUnshare} disabled={busy}>
               {unsharing ? <><Spinner />Unsharing…</> : "Unshare"}
@@ -57,10 +59,10 @@ export default function FolderCard({ folder, counts, selected, onSelect, onResca
           )}
         </div>
         <div className="folder-manage-row">
-          <button type="button" className="btn btn-ghost btn-sm" onClick={onRescan} disabled={busy}>
+          <button type="button" className="btn btn-outline btn-sm" onClick={onRescan} disabled={busy}>
             Rescan
           </button>
-          <button type="button" className="btn btn-danger-ghost btn-sm" onClick={onRemove} disabled={busy}>
+          <button type="button" className="btn btn-danger-outline btn-sm" onClick={onRemove} disabled={busy}>
             Remove
           </button>
         </div>

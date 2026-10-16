@@ -551,8 +551,20 @@ input:focus {
 
 .add-folder-row {
   display: flex;
-  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
 }
+
+.add-folder-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  font-size: 13.5px;
+}
+
+.add-folder-text strong { font-size: 15px; }
 
 .add-folder .inline-error { margin: 8px 0 0; }
 

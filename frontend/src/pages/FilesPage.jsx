@@ -224,17 +224,23 @@ export default function FilesPage() {
   return (
     <section className="files-page" aria-labelledby="files-title">
       <h2 id="files-title" className="page-title">Your folders</h2>
-      <p className="page-lede">Add a folder of files to your HiveMind agent so you can search them and share them with your team. Indexing runs in the background.</p>
+      <p className="page-lede">Add a folder of files to your HiveMind agent so you can search them and share them with your team.</p>
 
       <div className="add-folder">
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={() => pickFolder.mutate()}
-          disabled={pickFolder.isPending || addFolder.isPending}
-        >
-          {pickFolder.isPending ? "Opening…" : addFolder.isPending ? "Adding…" : "Upload a folder"}
-        </button>
+        <div className="add-folder-row">
+          <div className="add-folder-text">
+            <strong>Add a folder</strong>
+            <span className="muted">PDF, Word, PowerPoint and text files inside it are indexed.</span>
+          </div>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => pickFolder.mutate()}
+            disabled={pickFolder.isPending || addFolder.isPending}
+          >
+            {pickFolder.isPending ? "Opening…" : addFolder.isPending ? "Adding…" : "Upload a folder"}
+          </button>
+        </div>
         {(pickFolder.isError || addFolder.isError) && (
           <p className="inline-error" role="alert">
             Couldn't add that folder: {(pickFolder.error ?? addFolder.error).message}

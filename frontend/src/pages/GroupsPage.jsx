@@ -199,9 +199,13 @@ function GroupDetail({ group, onChanged }) {
           <>
             <p className="field-label members-label">Members ({members.length})</p>
             <ul className="member-list" aria-label="Group members">
-              {members.map((m) => (
-                <li key={m.email} className="member-row">
-                  <span className="member-email">{m.email}</span>
+              {members.map((m, i) => (
+                <li key={m.email ?? i} className="member-row">
+                  {m.email ? (
+                    <span className="member-email">{m.email}</span>
+                  ) : (
+                    <span className="member-email muted">Email not available yet</span>
+                  )}
                   {m.is_you && <span className="member-you">You</span>}
                 </li>
               ))}

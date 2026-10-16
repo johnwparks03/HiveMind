@@ -11,12 +11,12 @@
 As a requester's agent, I want the top matching teammate chunks for a query vector so that Ask can answer from them.
 
 ## Acceptance criteria
-- [ ] `POST /retrieval/search` takes `{query_embedding, file_ids?, limit?}`; the server derives `team_id` from membership.
-- [ ] Excludes the caller's own files and expired rows; only files with indexed chunks are searched.
-- [ ] Returns `{file_id, filename, chunk_index, text, distance}` ordered by cosine distance; no owner identity.
-- [ ] Limit has a configured default and cap.
-- [ ] Query text never reaches central (vector only). Vectors and chunk text are never logged.
-- [ ] Access log records a retrieval event with ids only (new `event_type` in the contract).
+- [x] `POST /retrieval/search` takes `{query_embedding, file_ids?, limit?}`; the server derives `team_id` from membership.
+- [x] Excludes the caller's own files and expired rows; only files with indexed chunks are searched.
+- [x] Returns `{file_id, filename, chunk_index, text, distance}` ordered by cosine distance; no owner identity.
+- [x] Limit has a configured default and cap.
+- [x] Query text never reaches central (vector only). Vectors and chunk text are never logged.
+- [x] Access log records a retrieval event with ids only (new `event_type` in the contract).
 - [x] Unit tests: team isolation, own-file exclusion, expiry, limit cap, dimension validation.
 
 ## Notes
@@ -28,7 +28,7 @@ Implemented (2026-10-16), not yet deployed or verified on AWS, so the other acce
 - Tests: `test_retrieval_search.py` (SQL scope and ordering, limits, 18 invalid bodies, no-team, logging, no leaks, 503, 401, plus a real-Postgres test that is skipped locally), `test_vectors.py`. `python -m pytest tests` in `central/`: 346 passed, 6 skipped.
 - The migrate Lambda's `verify` action now also runs the real `retrieval_search` on Aurora (rolled back), with another team holding thousands of chunks nearer to the query than the caller's own. After deploy, run it and record `retrieval` here: `caller_gets_full_limit` and `only_own_team_files_returned` should be true; `rows_without_iterative_scan` shows what the filter would have left.
 - Postman: the `Test Retrieval Search` folder (31 requests) is in the HiveMind collection (users A and B, `{{AWS_URL}}`, bearer auth, vectors built in pre-request scripts, runtime variables `retr_file_id` and `retr_own_file_id`, no collection variables declared or changed). Run it top to bottom.
-- Still to do: run the Postman folder, then tick the remaining boxes.
+- Postman `Test Retrieval Search` passed against the deployed stack (reported by the story owner, 2026-10-16). All acceptance criteria met; E6-S4 is done (see the iterative-scan caveat below).
 
 ## Verification on the deployed stack (2026-10-16)
 `verify` action (real `retrieval_search` on Aurora, rolled back; the other team held 2,000 chunks nearer to the query than the caller's own): `caller_gets_full_limit`, `only_own_team_files_returned`, `ordered_by_distance`, `no_owner_identity` and `foreign_file_ids_match_nothing` are all true. The ingest and smoke checks from S2/S3 still pass.

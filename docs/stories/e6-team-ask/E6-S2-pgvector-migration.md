@@ -28,10 +28,10 @@ Implemented (2026-10-16): `0006_chunk_index.sql`, Aurora max ACU 1 -> 2 (`infra/
 Verified locally: `python -m pytest tests` in `central/` gives 257 passed, 5 skipped. The DB-backed tests (cascade from file and team, publish upsert keeps chunks, dimension check, cosine ordering) are written but **skipped here**: no Docker or Postgres on this machine. Run them with `HIVEMIND_TEST_DATABASE_URL` pointing at a pgvector Postgres.
 
 Still to do (acceptance boxes stay unticked until then):
-- [ ] verify-in-AWS: pgvector version and HNSW support on Aurora PG 16.8 (`pg_available_extensions`), and that user `hivemind` can `CREATE EXTENSION vector`. Do this before deploying, because the migration batch is one transaction and a failure blocks the deploy.
-- [ ] Synthetic load (e.g. 50k x 384) for HNSW build time and top-20 cosine latency at 0.5-2 ACU.
-- [ ] Run the DB-backed tests against a pgvector Postgres.
-- [ ] `cdk diff`, then a coordinated `cdk deploy`; confirm `schema_migrations` lists `0006_chunk_index.sql`.
+- [x] verify-in-AWS: pgvector version and HNSW support on Aurora PG 16.8 (`pg_available_extensions`), and that user `hivemind` can `CREATE EXTENSION vector`. Do this before deploying, because the migration batch is one transaction and a failure blocks the deploy.
+- [x] Synthetic load (ran 5k and 20k x 384; 50k not needed) for HNSW build time and top-20 cosine latency at 0.5-2 ACU.
+- [ ] Run the DB-backed tests against a pgvector Postgres. Still open: the same behaviours passed on the real database via `verify`, but the pytest DB tests have not run.
+- [x] `cdk diff`, then a coordinated `cdk deploy`; confirm `schema_migrations` lists `0006_chunk_index.sql`.
 
 Post-deploy check (added after the first deploy; the migration ran and the cluster is 0.5-2 ACU): the migrate Lambda has a read-only `verify` action. It reports the pgvector version, `public_chunks` columns and the HNSW index, runs the cascade / dimension / cosine smoke tests, and times an HNSW build and top-20 query on random vectors in a temp table. It runs in one transaction that is always rolled back.
 

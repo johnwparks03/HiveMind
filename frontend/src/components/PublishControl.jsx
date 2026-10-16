@@ -42,7 +42,7 @@ export default function PublishControl({ file, canShare }) {
               <><Spinner />Unsharing…</>
             ) : publish.isPending || working ? (
               <><Spinner />Sharing…</>
-            ) : isPublic ? "Unshare" : "Share with team"}
+            ) : isPublic ? "Make private" : "Make public"}
           </button>
         )}
       </div>
@@ -51,7 +51,7 @@ export default function PublishControl({ file, canShare }) {
         const error = publish.error ?? unpublish.error ?? retry.error;
         if (!error) return null;
         const message = error.code === "no_team"
-          ? "Join a team first (see the Groups tab) before sharing."
+          ? "Join a team first (see the Team tab) before making files public."
           : "Something went wrong. Try again.";
         return <p className="inline-error" role="alert">{message}</p>;
       })()}

@@ -11,17 +11,17 @@ export function groupErrorMessage(err) {
   if (!err) return null;
   switch (err.code) {
     case "already_in_team":
-      return "You're already in a group. Leave it before creating or joining another.";
+      return "You're already on a team. Leave it before creating or joining another.";
     case "invalid_code":
       return "That invite code isn't valid. Check it and try again.";
     case "invite_expired":
       return "That invite has expired. Ask for a new code.";
     case "no_team":
-      return "You're not in a group yet.";
+      return "You're not on a team yet.";
     case "service_unavailable":
       return err.details?.missing?.length
         ? "Sign-in isn't set up on this computer yet."
-        : "Can't reach the group service. Check your connection and try again.";
+        : "Can't reach the team service. Check your connection and try again.";
     default:
       return "Something went wrong. Try again.";
   }

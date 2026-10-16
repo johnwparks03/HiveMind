@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import DownloadFolderControl from "../components/DownloadFolderControl";
 import { Spinner } from "../components/Loading";
+import HowTo from "../components/HowTo";
 import TeammateResultCard from "../components/TeammateResultCard";
 import { api, isAgentUnreachable } from "../api/client";
 import { formatDate } from "../lib/files";
@@ -31,7 +32,7 @@ export default function GroupsPage() {
       <Shell>
         <div className="banner banner-error" role="alert">
           {isAgentUnreachable(session.error)
-            ? "Can't reach the local agent. Start it on port 8420, then try again."
+            ? "The local agent isn't running. Start it, then try again."
             : "Couldn't check your sign-in status. Try again in a moment."}
         </div>
       </Shell>
@@ -40,7 +41,7 @@ export default function GroupsPage() {
 
   if (!signedIn) {
     return (
-      <Shell lede="Groups are shared with your team, so you need to sign in first.">
+      <Shell lede="Your team needs you to sign in first.">
         <div className="account-card">
           <p className="signed-in-text">
             <a href="#/account">Go to Sign in</a>
@@ -50,7 +51,7 @@ export default function GroupsPage() {
     );
   }
 
-  if (group.isPending) return <Shell><p className="muted">Loading your group…</p></Shell>;
+  if (group.isPending) return <Shell><p className="muted">Loading your team…</p></Shell>;
 
   if (group.isError) {
     return (
@@ -69,7 +70,7 @@ export default function GroupsPage() {
   }
 
   return (
-    <Shell lede="You're not in a group yet. Create one, or join with an invite code.">
+    <Shell lede="You're not on a team yet. Create one, or join with an invite code.">
       <CreateGroup onCreated={refreshGroup} />
       <JoinGroup onJoined={refreshGroup} />
     </Shell>
@@ -78,9 +79,10 @@ export default function GroupsPage() {
 
 function Shell({ lede, children }) {
   return (
-    <section className="groups-page" aria-label="Groups">
-      <h2 className="page-title">Your <span className="accent-word">group</span></h2>
+    <section className="groups-page" aria-label="Team">
+      <h2 className="page-title">Your <span className="accent-word">team</span></h2>
       {lede && <p className="page-lede">{lede}</p>}
+      <HowTo steps={['Create a team, or join one with an invite code.', 'Invite people with a code.', 'See what your team has made public.']} />
       {children}
     </section>
   );
@@ -104,13 +106,13 @@ function CreateGroup({ onCreated }) {
 
   return (
     <div className="account-card">
-      <h3 className="section-title">Create a group</h3>
+      <h3 className="section-title">Create a team</h3>
       <form className="account-form" onSubmit={handleSubmit}>
-        <label htmlFor="group-name" className="field-label">Group name</label>
+        <label htmlFor="group-name" className="field-label">Team name</label>
         <input id="group-name" type="text" value={name} onChange={(e) => setName(e.target.value)} />
         {create.isError && <p className="inline-error" role="alert">{groupErrorMessage(create.error)}</p>}
         <button type="submit" className="btn btn-primary" disabled={create.isPending || !name.trim()}>
-          {create.isPending ? "Creating…" : "Create group"}
+          {create.isPending ? "Creating…" : "Create team"}
         </button>
       </form>
     </div>
@@ -149,7 +151,7 @@ function JoinGroup({ onJoined }) {
         />
         {join.isError && <p className="inline-error" role="alert">{groupErrorMessage(join.error)}</p>}
         <button type="submit" className="btn btn-primary" disabled={join.isPending || !code.trim()}>
-          {join.isPending ? "Joining…" : "Join group"}
+          {join.isPending ? "Joining…" : "Join team"}
         </button>
       </form>
     </div>
@@ -180,7 +182,7 @@ function GroupDetail({ group, onChanged }) {
   });
 
   function handleLeave() {
-    const ok = window.confirm(`Leave ${group.name}? You will stop sharing files with this group.`);
+    const ok = window.confirm(`Leave ${group.name}? You will stop sharing files with this team.`);
     if (ok) leave.mutate();
   }
 
@@ -194,37 +196,13 @@ function GroupDetail({ group, onChanged }) {
   }
 
   return (
-    <>
-      <div className="account-card group-card">
+    <div className="account-card group-card">
+      <div className="team-header">
         <h3 className="section-title">{group.name}</h3>
-        {members.length > 0 && (
-          <>
-            <p className="field-label members-label">Members ({members.length})</p>
-            <ul className="member-list" aria-label="Group members">
-              {members.map((m, i) => (
-                <li key={m.email ?? i} className="member-row">
-                  {m.email ? (
-                    <span className="member-email">{m.email}</span>
-                  ) : (
-                    <span className="member-email muted">Email not available yet</span>
-                  )}
-                  {m.is_you && <span className="member-you">You</span>}
-                </li>
-              ))}
-            </ul>
-          </>
-        )}
-        <TeamFiles />
-        <div className="card-footer">
-          {leave.isError && <p className="inline-error" role="alert">{groupErrorMessage(leave.error)}</p>}
-          <button type="button" className="btn btn-danger-outline" onClick={handleLeave} disabled={leave.isPending}>
-            {leave.isPending ? <><Spinner />Leaving…</> : "Leave group"}
-          </button>
-        </div>
       </div>
 
-      <div className="account-card">
-        <h3 className="section-title">Invite someone</h3>
+      <section className="team-invite" aria-labelledby="invite-heading">
+        <p className="field-label" id="invite-heading">Invite someone</p>
         {invite ? (
           <>
             <p className="invite-code" aria-label={`Invite code ${invite.code}`}>{invite.code}</p>
@@ -247,8 +225,35 @@ function GroupDetail({ group, onChanged }) {
         >
           {createInvite.isPending ? "Creating code…" : invite ? "Create a new code" : "Create invite code"}
         </button>
+      </section>
+
+      {members.length > 0 && (
+        <>
+          <p className="field-label members-label">Members ({members.length})</p>
+          <ul className="member-list" aria-label="Team members">
+            {members.map((m, i) => (
+              <li key={m.email ?? i} className="member-row">
+                {m.email ? (
+                  <span className="member-email">{m.email}</span>
+                ) : (
+                  <span className="member-email muted">Email not available yet</span>
+                )}
+                {m.is_you && <span className="member-you">You</span>}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+
+      <TeamFiles />
+
+      <div className="card-footer">
+        {leave.isError && <p className="inline-error" role="alert">{groupErrorMessage(leave.error)}</p>}
+        <button type="button" className="btn btn-danger-outline" onClick={handleLeave} disabled={leave.isPending}>
+          {leave.isPending ? <><Spinner />Leaving…</> : "Leave team"}
+        </button>
       </div>
-    </>
+    </div>
   );
 }
 
@@ -257,20 +262,20 @@ function GroupDetail({ group, onChanged }) {
 function TeamFiles() {
   const files = useQuery({ queryKey: ["group-files"], queryFn: api.getGroupFiles });
 
-  if (files.isPending) return <p className="muted">Loading shared files…</p>;
+  if (files.isPending) return <p className="muted">Loading public files…</p>;
 
   if (files.isError) {
     return (
       <div className="banner banner-error" role="alert">
         {isAgentUnreachable(files.error)
-          ? "Can't reach the local agent. Start it on port 8420, then try again."
+          ? "The local agent isn't running. Start it, then try again."
           : groupErrorMessage(files.error)}
       </div>
     );
   }
 
   if (files.data.length === 0) {
-    return <p className="muted">No files shared yet. Publish one from the Files page.</p>;
+    return <p className="muted">No public files yet. Make one public from the Files page.</p>;
   }
 
   return (

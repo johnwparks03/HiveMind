@@ -14,7 +14,7 @@ const TABS = [
   { id: "search", label: "Search" },
   { id: "ask", label: "Ask" },
   { id: "files", label: "Files" },
-  { id: "groups", label: "Groups" },
+  { id: "groups", label: "Team" },
   { id: "account", label: "Sign in" },
 ];
 

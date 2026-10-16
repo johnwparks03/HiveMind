@@ -1,7 +1,8 @@
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { api, isAgentUnreachable } from "../api/client";
-import Loading, { Spinner } from "../components/Loading";
+import HowTo from "../components/HowTo";
+import Loading from "../components/Loading";
 import ResultCard from "../components/ResultCard";
 import SearchIllustration from "../components/SearchIllustration";
 import DownloadFolderControl from "../components/DownloadFolderControl";
@@ -57,6 +58,7 @@ export default function SearchPage() {
     <section className="search-page" aria-labelledby="search-title">
       <h2 id="search-title" className="page-title">Find a <span className="accent-word">file</span></h2>
       <p className="page-lede">Describe what you need in plain words.</p>
+      <HowTo steps={['Type a topic, or a time like "last week".', 'Press Enter to search.', 'Open the file you need.']} />
 
       <div className="search-box">
         <form className="search-form" role="search" onSubmit={handleSubmit}>
@@ -82,7 +84,7 @@ export default function SearchPage() {
 
         <div className="include-teammates">
           <Switch checked={includeTeammates} onChange={setIncludeTeammates}>
-            Also search teammates' shared files
+            Also search teammates' public files
           </Switch>
         </div>
 
@@ -134,7 +136,7 @@ export default function SearchPage() {
         {search.isError && (
           <div className="banner banner-error" role="alert">
             {isAgentUnreachable(search.error)
-              ? "Can't reach the local agent. Start it on port 8420, then try again."
+              ? "The local agent isn't running. Start it, then try again."
               : `Search failed: ${search.error.message}`}
           </div>
         )}
@@ -199,10 +201,10 @@ export default function SearchPage() {
             ) : (
               <p className="footnote">
                 {results.teammate.skipped_reason === "no_team"
-                  ? "Join a group (see the Groups tab) to search teammates' files."
+                  ? "Join a team (see the Team tab) to search teammates' files."
                   : results.teammate.skipped_reason === "central_unavailable"
                   ? "Couldn't reach teammate search just now. Your own files are still shown above."
-                  : "Only your own files are searched. Turn on \"Also search teammates' shared files\" above to include shared files."}
+                  : "Only your own files are searched. Turn on \"Also search teammates' public files\" above to include public files."}
               </p>
             )}
           </>

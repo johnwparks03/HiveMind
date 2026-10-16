@@ -21,7 +21,7 @@ export function bulkEligible(files, action) {
 }
 
 export function bulkResultText(action, ok, failed) {
-  const verb = action === "share" ? "shared" : "unshared";
+  const verb = action === "share" ? "made public" : "made private";
   return `${ok} of ${ok + failed} ${verb}; ${failed} failed. Try those again.`;
 }
 

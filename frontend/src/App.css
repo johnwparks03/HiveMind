@@ -1757,3 +1757,37 @@ input:focus {
     grid-template-columns: 1fr;
   }
 }
+
+/* Saved chats scaled to 1.25x: wider list, larger titles, controls and spacing. */
+.ask-page {
+  grid-template-columns: 325px minmax(0, 1fr);
+  gap: 25px;
+}
+
+.ask-sidebar {
+  gap: 12px;
+  padding: 15px;
+}
+
+.ask-new {
+  font-size: 16.25px;
+  padding: 11px 18px;
+}
+
+.ask-side-note {
+  font-size: 16.25px;
+}
+
+.ask-chat-list {
+  gap: 3px;
+}
+
+.ask-chat-open {
+  font-size: 18px;
+  padding: 12px 15px;
+}
+
+.ask-chat-delete {
+  font-size: 19px;
+  padding: 5px 10px;
+}

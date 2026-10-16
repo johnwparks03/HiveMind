@@ -302,7 +302,7 @@ export default function FilesPage() {
           </div>
 
           <div className="filter-block">
-          <div className="filter-row" role="group" aria-label="Filter files by status">
+          <div className="filter-row" role="group" aria-label="Filter files by status and sharing">
             <span className="filter-label">Status</span>
             {FILTERS.map((f) => (
               <button
@@ -315,12 +315,7 @@ export default function FilesPage() {
                 {f.label} <span className="chip-count">{scopeTotals[f.id]}</span>
               </button>
             ))}
-          </div>
-
-          {inGroup && (
-          <div className="filter-row filter-row-share" role="group" aria-label="Filter files by sharing">
-            <span className="filter-label">Sharing</span>
-            {SHARE_FILTERS.map((f) => (
+            {inGroup && SHARE_FILTERS.map((f) => (
               <button
                 key={f.id}
                 type="button"
@@ -334,7 +329,6 @@ export default function FilesPage() {
               </button>
             ))}
           </div>
-          )}
           </div>
 
           {selectedShown.length > 0 && (

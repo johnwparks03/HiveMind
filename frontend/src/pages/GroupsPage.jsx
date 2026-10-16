@@ -32,7 +32,7 @@ export default function GroupsPage() {
       <Shell>
         <div className="banner banner-error" role="alert">
           {isAgentUnreachable(session.error)
-            ? "The local agent isn't running. Start it, then try again."
+            ? "HiveMind isn't running. Start it, then try again."
             : "Couldn't check your sign-in status. Try again in a moment."}
         </div>
       </Shell>
@@ -71,8 +71,10 @@ export default function GroupsPage() {
 
   return (
     <Shell lede="You're not on a team yet. Create one, or join with an invite code.">
-      <CreateGroup onCreated={refreshGroup} />
-      <JoinGroup onJoined={refreshGroup} />
+      <div className="team-choices">
+        <CreateGroup onCreated={refreshGroup} />
+        <JoinGroup onJoined={refreshGroup} />
+      </div>
     </Shell>
   );
 }
@@ -268,7 +270,7 @@ function TeamFiles() {
     return (
       <div className="banner banner-error" role="alert">
         {isAgentUnreachable(files.error)
-          ? "The local agent isn't running. Start it, then try again."
+          ? "HiveMind isn't running. Start it, then try again."
           : groupErrorMessage(files.error)}
       </div>
     );

@@ -198,9 +198,9 @@ export default function AskPage() {
           {send.isError && (
             <div className="banner banner-error" role="alert">
               {isAgentUnreachable(send.error)
-                ? "The local agent isn't running. Start it, then try again."
+                ? "HiveMind isn't running. Start it, then try again."
                 : send.error.code === "service_unavailable"
-                  ? "Ask needs AWS credentials configured in agent/.env. See the agent README."
+                  ? "Ask isn't set up on this computer yet. Ask whoever set up HiveMind for help."
                   : `Ask failed: ${send.error.message}. Your question is still in the box.`}
             </div>
           )}

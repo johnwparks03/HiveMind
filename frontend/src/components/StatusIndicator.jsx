@@ -17,9 +17,9 @@ export default function StatusIndicator() {
     offline: "HiveMind isn't running. Start it, then refresh.",
   }[state];
   const hint = {
-    checking: "Checking that the local agent is running.",
-    online: "The local agent is running and answering.",
-    offline: "The local agent isn't responding. It usually runs in a terminal window.",
+    checking: "Checking that HiveMind is running on this computer.",
+    online: "HiveMind is running on this computer.",
+    offline: "HiveMind isn't responding. Start it again, then refresh this page.",
   }[state];
 
   return (

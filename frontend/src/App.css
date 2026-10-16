@@ -88,9 +88,9 @@
 /* Page */
 .page {
   width: 100%;
-  max-width: 880px;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 32px 24px 64px;
+  padding: 32px 20px 64px;
 }
 
 .page-title {
@@ -1687,8 +1687,11 @@ input:focus {
 }
 
 /* Ask: wider chat list, and larger, easier-to-read answers. */
+/* Saved chats sit at the left edge of the page, so the conversation gets the rest of the width. */
 .ask-page {
-  grid-template-columns: 300px minmax(0, 1fr);
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 20px;
+  margin-left: -20px;
 }
 
 .ask-chat-open {

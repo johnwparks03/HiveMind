@@ -1,7 +1,7 @@
 import { allShared, folderName } from "../lib/files";
 import { Spinner } from "./Loading";
 
-export default function FolderCard({ folder, counts, selected, onSelect, onRescan, onRemove, onShare, onUnshare, busy, sharing, unsharing }) {
+export default function FolderCard({ folder, counts, selected, onSelect, onRescan, onRemove, onShare, onUnshare, busy, sharing, unsharing, canShare }) {
   const percent = counts.total === 0 ? 0 : Math.round((counts.indexed / counts.total) * 100);
   const name = folderName(folder.path);
 
@@ -46,6 +46,7 @@ export default function FolderCard({ folder, counts, selected, onSelect, onResca
       )}
 
       <div className="folder-actions">
+        {canShare && (
         <div className="folder-share-row">
           {(sharing || !allShared(counts)) && (
             <button type="button" className="btn btn-outline btn-sm" onClick={onShare} disabled={busy}>
@@ -58,6 +59,7 @@ export default function FolderCard({ folder, counts, selected, onSelect, onResca
             </button>
           )}
         </div>
+        )}
         <div className="folder-manage-row">
           <button type="button" className="btn btn-outline btn-sm" onClick={onRescan} disabled={busy}>
             Rescan

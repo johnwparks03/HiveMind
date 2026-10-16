@@ -44,6 +44,10 @@ export default function FilesPage() {
   const [selected, setSelected] = useState([]); // file_ids ticked in the list
   const [openOverrides, setOpenOverrides] = useState(() => new Map()); // folder_id -> open, once the user toggles it
 
+  // Sharing only makes sense in a group, so without one every share control is hidden.
+  const session = useQuery({ queryKey: ["session"], queryFn: api.getSession, refetchInterval: IDLE_POLL_MS });
+  const inGroup = Boolean(session.data?.team);
+
   const folders = useQuery({
     queryKey: ["folders"],
     queryFn: api.listFolders,
@@ -148,7 +152,7 @@ export default function FilesPage() {
 
   const inScope = scopeFiles(fileList, folderId);
   const visible = inScope.filter(
-    (f) => (filter === "all" || f.index_state === filter) && matchesShareFilter(f, shareFilters),
+    (f) => (filter === "all" || f.index_state === filter) && matchesShareFilter(f, inGroup ? shareFilters : []),
   );
   const scopeTotals = totalsByState(inScope);
   const shareTotals = totalsByShare(inScope);
@@ -201,6 +205,7 @@ export default function FilesPage() {
           <FileRow
             key={file.file_id}
             file={file}
+            canShare={inGroup}
             selected={selectedShown.includes(file.file_id)}
             onToggle={(id) => setSelected(toggleSelected(selected, id))}
           />
@@ -267,6 +272,7 @@ export default function FilesPage() {
                 onRemove={() => handleRemove(folder)}
                 onShare={() => handleShare(folder)}
                 onUnshare={() => handleUnshare(folder)}
+                canShare={inGroup}
                 sharing={sharePreview.isPending || shareFolder.isPending}
                 unsharing={unshareFolder.isPending}
                 busy={rescan.isPending || removeFolder.isPending || sharePreview.isPending || shareFolder.isPending || unshareFolder.isPending}
@@ -305,6 +311,7 @@ export default function FilesPage() {
             ))}
           </div>
 
+          {inGroup && (
           <div className="filter-row filter-row-share" role="group" aria-label="Filter files by sharing">
             <span className="filter-label">Sharing</span>
             {SHARE_FILTERS.map((f) => (
@@ -321,6 +328,7 @@ export default function FilesPage() {
               </button>
             ))}
           </div>
+          )}
           </div>
 
           {selectedShown.length > 0 && (
@@ -330,6 +338,7 @@ export default function FilesPage() {
                 <button type="button" className="btn btn-ghost btn-sm" onClick={() => setSelected([])}>
                   Clear
                 </button>
+                {inGroup && (<>
                 <button
                   type="button"
                   className="btn btn-outline btn-sm"
@@ -350,6 +359,7 @@ export default function FilesPage() {
                     ? <><Spinner />Unsharing…</>
                     : `Unshare (${unshareable.length})`}
                 </button>
+                </>)}
                 <button
                   type="button"
                   className="btn btn-danger-ghost btn-sm"

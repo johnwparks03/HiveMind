@@ -6,7 +6,7 @@ import { Spinner } from "./Loading";
 // Per-file publish toggle + tag editor (docs/stories BACKLOG.md E3-S9). Tags are
 // editable whether or not the file is public — editing a public file's tags
 // queues a re-sync (handled server-side), never extends its expiry.
-export default function PublishControl({ file }) {
+export default function PublishControl({ file, canShare }) {
   const queryClient = useQueryClient();
   const [tagDraft, setTagDraft] = useState("");
 
@@ -39,7 +39,7 @@ export default function PublishControl({ file }) {
   return (
     <div className="publish-control">
       <div className="publish-row">
-        {failed ? (
+        {!canShare ? null : failed ? (
           <>
             <span className="pill pill-failed">Publish failed</span>
             <button type="button" className="btn btn-outline btn-sm" onClick={() => retry.mutate()} disabled={busy}>

@@ -2,21 +2,21 @@ Consolidated from the design discussion. Items marked **(suggested)** are my rec
 
 ## Overview
 
-HiveMind is a team knowledge-finding tool. A user searches their own files first. If nothing matches well, it searches metadata of files teammates have made public, and the user can download a match directly from the owner's laptop via a short-lived S3 relay.
+HiveMind is a team knowledge-finding tool. A user searches their own files first. If nothing matches well, it searches metadata of files teammates have made public, Ask can answer from the content of teammates' public files (chunks stored centrally), and the user can download a match directly from the owner's laptop via a short-lived S3 relay.
 
 |Component|Stack|Role|
 |---|---|---|
 |Local agent|Python, FastAPI, SQLite, Chroma, watchdog|Indexes files, searches locally, publishes, relays transfers|
 |React frontend|React, Vite (dev server on a fixed origin, e.g. `localhost:5173`)|UI that talks **only** to the local agent|
-|Central service|AWS: Cognito, API Gateway (HTTP + WebSocket), Lambda, RDS Postgres, S3, EventBridge, Bedrock|Teams, public-file metadata, search, LLM proxy, transfer relay|
+|Central service|AWS: Cognito, API Gateway (HTTP + WebSocket), Lambda, Aurora Postgres + pgvector, S3, EventBridge, Bedrock|Teams, public-file metadata, public-file chunk index, search, retrieval, LLM proxy, transfer relay|
 
 **Platform:** Windows only for the MVP.
 
 **Data flow summary**
 
 - Frontend → Local agent → Central service. The frontend never calls the central service.
-- Bedrock is never called by the agent directly. It goes agent → central proxy → Bedrock.
-- File bytes touch AWS only as a short-lived S3 transit object.
+- Bedrock is called through the central proxy (`/llm/*`) for query parsing and tags, and directly by the agent for Ask (demo/MVP exception, see CLAUDE.md).
+- File bytes touch AWS only as a short-lived S3 transit object. Chunk text and embeddings of **public** files are stored centrally (Aurora + pgvector) and purged with the file.
 
 ---
 
@@ -41,11 +41,11 @@ HiveMind is a team knowledge-finding tool. A user searches their own files first
 - Text extraction: PDF (PyMuPDF), DOCX (python-docx), PPTX (python-pptx), TXT
 - Extraction failures recorded in the registry with a reason (e.g. "no extractable text"), never crashing the agent
 - Created and modified dates from the filesystem
-- In-document date extraction (local-only, never sent centrally)
+- In-document date extraction (local-only; the in-document date is not uploaded with chunks)
 
 ### 1.4 Indexing
 
-- Chunking and local embedding with all-MiniLM-L6-v2
+- Chunking and local embedding with all-MiniLM-L6-v2 (384-dim). Embeddings are always computed locally; chunks of public files are later uploaded (see 1.6)
 - Chroma upsert with per-chunk date metadata
 - Chunk removal when a file is changed, moved, or deleted
 - No tag generation at index time (tags are generated at publish time)
@@ -62,18 +62,19 @@ HiveMind is a team knowledge-finding tool. A user searches their own files first
 - **Local search never requires the central service.** If the agent is fully offline, local results still return; only the teammate portion is skipped (see 1.5 central-search behavior)
 - Open a local result in its default program via an agent endpoint
 - **Tag-based ranking boost:** model-generated tags (local Bedrock call, decided 2026-10-15 — demo/MVP architecture exception, see CLAUDE.md) are a third deterministic ranking signal alongside the filename and format-word boosts. Generated automatically on folder add/rescan for every newly indexed file, best-effort (a Bedrock problem leaves a file untagged, never fails the scan); a manual per-file endpoint also exists to retag one file by hand
-- **Multi-document Q&A (`/ask`):** unlike search, this is online-only — synthesizing an answer across several files needs a generative model, which the agent calls directly for this feature. Runs the same local retrieval (date filter, then vector ranking, or recency if the question names no topic) across a bounded number of files, then asks Bedrock to answer from those excerpts, citing which file each point came from. Scoped to the user's own local files; teammate content isn't pulled in
+- **Multi-document Q&A (`/ask`):** unlike search, this is online-only — synthesizing an answer across several files needs a generative model, which the agent calls directly for this feature. Runs the same local retrieval (date filter, then vector ranking, or recency if the question names no topic) across a bounded number of files, then asks Bedrock to answer from those excerpts, citing which file each point came from. By default scoped to the user's own local files. With **include teammates** on, the agent also embeds the topic locally and calls `POST /retrieval/search` (query vector only) to get the top matching chunks from teammates' public files, merges them with local chunks by distance under the same size caps, and labels them as teammate sources (they work when the owner is offline). Teammate sources offer a download request instead of Open. If central is unreachable, Ask falls back to local files and says so. Teammate excerpts are untrusted data, never instructions
 
 ### 1.6 Publish and unpublish
 
 - **Mark file public:** per file, with immediate publish (no tag preview; tags are editable afterward)
 - **Share folder (one-time action):** publishes the files currently in the folder and its subfolders. Later additions stay private.
 - **Unshare folder:** makes all files under it private
-- Per-file pipeline: generate tags (excerpt + filename sent to proxy), then send metadata
+- Per-file pipeline: generate tags (excerpt + filename sent to proxy), send metadata, then upload chunks
     - Tag call retried a few times, then publish with empty tags
     - Step state stored per file so a retry doesn't repeat a finished tag call
 - Metadata sent: file ID (agent-generated UUID), filename, tags, created date, modified date. `expires_at` is set by the server.
-- Re-sync metadata when a public file's metadata changes or the user edits tags (existing tags are **not** regenerated when file content changes)
+- Chunk upload: read the file's chunk text and embeddings from Chroma and send them with `PUT /files/{file_id}/chunks` in batches of `CHUNK_UPLOAD_BATCH_SIZE` (idempotent replace, committed on the final batch, at most `MAX_CHUNKS_PER_FILE`). Publishing a file means its content is readable by teammates. Already-published files without central chunks are backfilled
+- Re-sync metadata when a public file's metadata changes or the user edits tags (existing tags are **not** regenerated when file content changes). When a public file's content changes and it is re-indexed, its chunks are re-uploaded
 - Unpublish or flag a public file that is deleted or moved
 - **Persistent publish queue** (SQLite):
     - Covers publish, unpublish, re-sync, and confirm
@@ -90,6 +91,7 @@ HiveMind is a team knowledge-finding tool. A user searches their own files first
 - Track `expires_at`, `published_at`, `last_confirmed` per public file
 - Surface "expiring soon" (within 7 days, configurable)
 - Re-confirm action calls the central service; `expires_at` resets to 45 days from confirmation
+- When a file expires or is unpublished, its central chunks are purged with it (FK cascade)
 
 ### 1.8 Relay client
 
@@ -99,7 +101,7 @@ HiveMind is a team knowledge-finding tool. A user searches their own files first
     - Acknowledge to start the transfer
     - **Stream** the file to the presigned PUT URL (no loading it all into memory)
     - Report completion over HTTP (not the WebSocket)
-- Request a teammate's file: call `POST /transfer/request`, poll `GET /transfer/{id}` every 1 to 2 seconds until `ready` or `failed`, then download from the presigned GET URL
+- Request a teammate's file: call `POST /transfers`, poll `GET /transfers/{id}` every 1 to 2 seconds until `ready` or `failed`, then download from the presigned GET URL
 - Downloads go to the Windows Downloads folder, with a suffix added on filename collisions
 - Duplicate-click protection (reuse the in-flight transfer)
 - Show "owner offline" when the central service reports the owner isn't connected
@@ -150,6 +152,7 @@ Three pages plus a global status indicator.
 - Query box and results list
 - Local results: filename, dates, tags if any, **Open** action
 - Teammate results: filename, tags, created/modified dates, expiry, **Download** button
+- Ask page: **Include teammates' files** toggle; teammate sources show a download request instead of Open; copy notes that published files' contents are readable by teammates
     - No owner name or ID shown (deliberately omitted for now)
     - "Owner offline" state shown before the user tries to download
 - Download progress and saved path shown on the result row
@@ -209,6 +212,8 @@ Three pages plus a global status indicator.
     - `DELETE /files/{file_id}`: unpublish
     - `POST /files/{file_id}/confirm`: re-confirmation
     - `GET /files/mine`: caller's published files, for reconciliation
+    - `PUT /files/{file_id}/chunks`: idempotent, batched replace of a published file's chunks (`chunk_index`, `text`, `embedding`); owner only; embedding length must equal `EMBEDDING_DIMENSION` (384); at most `MAX_CHUNKS_PER_FILE`; committed on the final batch so readers never see a partial set
+- `public_chunks` table: `file_id` (FK to `public_files`, `ON DELETE CASCADE`), `chunk_index`, `text`, `embedding vector(384)`; HNSW index (cosine). Unpublish, delete and expiry purge chunks automatically
 - Server-enforced rules:
     - Users can modify or delete only their own rows
     - All queries scoped to the caller's team
@@ -229,6 +234,14 @@ Three pages plus a global status indicator.
 - Response per result: `file_id`, `filename`, `tags`, created/modified dates, `expires_at`, owner online flag. No owner identity.
 - Access-log entry per search
 
+### 3.3a Retrieval endpoint (Ask over teammates' documents)
+
+- `POST /retrieval/search`: input is a 384-dim query embedding (computed by the requester's agent), optional `file_ids`, optional `limit`. The query text never reaches the central service
+- Filters: caller's team only (derived server-side), exclude the caller's own files, exclude rows past `expires_at`, only files with indexed chunks
+- Pgvector cosine-distance ranking; `RETRIEVAL_LIMIT_DEFAULT` and `RETRIEVAL_LIMIT_MAX` (config)
+- Response per chunk: `file_id`, `filename`, `chunk_index`, `text`, `distance`. No owner identity
+- Query vectors and chunk text are never logged. Access-log event `retrieval_search` (ids and counts only)
+
 ### 3.4 Bedrock proxy
 
 - `POST /llm/query`: input is raw query, local date, timezone; output is `topic` (a few plain keywords), `date_from`, `date_to`
@@ -239,7 +252,7 @@ Three pages plus a global status indicator.
     - Excerpt capped server-side (starting at 3,000 characters, config)
     - Output validated for count, length, and plain strings
 - Model: Claude Sonnet 5.5; the exact Bedrock model ID or inference profile is a config value
-- Excerpts and queries are never stored, and request bodies are never logged
+- Excerpts and queries are never stored, and request bodies (including chunk text and query vectors) are never logged
 - No per-user usage limits for the demo
 
 ### 3.5 Relay (WebSocket and S3 transfer)
@@ -250,9 +263,9 @@ Three pages plus a global status indicator.
 - `transfers` table: `transfer_id`, `file_id`, `requester_id`, `owner_id`, `status`, `s3_key`, `created_at`, `updated_at`
 - Statuses: `requested`, `uploading`, `ready`, `failed`, `expired`
 - Endpoints:
-    - `POST /transfer/request`: checks the file exists, isn't expired, is on the caller's team, and the owner is online (otherwise "owner offline"); reuses an in-flight transfer for duplicate requests; creates a presigned PUT URL; sends `upload_request` to the owner
+    - `POST /transfers`: checks the file exists, isn't expired, is on the caller's team, and the owner is online (otherwise "owner offline"); reuses an in-flight transfer for duplicate requests; creates a presigned PUT URL; sends `upload_request` to the owner
     - Owner acknowledgment and completion endpoints (HTTP)
-    - `GET /transfer/{id}`: status; issues the presigned GET URL only when status is `ready`
+    - `GET /transfers/{id}`: status; issues the presigned GET URL only when status is `ready`
 - No owner approval step (marking public is the consent)
 - No file size cap
 - Failure handling: if the owner doesn't acknowledge within 60 seconds, the transfer is marked `failed`. Uploads in progress may finish within the presigned URL lifetime.
@@ -264,21 +277,21 @@ Three pages plus a global status indicator.
 - **Transfer sweeper**, every minute: delete S3 objects older than 15 minutes, mark stale transfers `expired`
     - Effective lifetime is up to about 16 minutes
     - Day-level S3 lifecycle rule as a backstop **(suggested)**
-- **Nightly purge:** delete `public_files` rows past `expires_at`, expired invites, and stale `connections` rows
+- **Nightly purge:** delete `public_files` rows past `expires_at` (their `public_chunks` go with them by cascade), expired invites, and stale `connections` rows
 
 ### 3.7 Access log
 
 - Append-only `access_log` table: `log_id`, `timestamp`, `user_id`, `event_type`, `details` (JSON)
-- Events: `search`, `transfer_request`, `publish`, `unpublish`, `confirm`, `team_create`, `team_join`, `team_leave`
-- Stores identifiers, counts, and matched `file_id`s only. No filenames, content, or excerpts.
+- Events: `search`, `retrieval_search`, `chunks_put`, `transfer_request`, `publish`, `unpublish`, `confirm`, `team_create`, `team_join`, `team_leave`
+- Stores identifiers, counts, and matched `file_id`s only. No filenames, content, chunk text, query vectors, or excerpts.
 - Database role has `INSERT` only on this table
 - Indefinite retention for the MVP (open policy item for legal)
 - Viewed by direct database query; no admin screen
 
 ### 3.8 Infrastructure and config
 
-- RDS Postgres (db.t3.micro), Lambda behind API Gateway, S3 transit bucket, Secrets Manager or SSM for credentials
-- Config values: expiry days (45), expiring-soon window (7), invite lifetime (7 days), excerpt size (3,000), search result cap, publish concurrency, model ID, transfer timeout (60 seconds), sweeper age (15 minutes)
+- Aurora Serverless v2 Postgres with the pgvector extension, Lambda behind API Gateway, S3 transit bucket, Secrets Manager or SSM for credentials
+- Config values: expiry days (45), expiring-soon window (7), invite lifetime (7 days), excerpt size (3,000), search result cap, publish concurrency, model ID, transfer timeout (60 seconds), sweeper age (15 minutes), `CHUNK_UPLOAD_BATCH_SIZE`, `RETRIEVAL_LIMIT_DEFAULT`, `RETRIEVAL_LIMIT_MAX`, `MAX_CHUNKS_PER_FILE`, `EMBEDDING_DIMENSION`
 
 ---
 
@@ -312,8 +325,10 @@ Three pages plus a global status indicator.
 - SSO and MFA out of scope
 - No email verification on sign-up
 - No Bedrock usage caps
-- Transfer works only while the owner's agent is online
-- Central search is metadata-only; untagged files are findable only by filename and date
+- File downloads work only while the owner's agent is online; Ask over teammates' documents does not need the owner online
+- `/search` central matching is metadata-only; untagged files are findable only by filename and date. Ask retrieves chunk text instead
+- Chunk text and embeddings of public files are stored at rest in AWS and readable by team members until unpublish or expiry
+- Teammate chunks reach the requester's laptop and agent-direct Bedrock (demo/MVP exception)
 - Tags reflect only the first part of a file
 - Either-date matching means a file created long ago but edited recently matches recent date queries
 - 15-minute S3 expiry is approximate
@@ -325,7 +340,8 @@ Three pages plus a global status indicator.
 
 - Retention: 90 days → 45 days
 - S3 expiry: sweeper Lambda instead of a lifecycle rule
-- Bedrock proxied through the central service, not called by the agent
+- Bedrock proxied through the central service for query parsing and tags; Ask calls it from the agent (demo/MVP exception, 2026-10-15)
+- Central chunk index (E6): `public_chunks` + pgvector, `PUT /files/{id}/chunks`, `POST /retrieval/search`; embeddings and content of public files are no longer "never central"
 - Membership in Postgres, not Cognito Groups
 - Central dates: created, modified, `expires_at`, plus `published_at` and `last_confirmed`
 - Add the React frontend and the local SQLite registry

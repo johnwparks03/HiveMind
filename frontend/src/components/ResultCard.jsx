@@ -11,14 +11,6 @@ export default function ResultCard({ result }) {
         {percent != null && <span className="match">{percent}% match</span>}
       </div>
 
-      {result.tags?.length > 0 && (
-        <ul className="tag-list" aria-label="Tags">
-          {result.tags.map((tag) => (
-            <li key={tag} className="tag">{tag}</li>
-          ))}
-        </ul>
-      )}
-
       <div className="result-foot">
         <dl className="meta">
           {result.file_created_at && (

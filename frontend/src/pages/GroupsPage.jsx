@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import DownloadFolderControl from "../components/DownloadFolderControl";
 import Loading from "../components/Loading";
+import TeammateResultCard from "../components/TeammateResultCard";
 import { api, isAgentUnreachable } from "../api/client";
 import { formatDate } from "../lib/files";
 import { groupErrorMessage, normaliseInviteCode } from "../lib/groups";
@@ -194,7 +196,7 @@ function GroupDetail({ group, onChanged }) {
     <>
       <div className="account-card group-card">
         <h3 className="section-title">{group.name}</h3>
-        <p className="muted">Members and shared files will show here.</p>
+        <TeamFiles />
       </div>
 
       <div className="account-card">
@@ -230,6 +232,39 @@ function GroupDetail({ group, onChanged }) {
           {leave.isPending ? "Leaving…" : "Leave group"}
         </button>
         {leave.isError && <p className="inline-error" role="alert">{groupErrorMessage(leave.error)}</p>}
+      </div>
+    </>
+  );
+}
+
+// Everything the team has shared, newest first (reuses central's no-topic "list
+// by recency" search mode — see agent/app/search/search_service.py:list_team_files).
+function TeamFiles() {
+  const files = useQuery({ queryKey: ["group-files"], queryFn: api.getGroupFiles });
+
+  if (files.isPending) return <p className="muted">Loading shared files…</p>;
+
+  if (files.isError) {
+    return (
+      <div className="banner banner-error" role="alert">
+        {isAgentUnreachable(files.error)
+          ? "Can't reach the local agent. Start it on port 8420, then try again."
+          : groupErrorMessage(files.error)}
+      </div>
+    );
+  }
+
+  if (files.data.length === 0) {
+    return <p className="muted">No files shared yet. Publish one from the Files page.</p>;
+  }
+
+  return (
+    <>
+      <DownloadFolderControl />
+      <div className="result-list group-files">
+        {files.data.map((file) => (
+          <TeammateResultCard key={file.file_id} result={file} />
+        ))}
       </div>
     </>
   );

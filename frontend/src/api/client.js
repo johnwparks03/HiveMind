@@ -98,6 +98,15 @@ export const api = {
   sharePreview: (folderId) => request(`/folders/${folderId}/share-preview`).then((data) => data.file_count),
   shareFolder: (folderId) => request(`/folders/${folderId}/share`, { method: "POST" }).then((data) => data.queued),
   unshareFolder: (folderId) => request(`/folders/${folderId}/unshare`, { method: "POST" }).then((data) => data.queued),
+  // Teammate file download (docs/stories BACKLOG.md E4-S4/S5). The agent polls central
+  // and streams to the real Windows Downloads folder; the frontend just polls the agent.
+  requestTransfer: (fileId, filename) =>
+    request("/transfers", { method: "POST", body: JSON.stringify({ file_id: fileId, filename }) }),
+  getTransfer: (transferId) => request(`/transfers/${transferId}`),
+  getDownloadFolder: () => request("/settings/download-folder"),
+  setDownloadFolder: (path) =>
+    request("/settings/download-folder", { method: "PUT", body: JSON.stringify({ path }) }),
+  resetDownloadFolder: () => request("/settings/download-folder", { method: "DELETE" }),
   // Sign-in goes through the agent, which talks to Cognito. The frontend never sees Cognito tokens.
   logIn: (email, password) =>
     request("/auth/login", { method: "POST", body: JSON.stringify({ email, password }) }),
@@ -105,6 +114,7 @@ export const api = {
   getSession: () => request("/session"),
   // Groups: one team per person for the MVP (API_Contract section 3.1). The agent proxies these to central.
   getGroup: () => request("/team").then((data) => data.team),
+  getGroupFiles: () => request("/team/files").then((data) => data.files),
   createGroup: (name) => request("/team", { method: "POST", body: JSON.stringify({ name }) }),
   createInvite: () => request("/team/invites", { method: "POST" }),
   joinGroup: (code) => request("/team/join", { method: "POST", body: JSON.stringify({ code }) }),

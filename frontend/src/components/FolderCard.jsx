@@ -43,9 +43,11 @@ export default function FolderCard({ folder, counts, selected, onSelect, onResca
           {counts.failed > 0 && <span className="stat stat-failed">{counts.failed} failed</span>}
         </span>
         <div className="folder-actions">
-          <button type="button" className="btn btn-ghost btn-sm" onClick={onShare} disabled={busy}>
-            Share with team
-          </button>
+          {counts.public < counts.total && (
+            <button type="button" className="btn btn-ghost btn-sm" onClick={onShare} disabled={busy}>
+              Share with team
+            </button>
+          )}
           {counts.public > 0 && (
             <button type="button" className="btn btn-ghost btn-sm" onClick={onUnshare} disabled={busy}>
               Unshare

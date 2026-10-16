@@ -2,6 +2,7 @@ from fastapi import APIRouter, Response
 from pydantic import BaseModel
 
 from app.central import teams
+from app.search.search_service import list_team_files
 
 router = APIRouter()
 
@@ -32,6 +33,11 @@ def create_invite():
 @router.post("/team/join")
 def join_team(body: JoinTeam):
     return teams.join_team(body.code)
+
+
+@router.get("/team/files")
+def get_team_files():
+    return {"files": list_team_files()}
 
 
 @router.post("/team/leave", status_code=204)

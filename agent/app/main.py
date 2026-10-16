@@ -12,11 +12,13 @@ from app.api import (
     routes_folders,
     routes_search,
     routes_session,
+    routes_settings,
     routes_team,
+    routes_transfers,
 )
 from app.auth import session
 from app.auth.security import token_matches
-from app.central import publish
+from app.central import download, publish, relay
 from app.config import FRONTEND_ORIGIN, HOST, PORT
 from app.db import init_db
 from app.errors import envelope, install_error_handlers
@@ -27,9 +29,13 @@ async def lifespan(_: FastAPI):
     init_db()
     session.restore_from_keychain()  # silent sign-in if a refresh token is stored
     publish.start()
+    relay.start()
+    download.start()
     try:
         yield
     finally:
+        download.stop()
+        relay.stop()
         publish.stop()
 
 
@@ -68,6 +74,8 @@ app.include_router(routes_files.router)
 app.include_router(routes_search.router)
 app.include_router(routes_ask.router)
 app.include_router(routes_chats.router)
+app.include_router(routes_transfers.router)
+app.include_router(routes_settings.router)
 
 
 if __name__ == "__main__":

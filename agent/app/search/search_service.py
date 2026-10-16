@@ -138,6 +138,18 @@ def _central_search(topic: str | None, date_from: datetime | None, date_to: date
     return (resp or {}).get("results", []), None
 
 
+def list_team_files() -> list[dict]:
+    """Everything your team has shared, most recent first — central's no-topic
+    search mode (see search() above: topic=None skips the tsquery join entirely
+    and just orders by recency). Backs the Groups page's browse view."""
+    results, skipped_reason = _central_search(None, None, None)
+    if skipped_reason == "no_team":
+        raise ApiError(403, "no_team", "you are not in a team")
+    if skipped_reason == "central_unavailable":
+        raise ApiError(503, "service_unavailable", "central is unavailable")
+    return results
+
+
 def search_local(raw_query: str, include_teammates: bool = False) -> dict:
     parsed: ParsedQuery = parse_query_locally(raw_query)
     date_from_ts = parsed.date_from.timestamp() if parsed.date_from else None

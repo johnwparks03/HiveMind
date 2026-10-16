@@ -11,5 +11,6 @@ keyring==25.6.0
 nltk==3.9.1
 boto3==1.43.114
 httpx==0.28.1
+websockets==14.1
 pytest==8.4.2
 python-dotenv==1.1.1

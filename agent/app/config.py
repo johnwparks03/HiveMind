@@ -49,6 +49,27 @@ PUBLISH_WORKER_POLL_SECONDS = 2
 # catch a crash mid-publish or a file deleted/moved locally that's still public.
 PUBLISH_RECONCILE_INTERVAL_SECONDS = 300
 
+# Relay WebSocket, owner side (agent/app/central/relay.py). URL is the CDK output
+# "WebSocketUrl". infra/stack.py sets no custom idle-timeout or max-connection-age
+# override on the WebSocket API (confirmed 2026-10-16) - it runs on API Gateway's
+# raw defaults (10 min idle, 2h hard connection cap). Ping comfortably under the
+# idle timeout; reconnect proactively well before the hard cap instead of waiting
+# to be dropped.
+RELAY_WS_URL = os.environ.get("HIVEMIND_RELAY_WS_URL", "").strip()
+RELAY_PING_INTERVAL_SECONDS = 300
+RELAY_RECONNECT_BEFORE_SECONDS = 6300
+RELAY_RECONNECT_BACKOFF_BASE_SECONDS = 2
+RELAY_RECONNECT_BACKOFF_MAX_SECONDS = 60
+TRANSFER_UPLOAD_CHUNK_BYTES = 1024 * 1024
+
+# Requester-side download (agent/app/central/download.py). A durable SQLite-backed
+# queue, same pattern as the publish queue above - a background worker polls
+# central every DOWNLOAD_POLL_SECONDS (API_Contract.md section 2.6: "1 to 2
+# seconds") rather than the frontend polling central directly (the frontend never
+# calls central - CLAUDE.md).
+DOWNLOAD_POLL_SECONDS = 2
+DOWNLOAD_CHUNK_BYTES = 1024 * 1024
+
 # Embedding / chunking
 EMBEDDING_MODEL = "all-MiniLM-L6-v2"
 CHUNK_SIZE_CHARS = 800

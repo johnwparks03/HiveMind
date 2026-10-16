@@ -4,6 +4,7 @@ import { api, isAgentUnreachable } from "../api/client";
 import Loading, { Spinner } from "../components/Loading";
 import ResultCard from "../components/ResultCard";
 import SearchIllustration from "../components/SearchIllustration";
+import DownloadFolderControl from "../components/DownloadFolderControl";
 import TeammateResultCard from "../components/TeammateResultCard";
 import { interpretedCaption } from "../lib/files";
 import { addRecent, loadRecent, removeRecent, saveRecent } from "../lib/recent";
@@ -182,6 +183,7 @@ export default function SearchPage() {
             )}
             {results.teammate.searched ? (
               <div className="teammate-section">
+                {results.teammate.results.length > 0 && <DownloadFolderControl />}
                 <p className="caption">
                   {results.teammate.results.length} teammate {results.teammate.results.length === 1 ? "result" : "results"}
                 </p>

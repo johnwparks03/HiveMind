@@ -69,6 +69,27 @@ CREATE TABLE IF NOT EXISTS chat_messages (
 );
 
 CREATE INDEX IF NOT EXISTS idx_chat_messages_chat ON chat_messages(chat_id);
+
+-- Requester-side download tracking (agent/app/central/download.py). One row per
+-- transfer_id so a page refresh can resume showing in-flight transfers
+-- (API_Contract.md section 2.6: GET /transfers lists "this session's transfers").
+CREATE TABLE IF NOT EXISTS downloads (
+    transfer_id   TEXT PRIMARY KEY,
+    file_id       TEXT NOT NULL,
+    filename      TEXT NOT NULL,
+    status        TEXT NOT NULL,  -- requested|uploading|ready|downloading|downloaded|failed|expired
+    error_code    TEXT,
+    saved_path    TEXT,
+    requested_at  TEXT NOT NULL,
+    updated_at    TEXT NOT NULL
+);
+
+-- Local agent settings (app/settings.py), e.g. a user-chosen download destination
+-- folder in place of the default (real Windows Downloads folder).
+CREATE TABLE IF NOT EXISTS settings (
+    key   TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+);
 """
 
 

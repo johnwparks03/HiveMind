@@ -397,6 +397,23 @@ input:focus {
   gap: 10px;
 }
 
+/* Teammate file download (TeammateResultCard.jsx). */
+.transfer-row {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.download-folder-control {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
 .no-tags-flag {
   font-size: 12px;
 }

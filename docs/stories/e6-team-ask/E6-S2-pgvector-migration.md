@@ -11,11 +11,11 @@
 As the central service, I want a vector-capable chunk table so that teammate content can be searched by similarity.
 
 ## Acceptance criteria
-- [ ] Migration `0006` runs `CREATE EXTENSION vector` and creates `public_chunks(file_id, chunk_index, text, embedding vector(384))`, primary key `(file_id, chunk_index)`, `file_id` references `public_files` with `ON DELETE CASCADE`.
-- [ ] HNSW index on `embedding vector_cosine_ops`.
-- [ ] `public_files` gains `chunks_indexed_at` and `chunk_count`.
-- [ ] Deleting or expiring a `public_files` row removes its chunks.
-- [ ] Aurora ACU range reviewed against index build and query load; adjusted if needed.
+- [x] Migration `0006` runs `CREATE EXTENSION vector` and creates `public_chunks(file_id, chunk_index, text, embedding vector(384))`, primary key `(file_id, chunk_index)`, `file_id` references `public_files` with `ON DELETE CASCADE`.
+- [x] HNSW index on `embedding vector_cosine_ops`.
+- [x] `public_files` gains `chunks_indexed_at` and `chunk_count`.
+- [x] Deleting or expiring a `public_files` row removes its chunks.
+- [x] Aurora ACU range reviewed against index build and query load; adjusted if needed.
 
 ## Technical notes
 - **verify-in-AWS:** pgvector version available on Aurora PG 16.8 and HNSW support; the migration user must be allowed to create the extension. Record findings in Notes.
@@ -38,3 +38,14 @@ Post-deploy check (added after the first deploy; the migration ran and the clust
     aws lambda invoke --function-name <MigrateFn> --region us-east-1 --cli-binary-format raw-in-base64-out --payload '{"action":"verify","rows":5000}' out.json; cat out.json
 
 Needs a deploy of this commit first. Record the output here. `rows` is clamped to 100-50000; the Lambda timeout is 120 s, so raise `rows` gradually.
+
+## Verification results (2026-10-16, deployed stack, `verify` action)
+- pgvector **0.8.0** on Aurora PG 16.8 (installed = available); HNSW supported. User `hivemind` can create the extension. Migrations 0001-0006 applied.
+- `public_chunks` and both new `public_files` columns exist; index is `hnsw (embedding vector_cosine_ops)`.
+- Smoke (rolled back): cosine ordering correct, wrong dimension rejected, chunks kept on publish re-sync, cascade works from file and from team.
+- Load on random 384-dim vectors, cluster at 0.5-2 ACU:
+  - 5,000 rows: insert 1.2 s, HNSW build 2.2 s, top-20 query 1.5-3.6 ms.
+  - 20,000 rows: insert 5.6 s, HNSW build 16.9 s, top-20 query 3.2-4.7 ms.
+  - Build time grows faster than linearly; a 50k+ index build would approach the Lambda's 120 s limit in the verify action, but real ingest builds the index incrementally per insert, so this is not a runtime limit. The query planner uses the index when forced (`index_used_when_forced`).
+- ACU max 2 is sufficient for this scale; revisit if a team's index passes ~50k chunks.
+- Not run: the DB-backed pytest tests (no pgvector Postgres locally), though the same behaviours passed on the real database via `verify`.

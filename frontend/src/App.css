@@ -1645,3 +1645,91 @@ input:focus {
 }
 
 .card-footer .inline-error { margin: 0 auto 0 0; }
+
+/* How-to steps under each page intro: three numbered cards in a row. */
+.how-to {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  list-style: none;
+  padding: 0;
+  margin: 0 0 20px;
+  counter-reset: step;
+}
+
+.how-to li {
+  flex: 1 1 200px;
+  counter-increment: step;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  font-size: 13.5px;
+  line-height: 1.4;
+}
+
+.how-to li::before {
+  content: counter(step);
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* Ask: wider chat list, and larger, easier-to-read answers. */
+.ask-page {
+  grid-template-columns: 300px minmax(0, 1fr);
+}
+
+.ask-chat-open {
+  font-size: 14.5px;
+  padding: 10px 12px;
+}
+
+.ask-bubble {
+  font-size: 16px;
+  line-height: 1.65;
+  padding: 14px 18px;
+}
+
+.ask-msg {
+  max-width: 92%;
+}
+
+.ask-msg-assistant .ask-bubble {
+  font-size: 16.5px;
+}
+
+.ask-thread {
+  gap: 18px;
+}
+
+@media (max-width: 720px) {
+  .ask-page {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Team page: one card. The invite comes first, then members and files, then Leave. */
+.team-header {
+  padding-bottom: 4px;
+}
+
+.team-invite {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  background: var(--accent-soft);
+  border-radius: var(--radius);
+}

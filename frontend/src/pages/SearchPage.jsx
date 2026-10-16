@@ -55,7 +55,7 @@ export default function SearchPage() {
   return (
     <section className="search-page" aria-labelledby="search-title">
       <h2 id="search-title" className="page-title">Find a <span className="accent-word">file</span></h2>
-      <p className="page-lede">Describe what you need in plain words. Dates like "last week" work.</p>
+      <p className="page-lede">Describe what you need in plain words.</p>
 
       <div className="search-box">
         <form className="search-form" role="search" onSubmit={handleSubmit}>

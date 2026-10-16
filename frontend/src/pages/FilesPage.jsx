@@ -224,7 +224,7 @@ export default function FilesPage() {
   return (
     <section className="files-page" aria-labelledby="files-title">
       <h2 id="files-title" className="page-title">Your folders</h2>
-      <p className="page-lede">Add a folder to index its Word and PowerPoint files. Indexing runs in the background.</p>
+      <p className="page-lede">Add files to your HiveMind agent so you can search them and share them with your team. Indexing runs in the background.</p>
 
       <div className="add-folder">
         <button
@@ -233,7 +233,7 @@ export default function FilesPage() {
           onClick={() => pickFolder.mutate()}
           disabled={pickFolder.isPending || addFolder.isPending}
         >
-          {pickFolder.isPending ? "Opening…" : addFolder.isPending ? "Adding…" : "Choose a folder"}
+          {pickFolder.isPending ? "Opening…" : addFolder.isPending ? "Adding…" : "Upload files"}
         </button>
         {(pickFolder.isError || addFolder.isError) && (
           <p className="inline-error" role="alert">

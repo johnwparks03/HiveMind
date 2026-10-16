@@ -130,8 +130,7 @@ export default function AskPage() {
             <div className="ask-empty">
               <h2 className="page-title">Ask about <span className="accent-word">your files</span></h2>
               <p className="page-lede">
-                Ask across your files, like a summary of recent notes. This needs an internet connection,
-                so there's no offline fallback.
+                Ask across your files, like a summary of recent notes.
               </p>
               <div className="examples">
                 <p className="examples-label">Try one of these</p>

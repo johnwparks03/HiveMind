@@ -41,6 +41,10 @@ class HiveMindStack(Stack):
             "SWEEPER_MAX_AGE_MINUTES": "15",
             "UPLOAD_URL_EXPIRY_SECONDS": "600",
             "DOWNLOAD_URL_EXPIRY_SECONDS": "300",
+            "CHUNK_UPLOAD_BATCH_SIZE": "100",
+            "MAX_CHUNKS_PER_FILE": "2000",
+            "EMBEDDING_DIMENSION": "384",
+            "CHUNK_STAGING_TTL_MINUTES": "60",
         }
         for key, value in config.items():
             ssm.StringParameter(self, f"Param{key}",
@@ -180,8 +184,9 @@ class HiveMindStack(Stack):
             description="psycopg2-binary for Lambda (manylinux)",
         )
 
-        def vpc_function(construct_id, handler, timeout=30):
+        def vpc_function(construct_id, handler, timeout=30, memory_size=None):
             return lambda_.Function(self, construct_id,
+                memory_size=memory_size,
                 runtime=lambda_.Runtime.PYTHON_3_12,
                 handler=handler,
                 code=lambda_.Code.from_asset(lambdas_dir),
@@ -199,7 +204,7 @@ class HiveMindStack(Stack):
 
         # ── Teams API (E1-S4) and DB migrations ──────────────────────────────
         teams_fn = vpc_function("TeamsFn", "teams.handler")
-        files_fn = vpc_function("FilesFn", "files.handler")
+        files_fn = vpc_function("FilesFn", "files.handler", memory_size=512)  # chunk batches are ~1 MB JSON
         search_fn = vpc_function("SearchFn", "search.handler")
         migrate_fn = vpc_function("MigrateFn", "migrate.handler", timeout=120)
 
@@ -385,6 +390,7 @@ class HiveMindStack(Stack):
         # Metadata API (E3-S2)
         for path, methods, integration_id in [
             ("/files/{file_id}", [apigwv2.HttpMethod.PUT, apigwv2.HttpMethod.DELETE], "FilesItemIntegration"),
+            ("/files/{file_id}/chunks", [apigwv2.HttpMethod.PUT], "FilesChunksIntegration"),
             ("/files/{file_id}/confirm", [apigwv2.HttpMethod.POST], "FilesConfirmIntegration"),
             ("/files/mine", [apigwv2.HttpMethod.GET], "FilesMineIntegration"),
         ]:

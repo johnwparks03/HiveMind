@@ -363,7 +363,9 @@ Rules:
 - The file must already exist in `public_files` (publish with `PUT /files/{id}` first) and belong to the caller.
 - Each batch holds at most `CHUNK_UPLOAD_BATCH_SIZE` chunks (config), sized under the API Gateway HTTP API 10 MB and Lambda synchronous 6 MB payload limits.
 - Batches are staged. The staged set replaces the file's existing chunks atomically when the final batch (`batch == total_batches`) arrives, so a reader never sees a partial or mixed set. Retrying a batch or the whole upload leaves exactly one chunk set.
-- Starting a new upload (`batch` 1) discards any earlier uncommitted staging for the file.
+- Starting a new upload (`batch` 1) discards any earlier uncommitted staging for the file. Staging that is never committed is removed after `CHUNK_STAGING_TTL_MINUTES` (default 60) by the sweeper.
+- Retries: re-sending a batch (or the whole upload from batch 1) is safe and leaves one chunk set. If the final batch is re-sent after it already committed, staging is empty, so the request fails with `400 invalid_request` (`batch`) and the committed set is left intact; the agent restarts from batch 1. The same `400` is returned if an earlier batch is missing, `total_batches` changes between batches, or chunk indexes are not contiguous from 0 (`chunks`).
+- An empty `chunks` list is allowed only with `total_batches` 1 and commits an empty set (a file with no text).
 - `embedding` must have `EMBEDDING_DIMENSION` (384) entries. A file may have at most `MAX_CHUNKS_PER_FILE` chunks in total (config).
 - Sets `chunk_count` and `chunks_indexed_at` on the file row on commit. Request bodies, chunk text and vectors are never logged. Audit event: `chunks_put` on the final batch (section 5).
 - Chunks are deleted with the file row (`DELETE /files/{id}`, expiry, team leave).
@@ -593,7 +595,7 @@ Acknowledgment, completion, and failure go over HTTP, not the WebSocket, so they
 |Endpoint|`event_type`|`details`|
 |---|---|---|
 |`POST /search`|`search`|`topic`, `date_from`, `date_to`, `count`, `matched_file_ids`|
-|`PUT /files/{id}/chunks` (final batch)|`chunks_put`|`file_id`, `chunk_count`|
+|`PUT /files/{id}/chunks` (final batch)|`chunks_put`|`file_id`|
 |`POST /retrieval/search`|`retrieval_search`|`count`, `matched_file_ids`|
 |`PUT /files/{id}` (first publish)|`publish`|`file_id`|
 |`DELETE /files/{id}`|`unpublish`|`file_id`|

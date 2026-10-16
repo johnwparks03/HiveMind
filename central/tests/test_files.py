@@ -201,7 +201,7 @@ def test_confirm_other_users_file_is_403(fake_db):
 
 
 def _row(n):
-    return (str(uuid.UUID(int=n)), f"f{n}.docx", T0, T1, T0)
+    return (str(uuid.UUID(int=n)), f"f{n}.docx", T0, T1, T0, n * 10)
 
 
 def test_mine_returns_rows_and_no_cursor_on_last_page(fake_db):
@@ -210,7 +210,9 @@ def test_mine_returns_rows_and_no_cursor_on_last_page(fake_db):
     body = _body(resp)
     assert resp["statusCode"] == 200 and body["next_cursor"] is None
     assert [f["filename"] for f in body["files"]] == ["f1.docx", "f2.docx"]
-    assert set(body["files"][0]) == {"file_id", "filename", "published_at", "expires_at", "last_confirmed"}
+    assert set(body["files"][0]) == {"file_id", "filename", "published_at", "expires_at", "last_confirmed",
+                                     "chunk_count"}
+    assert [f["chunk_count"] for f in body["files"]] == [10, 20]
 
 
 def test_mine_pages_with_a_cursor_that_round_trips(fake_db):

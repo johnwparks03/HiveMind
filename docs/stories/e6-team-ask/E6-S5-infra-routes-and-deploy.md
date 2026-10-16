@@ -11,7 +11,7 @@
 As the team, I want the new endpoints deployed to the shared stack so that agents can use them.
 
 ## Acceptance criteria
-- [ ] Routes for `PUT /files/{id}/chunks` and `POST /retrieval/search` added with the JWT authorizer.
+- [ ] Routes for `PUT /files/{id}/chunks` (added in E6-S3) and `POST /retrieval/search` added with the JWT authorizer.
 - [ ] Lambda memory, timeout and request-size settings fit batch ingest and vector search.
 - [ ] Aurora capacity adjusted if E6-S2 found it necessary.
 - [ ] `cdk diff` reviewed and the deploy coordinated with the team before `cdk deploy`.

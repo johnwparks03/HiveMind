@@ -340,6 +340,8 @@ embedding    vector(384)                -- pgvector; HNSW index, cosine distance
 primary key (file_id, chunk_index)
 ```
 
+`public_chunks_staging` (same columns plus `batch`, `total_batches` and `staged_at`, no vector index) holds batches of an upload in progress. The final batch copies the staged set into `public_chunks` and deletes the old one in a single transaction, so readers never see a partial set. Rows cascade with the file; the sweeper deletes uploads abandoned for more than `CHUNK_STAGING_TTL_MINUTES`.
+
 The 45-day default is a placeholder. Swap it for whatever the firm's actual retention policy requires.
 
 ### Metadata API

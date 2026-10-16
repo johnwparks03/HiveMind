@@ -34,7 +34,7 @@ If the docs disagree, `API_Contract.md` wins for paths, field names and status c
 - Absent optional values are `null`.
 - Errors on every interface use `{"error": {"code": "...", "message": "...", "details": {}}}` with the codes in `API_Contract.md` section 1.
 - Interface A (frontend to agent): header `X-HiveMind-Token`, except `GET /auth/token`. Interface B (agent to central): `Authorization: Bearer <Cognito JWT>`.
-- Config values (retention 45 days, expiring-soon 7 days, invite lifetime 7 days, excerpt size 3,000, central search cap 20, publish concurrency 5, Bedrock model ID, transfer ack timeout 60 s, sweeper age 15 min, `CHUNK_UPLOAD_BATCH_SIZE`, `RETRIEVAL_LIMIT_DEFAULT`, `RETRIEVAL_LIMIT_MAX`, `MAX_CHUNKS_PER_FILE`, `EMBEDDING_DIMENSION`) must be configuration, not literals scattered in code.
+- Config values (retention 45 days, expiring-soon 7 days, invite lifetime 7 days, excerpt size 3,000, central search cap 20, publish concurrency 5, Bedrock model ID, transfer ack timeout 60 s, sweeper age 15 min, `CHUNK_UPLOAD_BATCH_SIZE`, `RETRIEVAL_LIMIT_DEFAULT`, `RETRIEVAL_LIMIT_MAX`, `MAX_CHUNKS_PER_FILE`, `EMBEDDING_DIMENSION`, `CHUNK_STAGING_TTL_MINUTES`) must be configuration, not literals scattered in code.
 - Idempotent central operations: retried `PUT /files/{id}` must produce one row; `DELETE` of a missing row returns 204.
 - Match the style of surrounding code. Add tests for new behavior.
 

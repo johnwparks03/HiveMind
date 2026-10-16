@@ -1,7 +1,8 @@
-"""Metadata API (Interface B /files/*). One Lambda behind four routes; dispatches on
+"""Metadata API (Interface B /files/*). One Lambda behind five routes; dispatches on
 routeKey. owner_id comes from the token and team_id from membership, never from input."""
 import base64
 import binascii
+import math
 import os
 import uuid
 
@@ -20,6 +21,18 @@ MAX_PAGE_SIZE = 500
 
 def retention_days():
     return int(os.environ.get("RETENTION_DAYS", "45"))
+
+
+def chunk_batch_size():
+    return int(os.environ.get("CHUNK_UPLOAD_BATCH_SIZE", "100"))
+
+
+def max_chunks_per_file():
+    return int(os.environ.get("MAX_CHUNKS_PER_FILE", "2000"))
+
+
+def embedding_dimension():
+    return int(os.environ.get("EMBEDDING_DIMENSION", "384"))
 
 
 def _file_id(event):
@@ -110,6 +123,107 @@ def confirm_file(cur, user_id, event, body):
     return json_response(200, {"expires_at": iso(expires_at), "last_confirmed": iso(last_confirmed)})
 
 
+def _is_int(value):
+    return isinstance(value, int) and not isinstance(value, bool)
+
+
+def _is_number(value):
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
+
+
+def _validate_chunks(body):
+    """Returns (batch, total_batches, [(chunk_index, text, vector_literal)]). Bad fields are reported
+    by name only, never by value."""
+    bad = []
+    batch, total = body.get("batch"), body.get("total_batches")
+    max_total = -(-max_chunks_per_file() // chunk_batch_size())
+    if not _is_int(batch) or batch < 1:
+        bad.append("batch")
+    if not _is_int(total) or not 1 <= total <= max_total:
+        bad.append("total_batches")
+    elif "batch" not in bad and batch > total:
+        bad.append("batch")
+    chunks, rows = body.get("chunks"), []
+    if not isinstance(chunks, list) or len(chunks) > chunk_batch_size() or (not chunks and total != 1):
+        bad.append("chunks")
+    else:
+        seen, dimension, cap = set(), embedding_dimension(), max_chunks_per_file()
+        for i, chunk in enumerate(chunks):
+            if not isinstance(chunk, dict):
+                bad.append(f"chunks[{i}]")
+                continue
+            index, text, embedding = chunk.get("chunk_index"), chunk.get("text"), chunk.get("embedding")
+            if not _is_int(index) or not 0 <= index < cap or index in seen:
+                bad.append(f"chunks[{i}].chunk_index")
+            else:
+                seen.add(index)
+            if not isinstance(text, str) or not text.strip():
+                bad.append(f"chunks[{i}].text")
+            if (not isinstance(embedding, list) or len(embedding) != dimension
+                    or not all(_is_number(x) for x in embedding)):
+                bad.append(f"chunks[{i}].embedding")
+                continue
+            rows.append((index, text, "[" + ",".join(repr(float(x)) for x in embedding) + "]"))
+    if bad:
+        raise invalid_request(*bad[:20])
+    return batch, total, rows
+
+
+def put_chunks(cur, user_id, event, body):
+    """One batch of a file's chunks. Batches are staged and swapped into public_chunks in one
+    transaction on the final batch, so a reader sees the old set or the new set, never a mix."""
+    file_id = _file_id(event)
+    batch, total, rows = _validate_chunks(body)
+    team = get_membership(cur, user_id)
+    if not team:
+        raise ApiError(403, "no_team", "you are not in a team")
+    # The row lock serializes concurrent uploads of the same file.
+    cur.execute("SELECT owner_id FROM public_files WHERE file_id = %s FOR UPDATE", (file_id,))
+    owner = cur.fetchone()
+    if owner is None:
+        raise ApiError(404, "not_found", "file not found")
+    if owner[0] != user_id:
+        raise ApiError(403, "forbidden", "this file belongs to another user")
+    if batch == 1:
+        cur.execute("DELETE FROM public_chunks_staging WHERE file_id = %s", (file_id,))
+    if rows:
+        placeholders = ", ".join(["(%s, %s, %s, %s, %s, %s::vector)"] * len(rows))
+        params = [p for index, text, literal in rows for p in (file_id, index, batch, total, text, literal)]
+        cur.execute(
+            "INSERT INTO public_chunks_staging (file_id, chunk_index, batch, total_batches, text, embedding) "
+            f"VALUES {placeholders} ON CONFLICT (file_id, chunk_index) DO UPDATE SET batch = EXCLUDED.batch, "
+            "total_batches = EXCLUDED.total_batches, text = EXCLUDED.text, embedding = EXCLUDED.embedding, "
+            "staged_at = now()", params)
+    cur.execute(
+        "SELECT count(*), count(DISTINCT batch), min(batch), max(batch), count(DISTINCT total_batches), "
+        "min(total_batches), min(chunk_index), max(chunk_index) FROM public_chunks_staging WHERE file_id = %s",
+        (file_id,))
+    count, batches, first, last, totals, staged_total, low, high = cur.fetchone()
+    if count > max_chunks_per_file():
+        raise invalid_request("chunks")
+    if totals > 1 or (count and staged_total != total):
+        raise invalid_request("total_batches")
+    if batch < total:
+        return json_response(200, {"file_id": file_id, "chunk_count": 0, "committed": False})
+    # Final batch: every batch must be staged and the chunk indexes contiguous from 0.
+    if count == 0:
+        if total != 1:
+            raise invalid_request("batch")
+    elif batches != total or first != 1 or last != total:
+        raise invalid_request("batch")  # an earlier batch is missing: restart from batch 1
+    elif low != 0 or high != count - 1:
+        raise invalid_request("chunks")
+    cur.execute("DELETE FROM public_chunks WHERE file_id = %s", (file_id,))
+    cur.execute("INSERT INTO public_chunks (file_id, chunk_index, text, embedding) "
+                "SELECT file_id, chunk_index, text, embedding FROM public_chunks_staging WHERE file_id = %s",
+                (file_id,))
+    cur.execute("DELETE FROM public_chunks_staging WHERE file_id = %s", (file_id,))
+    cur.execute("UPDATE public_files SET chunk_count = %s, chunks_indexed_at = now() WHERE file_id = %s",
+                (count, file_id))
+    log_event(cur, "chunks_put", user_id, team[0], file_id)
+    return json_response(200, {"file_id": file_id, "chunk_count": count, "committed": True})
+
+
 def _decode_cursor(raw):
     try:
         return str(uuid.UUID(base64.urlsafe_b64decode(raw.encode()).decode()))
@@ -127,7 +241,8 @@ def list_mine(cur, user_id, event, body):
         raise invalid_request("limit")
     cursor = _decode_cursor(params["cursor"]) if params.get("cursor") else None
     cur.execute(
-        "SELECT file_id, filename, published_at, expires_at, last_confirmed FROM public_files "
+        "SELECT file_id, filename, published_at, expires_at, last_confirmed, COALESCE(chunk_count, 0) "
+        "FROM public_files "
         "WHERE owner_id = %s AND (%s::text IS NULL OR file_id > %s) ORDER BY file_id LIMIT %s",
         (user_id, cursor, cursor, limit + 1))
     rows = cur.fetchall()
@@ -137,7 +252,7 @@ def list_mine(cur, user_id, event, body):
         next_cursor = base64.urlsafe_b64encode(page[-1][0].encode()).decode()
     return json_response(200, {
         "files": [{"file_id": r[0], "filename": r[1], "published_at": iso(r[2]),
-                   "expires_at": iso(r[3]), "last_confirmed": iso(r[4])} for r in page],
+                   "expires_at": iso(r[3]), "last_confirmed": iso(r[4]), "chunk_count": r[5]} for r in page],
         "next_cursor": next_cursor,
     })
 
@@ -145,6 +260,7 @@ def list_mine(cur, user_id, event, body):
 ROUTES = {
     "PUT /files/{file_id}": put_file,
     "DELETE /files/{file_id}": delete_file,
+    "PUT /files/{file_id}/chunks": put_chunks,
     "POST /files/{file_id}/confirm": confirm_file,
     "GET /files/mine": list_mine,
 }

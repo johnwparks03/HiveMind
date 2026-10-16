@@ -34,6 +34,9 @@ def _schema(cur):
     file_columns = [r[0] for r in cur.fetchall()]
     cur.execute("SELECT indexdef FROM pg_indexes WHERE indexname = 'idx_public_chunks_embedding'")
     index = cur.fetchone()
+    cur.execute("SELECT column_name FROM information_schema.columns WHERE table_name = 'public_chunks_staging' "
+                "ORDER BY ordinal_position")
+    staging_columns = [r[0] for r in cur.fetchall()]
     return {
         "pgvector_installed": row[0] if row else None,
         "pgvector_available": available[0] if available else None,
@@ -41,6 +44,7 @@ def _schema(cur):
         "public_chunks_columns": chunk_columns,
         "public_files_new_columns": file_columns,
         "hnsw_index": index[0] if index else None,
+        "staging_columns": staging_columns,
     }
 
 
@@ -107,10 +111,70 @@ def _load(cur, rows):
             "top20_ms": [round(t, 1) for t in timings], "index_used_when_forced": "verify_chunks_embedding_idx" in plan}
 
 
+def _ingest(cur):
+    """Runs the real files.put_chunks handler against real tables (rolled back by the caller):
+    batched upload, atomic swap, retries and the failure paths."""
+    import files
+    from common.errors import ApiError
+
+    user, team_id, file_id = "verify-" + uuid.uuid4().hex[:8], str(uuid.uuid4()), str(uuid.uuid4())
+    cur.execute("INSERT INTO teams (id, name, created_by) VALUES (%s, 'verify', %s)", (team_id, user))
+    cur.execute("INSERT INTO memberships (user_id, team_id) VALUES (%s, %s)", (user, team_id))
+    cur.execute("INSERT INTO public_files (file_id, owner_id, team_id, filename, tags, expires_at) "
+                "VALUES (%s, %s, %s, 'v.txt', ARRAY['v'], now() + interval '1 day')", (file_id, user, team_id))
+    event = {"pathParameters": {"file_id": file_id}}
+
+    def put(start, n, batch, total):
+        chunks = [{"chunk_index": start + i, "text": f"verify {start + i}",
+                   "embedding": [float(start + i + 1)] + [0.1] * 383} for i in range(n)]
+        return files.put_chunks(cur, user, event, {"chunks": chunks, "batch": batch, "total_batches": total})
+
+    def visible():
+        return _count(cur, "SELECT count(*) FROM public_chunks WHERE file_id = %s", (file_id,))
+
+    def rejected(call):
+        try:
+            call()
+        except ApiError as exc:
+            return exc.status == 400
+        return False
+
+    import json
+
+    def answer(resp):
+        return json.loads(resp["body"])
+
+    first = [answer(put(0, 2, 1, 3)), answer(put(2, 2, 2, 3))]
+    hidden_until_final = visible() == 0
+    final = answer(put(4, 1, 3, 3))
+    committed = final == {"file_id": file_id, "chunk_count": 5, "committed": True} and visible() == 5
+    # A new upload does not disturb the committed set until its final batch.
+    put(0, 2, 1, 2)
+    old_set_visible_mid_upload = visible() == 5
+    put(0, 2, 1, 2)  # a retried batch
+    swapped = answer(put(2, 1, 2, 2))["chunk_count"] == 3 and visible() == 3
+    retried_final_rejected = rejected(lambda: put(2, 1, 2, 2)) and visible() == 3
+    cur.execute("SELECT chunk_count, chunks_indexed_at IS NOT NULL FROM public_files WHERE file_id = %s", (file_id,))
+    counted = cur.fetchone() == (3, True)
+    missing_batch_rejected = rejected(lambda: (put(0, 1, 1, 3), put(1, 1, 3, 3))) and visible() == 3
+    cur.execute("UPDATE public_chunks_staging SET staged_at = now() - interval '2 hours' WHERE file_id = %s", (file_id,))
+    cur.execute("DELETE FROM public_chunks_staging WHERE staged_at < now() - make_interval(mins => %s)", (60,))
+    stale_staging_cleared = cur.rowcount > 0
+    cur.execute("DELETE FROM public_files WHERE file_id = %s", (file_id,))
+    cascade_clears_chunks = visible() == 0 and _count(
+        cur, "SELECT count(*) FROM public_chunks_staging WHERE file_id = %s", (file_id,)) == 0
+    return {"batches_not_committed_early": [r["committed"] for r in first] == [False, False],
+            "hidden_until_final": hidden_until_final, "final_batch_commits": committed,
+            "old_set_visible_mid_upload": old_set_visible_mid_upload, "reupload_swaps_atomically": swapped,
+            "retried_final_batch_rejected_set_intact": retried_final_rejected,
+            "file_row_counts_set": counted, "missing_batch_rejected_set_intact": missing_batch_rejected,
+            "stale_staging_cleared": stale_staging_cleared, "cascade_clears_chunks_and_staging": cascade_clears_chunks}
+
+
 def run(conn, rows=DEFAULT_ROWS):
     rows = max(100, min(int(rows), MAX_ROWS))
     try:
         with conn.cursor() as cur:
-            return {"schema": _schema(cur), "smoke": _smoke(cur), "load": _load(cur, rows)}
+            return {"schema": _schema(cur), "smoke": _smoke(cur), "load": _load(cur, rows), "ingest": _ingest(cur)}
     finally:
         conn.rollback()  # never commit: the check leaves no data behind

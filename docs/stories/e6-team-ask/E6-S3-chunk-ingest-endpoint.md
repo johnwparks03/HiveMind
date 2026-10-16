@@ -17,11 +17,18 @@ As an owner's agent, I want to upload a published file's chunks and embeddings s
 - [ ] Embedding length is validated against the configured dimension; per-file max chunks enforced (config).
 - [ ] Sets `chunks_indexed_at` and `chunk_count` on commit.
 - [ ] Nothing in the request body is logged.
-- [ ] Unit tests: retry, partial upload, wrong owner, bad dimension, over-limit.
+- [x] Unit tests: retry, partial upload, wrong owner, bad dimension, over-limit.
 
 ## Technical notes
 - Batch size is config, sized under API Gateway and Lambda payload limits.
-- Route and IAM go in `infra/stack.py` (E6-S5).
+- The route, config values and the FilesFn memory bump (512 MB) were added to `infra/stack.py` in this story, so they deploy with it; E6-S5 now only adds the retrieval route and sizing.
 
 ## Notes
-_(add during implementation)_
+Implemented (2026-10-16), not yet deployed or verified on AWS, so the other acceptance boxes stay unticked:
+- `files.put_chunks` in `central/lambdas/files.py`; migration `0007_chunk_staging.sql` (staging table, cascades with the file); sweeper clears uploads staged longer than `CHUNK_STAGING_TTL_MINUTES`; `GET /files/mine` now returns `chunk_count`.
+- Config in `infra/stack.py`: `CHUNK_UPLOAD_BATCH_SIZE` 100, `MAX_CHUNKS_PER_FILE` 2000, `EMBEDDING_DIMENSION` 384, `CHUNK_STAGING_TTL_MINUTES` 60.
+- Retry rule: a re-sent final batch after commit gets `400` (staging is empty) and leaves the committed set intact; the agent restarts from batch 1 (documented in the contract).
+- `chunks_put` logs `file_id` only (the access log has no details column).
+- Tests: `central/tests/test_chunks_put.py` (35 cases), plus migration, sweeper and `files/mine` tests. `python -m pytest tests` in `central/`: 297 passed, 5 skipped.
+- The migrate Lambda's `verify` action now also runs the real `put_chunks` against Aurora in a rolled-back transaction (`ingest` section). After deploy, run it as described in E6-S2, then tick the remaining boxes.
+- Still to do: deploy, run `verify`, integration test, and the Postman `Test Chunk Ingest` folder (users A and B, `{{AWS_URL}}`, 384-float vectors from a pre-request script).

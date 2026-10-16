@@ -35,7 +35,7 @@ def test_0002_defines_publish_and_relay_tables():
 def test_all_acceptance_tables_exist_across_migrations():
     sql = "\n".join(_sql(n) for n in MIGRATION_FILES)
     for table in ("teams", "memberships", "invites", "public_files", "connections",
-                  "transfers", "access_log", "public_chunks"):
+                  "transfers", "access_log", "public_chunks", "public_chunks_staging"):
         assert f"CREATE TABLE {table} " in sql
 
 
@@ -123,6 +123,16 @@ def test_0006_defines_the_chunk_index():
     assert "PRIMARY KEY (file_id, chunk_index)" in sql
     assert re.search(r"CREATE INDEX \w+ ON public_chunks USING hnsw \(embedding vector_cosine_ops\)", sql)
     assert "ALTER TABLE public_files ADD COLUMN chunks_indexed_at timestamptz, ADD COLUMN chunk_count integer" in sql
+
+
+def test_0007_defines_the_chunk_staging_table():
+    sql = _sql("0007_chunk_staging.sql")
+    assert "CREATE TABLE public_chunks_staging (" in sql
+    assert re.search(r"file_id\s+text\s+NOT NULL REFERENCES public_files\(file_id\) ON DELETE CASCADE", sql)
+    assert "embedding     vector(384) NOT NULL" in sql and "PRIMARY KEY (file_id, chunk_index)" in sql
+    for column in ("batch", "total_batches", "staged_at"):
+        assert re.search(rf"{column}\s+(integer|timestamptz)\s+NOT NULL", sql)
+    assert "hnsw" not in sql  # staging is write-then-copy: no vector index
 
 
 def _vec(*head):

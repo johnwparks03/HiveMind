@@ -23,4 +23,12 @@ As the central service, I want a vector-capable chunk table so that teammate con
 - Check how `central/tests` provide Postgres and whether the test DB can load pgvector (or needs a fake).
 
 ## Notes
-_(add during implementation)_
+Implemented (2026-10-16): `0006_chunk_index.sql`, Aurora max ACU 1 -> 2 (`infra/stack.py`), and migration tests. The `fresh_db` test fixture now installs pgvector in `public` and keeps `public` on the search_path (the test Postgres must ship pgvector, e.g. `pgvector/pgvector:pg16`).
+
+Verified locally: `python -m pytest tests` in `central/` gives 257 passed, 5 skipped. The DB-backed tests (cascade from file and team, publish upsert keeps chunks, dimension check, cosine ordering) are written but **skipped here**: no Docker or Postgres on this machine. Run them with `HIVEMIND_TEST_DATABASE_URL` pointing at a pgvector Postgres.
+
+Still to do (acceptance boxes stay unticked until then):
+- [ ] verify-in-AWS: pgvector version and HNSW support on Aurora PG 16.8 (`pg_available_extensions`), and that user `hivemind` can `CREATE EXTENSION vector`. Do this before deploying, because the migration batch is one transaction and a failure blocks the deploy.
+- [ ] Synthetic load (e.g. 50k x 384) for HNSW build time and top-20 cosine latency at 0.5-2 ACU.
+- [ ] Run the DB-backed tests against a pgvector Postgres.
+- [ ] `cdk diff`, then a coordinated `cdk deploy`; confirm `schema_migrations` lists `0006_chunk_index.sql`.

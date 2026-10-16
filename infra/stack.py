@@ -88,7 +88,7 @@ class HiveMindStack(Stack):
             vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_ISOLATED),
             security_groups=[rds_sg],
             serverless_v2_min_capacity=0.5,
-            serverless_v2_max_capacity=1,
+            serverless_v2_max_capacity=2,  # headroom for the pgvector HNSW index (E6-S2)
             writer=rds.ClusterInstance.serverless_v2("writer"),
             removal_policy=RemovalPolicy.DESTROY,
             deletion_protection=False,

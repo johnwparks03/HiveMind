@@ -1,10 +1,11 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
+import { Spinner } from "./Loading";
 
 // Per-file publish toggle (docs/stories BACKLOG.md E3-S9). Tags still exist on
 // the file record and are used by central search, but aren't shown/edited here
 // (2026-10-16: too cluttered) — they're generated automatically on publish.
-export default function PublishControl({ file }) {
+export default function PublishControl({ file, canShare }) {
   const queryClient = useQueryClient();
 
   function refresh() {
@@ -23,11 +24,11 @@ export default function PublishControl({ file }) {
   return (
     <div className="publish-control">
       <div className="publish-row">
-        {failed ? (
+        {!canShare ? null : failed ? (
           <>
             <span className="pill pill-failed">Publish failed</span>
             <button type="button" className="btn btn-outline btn-sm" onClick={() => retry.mutate()} disabled={busy}>
-              Retry
+              {retry.isPending ? <><Spinner />Retrying…</> : "Retry"}
             </button>
           </>
         ) : (
@@ -37,7 +38,11 @@ export default function PublishControl({ file }) {
             onClick={() => (isPublic ? unpublish.mutate() : publish.mutate())}
             disabled={busy}
           >
-            {working ? "Working…" : isPublic ? "Unpublish" : "Share with team"}
+            {unpublish.isPending || (working && isPublic) ? (
+              <><Spinner />Unsharing…</>
+            ) : publish.isPending || working ? (
+              <><Spinner />Sharing…</>
+            ) : isPublic ? "Unshare" : "Share with team"}
           </button>
         )}
       </div>

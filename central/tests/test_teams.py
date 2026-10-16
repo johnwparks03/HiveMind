@@ -118,11 +118,35 @@ def test_create_team_success_logs_event(fake_db):
     assert "INSERT INTO memberships" in cur.sqls() and "access_log" in cur.sqls()
 
 
-def test_get_my_team(fake_db):
-    fake_db([("tid", "Alpha")])
-    assert _body(teams.handler(_event("GET /teams/me"), None)) == {"team": {"team_id": "tid", "name": "Alpha"}}
+def test_get_my_team_lists_members_and_marks_the_caller(fake_db):
+    fake_db([("tid", "Alpha"), [("user-1", "a@firm.com"), ("user-2", None)]])
+    assert _body(teams.handler(_event("GET /teams/me"), None)) == {
+        "team": {"team_id": "tid", "name": "Alpha",
+                 "members": [{"email": "a@firm.com", "is_you": True}, {"email": None, "is_you": False}]}}
+
+
+def test_get_my_team_without_a_team(fake_db):
     fake_db([None])
     assert _body(teams.handler(_event("GET /teams/me"), None)) == {"team": None}
+
+
+def test_set_my_email_stores_it_on_the_membership(fake_db):
+    cur = fake_db([("tid", "Alpha")])
+    resp = teams.handler(_event("PUT /teams/me/email", {"email": " a@firm.com "}), None)
+    assert resp["statusCode"] == 204
+    assert cur.executed[-1] == ("UPDATE memberships SET email = %s WHERE user_id = %s", ("a@firm.com", "user-1"))
+
+
+@pytest.mark.parametrize("body", [{}, {"email": ""}, {"email": "nope"}, {"email": 5}, {"email": "a@b.c" + "x" * 260}])
+def test_set_my_email_validates(fake_db, body):
+    fake_db([])
+    assert teams.handler(_event("PUT /teams/me/email", body), None)["statusCode"] == 400
+
+
+def test_set_my_email_without_team_is_403(fake_db):
+    fake_db([None])
+    resp = teams.handler(_event("PUT /teams/me/email", {"email": "a@firm.com"}), None)
+    assert resp["statusCode"] == 403 and _body(resp)["error"]["code"] == "no_team"
 
 
 def test_invite_without_team_is_403(fake_db):

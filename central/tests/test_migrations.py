@@ -107,6 +107,10 @@ def test_0004_adds_swept_at_and_the_sweeper_index():
     assert re.search(r"CREATE INDEX idx_transfers_unswept ON transfers \(created_at\)\s+WHERE swept_at IS NULL", sql)
 
 
+def test_0005_adds_the_membership_email_column():
+    assert "ALTER TABLE memberships ADD COLUMN email text" in _sql("0005_membership_email.sql")
+
+
 def test_in_flight_statuses_are_defined_once_and_match_the_index_predicate():
     from common.transfer_state import IN_FLIGHT
 

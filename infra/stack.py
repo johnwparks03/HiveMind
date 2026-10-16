@@ -375,6 +375,7 @@ class HiveMindStack(Stack):
         for path, methods, integration_id in [
             ("/teams", [apigwv2.HttpMethod.POST], "TeamsCreateIntegration"),
             ("/teams/me", [apigwv2.HttpMethod.GET], "TeamsMeIntegration"),
+            ("/teams/me/email", [apigwv2.HttpMethod.PUT], "TeamsEmailIntegration"),
             ("/teams/me/invites", [apigwv2.HttpMethod.POST], "TeamsInvitesIntegration"),
             ("/teams/join", [apigwv2.HttpMethod.POST], "TeamsJoinIntegration"),
             ("/teams/me/leave", [apigwv2.HttpMethod.POST], "TeamsLeaveIntegration"),

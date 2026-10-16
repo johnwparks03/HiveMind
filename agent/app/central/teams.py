@@ -4,6 +4,7 @@ import time
 import httpx
 
 from app import config
+from app.auth import session
 from app.central import client as central_client
 from app.central import publish
 from app.db import session as db_session
@@ -20,8 +21,25 @@ def invalidate_cache() -> None:
 
 
 def get_team() -> dict | None:
-    body = _call("GET", "/teams/me")
-    return body["team"]
+    team = _call("GET", "/teams/me")["team"]
+    if team:
+        _report_own_email(team)
+    return team
+
+
+def _report_own_email(team: dict) -> None:
+    """Central can't look emails up (no route out of its VPC), so each agent tells it
+    its own. Runs when the caller's membership has no email yet; best effort, because
+    a failure just means the list shows no address for this person until the next call."""
+    mine = next((m for m in team.get("members", []) if m.get("is_you")), None)
+    own = session.email()
+    if not mine or mine.get("email") or not own:
+        return
+    try:
+        _call("PUT", "/teams/me/email", json={"email": own})
+    except (ApiError, httpx.HTTPError):
+        return
+    mine["email"] = own
 
 
 def current_team_or_none() -> dict | None:

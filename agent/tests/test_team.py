@@ -151,3 +151,27 @@ def test_local_search_works_without_team(client, auth, central, local_db):
     resp = client.post("/search", headers=auth, json={"query": "anything"})
     assert resp.status_code != 403
     assert not any(route.startswith("POST /teams") for route, _ in central.calls)
+
+
+def test_get_team_reports_own_email_when_central_has_none(client, auth, central):
+    central.reply("GET /teams/me", 200, {"team": {"team_id": "t1", "name": "Alpha", "members": [
+        {"email": None, "is_you": True}, {"email": "b@firm.com", "is_you": False}]}})
+    central.reply("PUT /teams/me/email", 204)
+    members = client.get("/team", headers=auth).json()["team"]["members"]
+    assert members[0] == {"email": "a@firm.com", "is_you": True}
+    assert ("PUT /teams/me/email", {"email": "a@firm.com"}) in central.calls
+
+
+def test_get_team_does_not_resend_an_email_central_already_has(client, auth, central):
+    central.reply("GET /teams/me", 200, {"team": {"team_id": "t1", "name": "Alpha", "members": [
+        {"email": "a@firm.com", "is_you": True}]}})
+    client.get("/team", headers=auth)
+    assert [route for route, _ in central.calls] == ["GET /teams/me"]
+
+
+def test_get_team_survives_a_failed_email_report(client, auth, central):
+    central.reply("GET /teams/me", 200, {"team": {"team_id": "t1", "name": "Alpha", "members": [
+        {"email": None, "is_you": True}]}})
+    central.reply("PUT /teams/me/email", 503, _err("service_unavailable"))
+    resp = client.get("/team", headers=auth)
+    assert resp.status_code == 200 and resp.json()["team"]["members"][0]["email"] is None

@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import DownloadFolderControl from "../components/DownloadFolderControl";
-import Loading from "../components/Loading";
+import { Spinner } from "../components/Loading";
 import TeammateResultCard from "../components/TeammateResultCard";
 import { api, isAgentUnreachable } from "../api/client";
 import { formatDate } from "../lib/files";
@@ -160,6 +160,7 @@ function GroupDetail({ group, onChanged }) {
   const queryClient = useQueryClient();
   const [invite, setInvite] = useState(null);
   const [copied, setCopied] = useState(false);
+  const members = group.members ?? [];
 
   const createInvite = useMutation({
     mutationFn: api.createInvite,
@@ -196,7 +197,30 @@ function GroupDetail({ group, onChanged }) {
     <>
       <div className="account-card group-card">
         <h3 className="section-title">{group.name}</h3>
+        {members.length > 0 && (
+          <>
+            <p className="field-label members-label">Members ({members.length})</p>
+            <ul className="member-list" aria-label="Group members">
+              {members.map((m, i) => (
+                <li key={m.email ?? i} className="member-row">
+                  {m.email ? (
+                    <span className="member-email">{m.email}</span>
+                  ) : (
+                    <span className="member-email muted">Email not available yet</span>
+                  )}
+                  {m.is_you && <span className="member-you">You</span>}
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
         <TeamFiles />
+        <div className="card-footer">
+          {leave.isError && <p className="inline-error" role="alert">{groupErrorMessage(leave.error)}</p>}
+          <button type="button" className="btn btn-danger-outline" onClick={handleLeave} disabled={leave.isPending}>
+            {leave.isPending ? <><Spinner />Leaving…</> : "Leave group"}
+          </button>
+        </div>
       </div>
 
       <div className="account-card">
@@ -223,15 +247,6 @@ function GroupDetail({ group, onChanged }) {
         >
           {createInvite.isPending ? "Creating code…" : invite ? "Create a new code" : "Create invite code"}
         </button>
-      </div>
-
-      <div className="account-card">
-        <h3 className="section-title">Leave group</h3>
-        <p className="muted">You will stop sharing files with this group.</p>
-        <button type="button" className="btn btn-danger-ghost" onClick={handleLeave} disabled={leave.isPending}>
-          {leave.isPending ? "Leaving…" : "Leave group"}
-        </button>
-        {leave.isError && <p className="inline-error" role="alert">{groupErrorMessage(leave.error)}</p>}
       </div>
     </>
   );

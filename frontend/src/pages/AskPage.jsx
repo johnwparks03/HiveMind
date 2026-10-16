@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api, isAgentUnreachable } from "../api/client";
 import Loading from "../components/Loading";
+import Markdown from "../components/Markdown";
 import OpenButton from "../components/OpenButton";
 import ScopePicker from "../components/ScopePicker";
 
@@ -10,6 +11,30 @@ const EXAMPLES = [
   "give me a breakdown of this sprint",
   "what's the status of the budget plan",
 ];
+
+// The files an answer was based on, collapsed by default so long answers stay readable.
+function Sources({ sources }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="ask-sources-block">
+      <button type="button" className="ask-sources-toggle" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
+        <span className="file-group-chevron" aria-hidden="true">{open ? "▾" : "▸"}</span>
+        <span className="file-group-name">Sources used</span>
+        <span className="muted file-group-count">{sources.length} file{sources.length === 1 ? "" : "s"}</span>
+      </button>
+      {open && (
+        <ul className="ask-sources" aria-label="Based on these files">
+          {sources.map((s) => (
+            <li key={s.file_id} className="ask-source-row">
+              <span>{s.filename}</span>
+              <OpenButton fileId={s.file_id} filename={s.filename} />
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
 
 // Chat-style Ask: saved conversations on the left, the thread in the middle, the question box below.
 export default function AskPage() {
@@ -86,7 +111,7 @@ export default function AskPage() {
   const showExamples = !activeId && !pendingQuestion;
 
   return (
-    <section className="ask-page" aria-labelledby="ask-title">
+    <section className={`ask-page${showExamples ? "" : " is-chatting"}`} aria-labelledby="ask-title">
       <aside className="ask-sidebar" aria-label="Saved chats">
         <button type="button" className="btn btn-primary ask-new" onClick={startNewChat}>
           New chat
@@ -124,13 +149,12 @@ export default function AskPage() {
       </aside>
 
       <div className="ask-main">
-        <div className="ask-thread" aria-live="polite">
+        <div className={`ask-thread${showExamples ? " is-empty" : ""}`} aria-live="polite">
           {showExamples && (
             <div className="ask-empty">
               <h2 className="page-title">Ask about <span className="accent-word">your files</span></h2>
               <p className="page-lede">
-                Ask across your files, like a summary of recent notes. This needs an internet connection,
-                so there's no offline fallback.
+                Ask across your files, like a summary of recent notes.
               </p>
               <div className="examples">
                 <p className="examples-label">Try one of these</p>
@@ -154,17 +178,8 @@ export default function AskPage() {
               </div>
             ) : (
               <div key={m.message_id} className="ask-msg ask-msg-assistant">
-                <div className="ask-bubble ask-answer">{m.content}</div>
-                {m.sources?.length > 0 && (
-                  <ul className="ask-sources" aria-label="Based on these files">
-                    {m.sources.map((s) => (
-                      <li key={s.file_id} className="ask-source-row">
-                        <span>{s.filename}</span>
-                        <OpenButton fileId={s.file_id} filename={s.filename} />
-                      </li>
-                    ))}
-                  </ul>
-                )}
+                <div className="ask-bubble ask-answer"><Markdown>{m.content}</Markdown></div>
+                {m.sources?.length > 0 && <Sources sources={m.sources} />}
               </div>
             ),
           )}

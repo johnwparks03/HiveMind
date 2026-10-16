@@ -1733,3 +1733,24 @@ input:focus {
   background: var(--accent-soft);
   border-radius: var(--radius);
 }
+
+/* Team page, not on a team yet: create and join sit side by side, and stack on narrow screens. */
+.team-choices {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  max-width: 880px;
+  margin: 20px auto 0;
+  align-items: start;
+}
+
+.team-choices .account-card {
+  max-width: none;
+  margin: 0;
+}
+
+@media (max-width: 720px) {
+  .team-choices {
+    grid-template-columns: 1fr;
+  }
+}

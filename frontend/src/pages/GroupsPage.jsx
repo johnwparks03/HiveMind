@@ -71,8 +71,10 @@ export default function GroupsPage() {
 
   return (
     <Shell lede="You're not on a team yet. Create one, or join with an invite code.">
-      <CreateGroup onCreated={refreshGroup} />
-      <JoinGroup onJoined={refreshGroup} />
+      <div className="team-choices">
+        <CreateGroup onCreated={refreshGroup} />
+        <JoinGroup onJoined={refreshGroup} />
+      </div>
     </Shell>
   );
 }

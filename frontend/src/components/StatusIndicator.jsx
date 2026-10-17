@@ -10,12 +10,22 @@ export default function StatusIndicator() {
   });
 
   const state = isPending ? "checking" : online ? "online" : "offline";
-  const label = { checking: "Checking agent", online: "Agent connected", offline: "Agent offline" }[state];
+  // Say what it means and what to do, in plain words.
+  const label = {
+    checking: "Connecting to HiveMind…",
+    online: "HiveMind is ready",
+    offline: "HiveMind isn't running. Start it, then refresh.",
+  }[state];
+  const hint = {
+    checking: "Checking that HiveMind is running on this computer.",
+    online: "HiveMind is running on this computer.",
+    offline: "HiveMind isn't responding. Start it again, then refresh this page.",
+  }[state];
 
   return (
-    <div className="status" role="status">
+    <div className="status" role="status" title={hint}>
       <span className={`dot dot-${state}`} aria-hidden="true" />
-      {label}
+      <span className="status-label">{label}</span>
     </div>
   );
 }

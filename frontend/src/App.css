@@ -88,9 +88,9 @@
 /* Page */
 .page {
   width: 100%;
-  max-width: 880px;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 32px 24px 64px;
+  padding: 32px 20px 64px;
 }
 
 .page-title {
@@ -1645,3 +1645,198 @@ input:focus {
 }
 
 .card-footer .inline-error { margin: 0 auto 0 0; }
+
+/* How-to steps under each page intro: three numbered cards in a row. */
+.how-to {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  list-style: none;
+  padding: 0;
+  margin: 0 0 20px;
+  counter-reset: step;
+}
+
+.how-to li {
+  flex: 1 1 200px;
+  counter-increment: step;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  font-size: 13.5px;
+  line-height: 1.4;
+}
+
+.how-to li::before {
+  content: counter(step);
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* Ask: wider chat list, and larger, easier-to-read answers. */
+/* Saved chats sit at the left edge of the page, so the conversation gets the rest of the width. */
+.ask-page {
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 20px;
+  margin-left: -20px;
+}
+
+.ask-chat-open {
+  font-size: 14.5px;
+  padding: 10px 12px;
+}
+
+.ask-bubble {
+  font-size: 16px;
+  line-height: 1.65;
+  padding: 14px 18px;
+}
+
+.ask-msg {
+  max-width: 92%;
+}
+
+.ask-msg-assistant .ask-bubble {
+  font-size: 16.5px;
+}
+
+.ask-thread {
+  gap: 18px;
+}
+
+@media (max-width: 720px) {
+  .ask-page {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Team page: one card. The invite comes first, then members and files, then Leave. */
+.team-header {
+  padding-bottom: 4px;
+}
+
+.team-invite {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  background: var(--accent-soft);
+  border-radius: var(--radius);
+}
+
+/* Team page, not on a team yet: create and join sit side by side, and stack on narrow screens. */
+.team-choices {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  max-width: 880px;
+  margin: 20px auto 0;
+  align-items: start;
+}
+
+.team-choices .account-card {
+  max-width: none;
+  margin: 0;
+}
+
+@media (max-width: 720px) {
+  .team-choices {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Saved chats scaled to 1.25x: wider list, larger titles, controls and spacing. */
+.ask-page {
+  grid-template-columns: 325px minmax(0, 1fr);
+  gap: 25px;
+}
+
+.ask-sidebar {
+  gap: 12px;
+  padding: 15px;
+}
+
+.ask-new {
+  font-size: 16.25px;
+  padding: 11px 18px;
+}
+
+.ask-side-note {
+  font-size: 16.25px;
+}
+
+.ask-chat-list {
+  gap: 3px;
+}
+
+.ask-chat-open {
+  font-size: 18px;
+  padding: 12px 15px;
+}
+
+.ask-chat-delete {
+  font-size: 19px;
+  padding: 5px 10px;
+}
+
+/* Folder row actions: a little room between Check for new files, Make public, Make private and Remove. */
+.folder-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Ask: the chat list and the conversation scroll on their own. The page itself stays put. */
+.ask-page {
+  height: calc(100vh - 170px);
+  min-height: 420px;
+  overflow: hidden;
+}
+
+.ask-sidebar {
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  align-self: stretch;
+}
+
+.ask-main {
+  height: 100%;
+  min-height: 0;
+}
+
+.ask-thread {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+@media (max-width: 720px) {
+  .ask-page {
+    height: auto;
+    overflow: visible;
+  }
+
+  .ask-sidebar {
+    height: auto;
+    overflow: visible;
+  }
+
+  .ask-thread {
+    overflow: visible;
+  }
+}

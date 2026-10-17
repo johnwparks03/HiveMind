@@ -12,6 +12,7 @@ import {
   interpretedCaption,
   matchPercent,
   normaliseFile,
+  plainFailure,
   scopeFiles,
   totalsByState,
 } from "./files.js";
@@ -73,20 +74,26 @@ test("interpretedCaption describes what the query was understood to mean", () =>
   assert.equal(interpretedCaption(null), null);
   assert.equal(
     interpretedCaption({ topic: null, date_from: null, date_to: null }),
-    "Searched everything, most recent first",
+    "Showing everything, newest first",
   );
-  assert.equal(interpretedCaption({ topic: "budget plan", date_from: null }), 'Searched for topic "budget plan"');
+  assert.equal(interpretedCaption({ topic: "budget plan", date_from: null }), 'Looking for "budget plan"');
 
   const day = new Date(2026, 9, 11).toISOString();
   const sameDay = interpretedCaption({ topic: null, date_from: day, date_to: day });
-  assert.match(sameDay, /^Searched for on /);
+  assert.match(sameDay, /^Showing files on /);
 
   const range = interpretedCaption({
     topic: "budget plan",
     date_from: new Date(2026, 9, 5).toISOString(),
     date_to: new Date(2026, 9, 11).toISOString(),
   });
-  assert.match(range, /^Searched for topic "budget plan", .+ – .+$/);
+  assert.match(range, /^Looking for "budget plan" from .+ to .+$/);
+});
+
+test("plainFailure turns developer messages into plain words", () => {
+  assert.equal(plainFailure("no extractable text"), "This file is empty, or has no text to read.");
+  assert.equal(plainFailure("File is not a zip file"), "This file looks damaged, so it can't be opened.");
+  assert.equal(plainFailure(null), "This file couldn't be read.");
 });
 
 test("folderName takes the last segment of Windows and POSIX paths", () => {

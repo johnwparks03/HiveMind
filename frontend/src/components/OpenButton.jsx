@@ -18,7 +18,7 @@ export default function OpenButton({ fileId, filename }) {
       </button>
       {open.isError && (
         <span className="inline-error" role="alert">
-          {open.error.code === "file_missing" ? "File no longer on disk" : "Couldn't open that file"}
+          {open.error.code === "file_missing" ? "This file has been moved or deleted." : "Couldn't open that file"}
         </span>
       )}
     </div>

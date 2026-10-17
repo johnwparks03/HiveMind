@@ -1,11 +1,11 @@
-import { formatDate } from "../lib/files";
+import { formatDate, plainFailure } from "../lib/files";
 import OpenButton from "./OpenButton";
 import PublishControl from "./PublishControl";
 
 const STATE_LABEL = {
-  indexed: "Indexed",
-  pending: "Indexing",
-  failed: "Failed",
+  indexed: "Ready to search",
+  pending: "Reading",
+  failed: "Couldn't read",
 };
 
 export default function FileRow({ file, selected, onToggle, canShare }) {
@@ -28,8 +28,10 @@ export default function FileRow({ file, selected, onToggle, canShare }) {
         </div>
         <div className="file-meta">
           {file.file_modified_at && <span>Modified {formatDate(file.file_modified_at)}</span>}
-          {file.index_state === "failed" && file.failure_reason && (
-            <span className="failure-reason">{file.failure_reason}</span>
+          {file.index_state === "failed" && (
+            <span className="failure-reason" title={file.failure_reason ?? undefined}>
+              {plainFailure(file.failure_reason)}
+            </span>
           )}
         </div>
         {file.index_state === "indexed" && <PublishControl file={file} canShare={canShare} />}

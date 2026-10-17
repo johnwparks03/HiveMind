@@ -1,17 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import HowTo from "../components/HowTo";
 import Loading, { Spinner } from "../components/Loading";
 import { api, isAgentUnreachable } from "../api/client";
-import FolderCard from "../components/FolderCard";
+import FolderRow from "../components/FolderRow";
 import FileRow from "../components/FileRow";
 import {
   countsByFolder,
   countsFor,
   folderName,
-  groupByFolder,
   hasPendingWork,
   matchesShareFilter,
-  scopeFiles,
   totalsByShare,
   totalsByState,
 } from "../lib/files";
@@ -23,14 +22,14 @@ const IDLE_POLL_MS = 15000;
 
 const FILTERS = [
   { id: "all", label: "All" },
-  { id: "indexed", label: "Indexed" },
-  { id: "pending", label: "Indexing" },
-  { id: "failed", label: "Failed" },
+  { id: "indexed", label: "Ready" },
+  { id: "pending", label: "Reading" },
+  { id: "failed", label: "Couldn't read" },
 ];
 
 const SHARE_FILTERS = [
-  { id: "shared", label: "Shared" },
-  { id: "unshared", label: "Not shared" },
+  { id: "shared", label: "Public" },
+  { id: "unshared", label: "Private" },
 ];
 
 // A folder with more files than this starts collapsed in the all-folders view.
@@ -38,7 +37,7 @@ const AUTO_COLLAPSE_OVER = 10;
 
 export default function FilesPage() {
   const queryClient = useQueryClient();
-  const [folderId, setFolderId] = useState(null); // null = all folders
+
   const [filter, setFilter] = useState("all");
   const [shareFilters, setShareFilters] = useState([]); // "shared" / "unshared"; none or both = show all
   const [selected, setSelected] = useState([]); // file_ids ticked in the list
@@ -86,7 +85,7 @@ export default function FilesPage() {
   const removeFolder = useMutation({
     mutationFn: (id) => api.removeFolder(id),
     onSuccess: (_data, id) => {
-      if (folderId === id) setFolderId(null);
+
       refresh();
     },
   });
@@ -132,16 +131,16 @@ export default function FilesPage() {
       return;
     }
     if (count === 0) {
-      window.alert("Nothing new to share — every indexed file here is already public.");
+      window.alert("Nothing new to make public. Every readable file here is already public.");
       return;
     }
-    if (window.confirm(`Share ${count} file${count === 1 ? "" : "s"} with your team?`)) {
+    if (window.confirm(`Make ${count} file${count === 1 ? "" : "s"} public?`)) {
       shareFolder.mutate(folder.folder_id);
     }
   }
 
   function handleUnshare(folder) {
-    if (window.confirm(`Make all shared files in ${folderName(folder.path)} private again?`)) {
+    if (window.confirm(`Make all public files in ${folderName(folder.path)} private?`)) {
       unshareFolder.mutate(folder.folder_id);
     }
   }
@@ -150,20 +149,20 @@ export default function FilesPage() {
   const fileList = files.data ?? [];
   const counts = countsByFolder(fileList);
 
-  const inScope = scopeFiles(fileList, folderId);
+  const inScope = fileList;
   const visible = inScope.filter(
     (f) => (filter === "all" || f.index_state === filter) && matchesShareFilter(f, inGroup ? shareFilters : []),
   );
   const scopeTotals = totalsByState(inScope);
   const shareTotals = totalsByShare(inScope);
 
-  const selectedFolder = folderList.find((f) => f.folder_id === folderId);
+
 
   // Only what's showing counts, so changing the filter never removes files you can't see.
   const selectedShown = selectedInView(selected, visible.map((f) => f.file_id));
 
   function handleRemove(folder) {
-    const ok = window.confirm(`Stop watching ${folder.path}? Its index entries will be removed. Your files are not touched.`);
+    const ok = window.confirm(`Remove ${folderName(folder.path)} from HiveMind? Its files stay on your computer.`);
     if (ok) removeFolder.mutate(folder.folder_id);
   }
 
@@ -175,13 +174,14 @@ export default function FilesPage() {
     const files = action === "share" ? shareable : unshareable;
     const n = files.length;
     const text = action === "share"
-      ? `Share ${n} file${n === 1 ? "" : "s"} with your team?`
-      : `Make ${n} shared file${n === 1 ? "" : "s"} private again?`;
+      ? `Make ${n} file${n === 1 ? "" : "s"} public?`
+      : `Make ${n} public file${n === 1 ? "" : "s"} private?`;
     if (window.confirm(text)) bulkShare.mutate({ action, files });
   }
 
   // Grouped by folder only in the all-folders view; one folder is already a single list.
-  const groups = folderId == null ? groupByFolder(visible, folderList) : null;
+  // Every folder appears once, with its files under it. Empty folders still show, so they can be rescanned or removed.
+  const groups = folderList.map((folder) => ({ folder, files: visible.filter((f) => f.folder_id === folder.folder_id) }));
   const isOpen = (id, count) => (openOverrides.has(id) ? openOverrides.get(id) : count <= AUTO_COLLAPSE_OVER);
 
   function toggleGroup(id, count) {
@@ -224,13 +224,14 @@ export default function FilesPage() {
   return (
     <section className="files-page" aria-labelledby="files-title">
       <h2 id="files-title" className="page-title">Your folders</h2>
-      <p className="page-lede">Add a folder of files to your HiveMind agent so you can search them and share them with your team.</p>
+      <p className="page-lede">Add a folder of files to your HiveMind agent so you can search them and make them public to your team.</p>
+      <HowTo steps={['Choose a folder to add it.', 'Wait while HiveMind reads your files.', 'Make files public to share them with your team.']} />
 
       <div className="add-folder">
         <div className="add-folder-row">
           <div className="add-folder-text">
             <strong>Add a folder</strong>
-            <span className="muted">PDF, Word, PowerPoint and text files inside it are indexed.</span>
+            <span className="muted">PDF, Word, PowerPoint and text files inside it get read so you can search them.</span>
           </div>
           <button
             type="button"
@@ -251,7 +252,7 @@ export default function FilesPage() {
       {loadError && (
         <div className="banner banner-error" role="alert">
           {isAgentUnreachable(folders.error ?? files.error)
-            ? "Can't reach the local agent. Start it on port 8420, then refresh this page."
+            ? "HiveMind isn't running. Start it, then refresh this page."
             : "Couldn't load your folders. Try again in a moment."}
         </div>
       )}
@@ -261,48 +262,18 @@ export default function FilesPage() {
       {folderList.length === 0 && !loadError && !folders.isPending && (
         <div className="empty">
           <p>No folders yet.</p>
-          <p className="muted">Add one above to start indexing.</p>
+          <p className="muted">Add one above to get started.</p>
         </div>
-      )}
-
-      {folderList.length > 0 && (
-        <ul className="folder-grid" aria-label="Watched folders">
-          {folderList.map((folder) => (
-            <li key={folder.folder_id}>
-              <FolderCard
-                folder={folder}
-                counts={countsFor(counts, folder.folder_id)}
-                selected={folderId === folder.folder_id}
-                onSelect={() => setFolderId(folderId === folder.folder_id ? null : folder.folder_id)}
-                onRescan={() => rescan.mutate(folder.folder_id)}
-                onRemove={() => handleRemove(folder)}
-                onShare={() => handleShare(folder)}
-                onUnshare={() => handleUnshare(folder)}
-                canShare={inGroup}
-                sharing={sharePreview.isPending || shareFolder.isPending}
-                unsharing={unshareFolder.isPending}
-                busy={rescan.isPending || removeFolder.isPending || sharePreview.isPending || shareFolder.isPending || unshareFolder.isPending}
-              />
-            </li>
-          ))}
-        </ul>
       )}
 
       {folderList.length > 0 && (
         <div className="files-section">
           <div className="files-head">
-            <h3 className="section-title">
-              Files{selectedFolder ? ` in ${folderName(selectedFolder.path)}` : ""}
-            </h3>
-            {selectedFolder && (
-              <button type="button" className="btn btn-ghost btn-sm" onClick={() => setFolderId(null)}>
-                Show all folders
-              </button>
-            )}
+            <h3 className="section-title">Your folders and files</h3>
           </div>
 
           <div className="filter-block">
-          <div className="filter-row" role="group" aria-label="Filter files by status">
+          <div className="filter-row" role="group" aria-label="Filter files by status and visibility">
             <span className="filter-label">Status</span>
             {FILTERS.map((f) => (
               <button
@@ -315,12 +286,7 @@ export default function FilesPage() {
                 {f.label} <span className="chip-count">{scopeTotals[f.id]}</span>
               </button>
             ))}
-          </div>
-
-          {inGroup && (
-          <div className="filter-row filter-row-share" role="group" aria-label="Filter files by sharing">
-            <span className="filter-label">Sharing</span>
-            {SHARE_FILTERS.map((f) => (
+            {inGroup && SHARE_FILTERS.map((f) => (
               <button
                 key={f.id}
                 type="button"
@@ -334,7 +300,6 @@ export default function FilesPage() {
               </button>
             ))}
           </div>
-          )}
           </div>
 
           {selectedShown.length > 0 && (
@@ -352,8 +317,8 @@ export default function FilesPage() {
                   disabled={shareable.length === 0 || bulkShare.isPending}
                 >
                   {bulkShare.isPending && bulkShare.variables?.action === "share"
-                    ? <><Spinner />Sharing…</>
-                    : `Share with team (${shareable.length})`}
+                    ? <><Spinner />Making public…</>
+                    : `Make public (${shareable.length})`}
                 </button>
                 <button
                   type="button"
@@ -362,8 +327,8 @@ export default function FilesPage() {
                   disabled={unshareable.length === 0 || bulkShare.isPending}
                 >
                   {bulkShare.isPending && bulkShare.variables?.action === "unshare"
-                    ? <><Spinner />Unsharing…</>
-                    : `Unshare (${unshareable.length})`}
+                    ? <><Spinner />Making private…</>
+                    : `Make private (${unshareable.length})`}
                 </button>
                 </>)}
                 <button
@@ -378,7 +343,7 @@ export default function FilesPage() {
               {bulkShare.isSuccess && bulkShare.data.failed > 0 && (
                 <p className="inline-error" role="alert">
                   {bulkShare.data.noTeam
-                    ? "Join a group first (see the Groups tab) before sharing."
+                    ? "Join a team first (see the Team tab) before making files public."
                     : bulkResultText(bulkShare.data.action, bulkShare.data.ok, bulkShare.data.failed)}
                 </p>
               )}
@@ -403,59 +368,44 @@ export default function FilesPage() {
                   </button>
                 </div>
               )}
-              {groups ? (
-                <>
-                  {groups.length > 1 && (
-                    <div className="group-controls">
-                      <button type="button" className="btn btn-outline" onClick={() => setAllGroups(true)}>
-                        Expand all
-                      </button>
-                      <button type="button" className="btn btn-outline" onClick={() => setAllGroups(false)}>
-                        Collapse all
-                      </button>
-                    </div>
-                  )}
-                  {groups.map(({ folder, files: groupFiles }) => {
-                    const id = folder.folder_id;
-                    const open = isOpen(id, groupFiles.length);
-                    const ids = groupFiles.map((f) => f.file_id);
-                    const pickedCount = ids.filter((x) => selectedShown.includes(x)).length;
-                    const sharedCount = groupFiles.filter((f) => f.public_state === "public").length;
-                    return (
-                      <div key={id} className="file-group">
-                        <div className="file-group-head">
-                          <input
-                            type="checkbox"
-                            className="file-check"
-                            checked={pickedCount === ids.length}
-                            ref={(el) => {
-                              if (el) el.indeterminate = pickedCount > 0 && pickedCount < ids.length;
-                            }}
-                            onChange={() => toggleGroupSelection(groupFiles)}
-                            aria-label={`Select all shown files in ${folderName(folder.path)}`}
-                          />
-                          <button
-                            type="button"
-                            className="file-group-toggle"
-                            aria-expanded={open}
-                            onClick={() => toggleGroup(id, groupFiles.length)}
-                          >
-                            <span className="file-group-chevron" aria-hidden="true">{open ? "▾" : "▸"}</span>
-                            <span className="file-group-name">{folderName(folder.path)}</span>
-                            <span className="muted file-group-count">
-                              {groupFiles.length} file{groupFiles.length === 1 ? "" : "s"}
-                              {sharedCount > 0 ? ` · ${sharedCount} shared` : ""}
-                            </span>
-                          </button>
-                        </div>
-                        {open && renderRows(groupFiles)}
-                      </div>
-                    );
-                  })}
-                </>
-              ) : (
-                renderRows(visible)
+              {groups.length > 1 && (
+                <div className="group-controls">
+                  <button type="button" className="btn btn-outline" onClick={() => setAllGroups(true)}>
+                    Expand all
+                  </button>
+                  <button type="button" className="btn btn-outline" onClick={() => setAllGroups(false)}>
+                    Collapse all
+                  </button>
+                </div>
               )}
+              {groups.map(({ folder, files: groupFiles }) => {
+                const id = folder.folder_id;
+                const open = isOpen(id, groupFiles.length);
+                const ids = groupFiles.map((f) => f.file_id);
+                const pickedCount = ids.filter((x) => selectedShown.includes(x)).length;
+                return (
+                  <FolderRow
+                    key={id}
+                    folder={folder}
+                    counts={countsFor(counts, id)}
+                    open={open}
+                    onToggleOpen={() => toggleGroup(id, groupFiles.length)}
+                    shownCount={ids.length}
+                    pickedCount={pickedCount}
+                    onToggleSelection={() => toggleGroupSelection(groupFiles)}
+                    canShare={inGroup}
+                    onRescan={() => rescan.mutate(id)}
+                    onRemove={() => handleRemove(folder)}
+                    onShare={() => handleShare(folder)}
+                    onUnshare={() => handleUnshare(folder)}
+                    sharing={sharePreview.isPending || shareFolder.isPending}
+                    unsharing={unshareFolder.isPending}
+                    busy={rescan.isPending || removeFolder.isPending || sharePreview.isPending || shareFolder.isPending || unshareFolder.isPending}
+                  >
+                    {renderRows(groupFiles)}
+                  </FolderRow>
+                );
+              })}
             </>
           )}
         </div>

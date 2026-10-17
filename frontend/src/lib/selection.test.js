@@ -34,5 +34,5 @@ test("bulkEligible picks what each action can act on", () => {
 });
 
 test("bulkResultText reports partial failure", () => {
-  assert.equal(bulkResultText("share", 3, 2), "3 of 5 shared; 2 failed. Try those again.");
+  assert.equal(bulkResultText("share", 3, 2), "3 of 5 made public. 2 couldn't be changed. Try those again.");
 });

@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api, isAgentUnreachable } from "../api/client";
-import Loading, { Spinner } from "../components/Loading";
+import HowTo from "../components/HowTo";
+
 import PasswordInput from "../components/PasswordInput";
 import { authErrorMessage, validateCredentials } from "../lib/auth";
 
@@ -70,7 +71,7 @@ export default function AccountPage() {
       {session.isError && (
         <div className="banner banner-error" role="alert">
           {isAgentUnreachable(session.error)
-            ? "Can't reach the local agent. Start it on port 8420, then try again."
+            ? "HiveMind isn't running. Start it, then try again."
             : "Couldn't check your sign-in status. Try again in a moment."}
         </div>
       )}
@@ -98,6 +99,7 @@ export default function AccountPage() {
         <>
           <h2 className="page-title">Sign <span className="accent-word">in</span></h2>
           <p className="page-lede">Sign in to share with your team. Your files stay on this computer until you choose to share them.</p>
+          <HowTo steps={['Sign in with your email and password.', 'Your files stay on this computer until you make them public.', 'Sign out here anytime.']} />
 
           <div className="account-card">
             <form className="account-form" onSubmit={handleSubmit} noValidate>

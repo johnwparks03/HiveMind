@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api, isAgentUnreachable } from "../api/client";
+import HowTo from "../components/HowTo";
 import Loading from "../components/Loading";
 import Markdown from "../components/Markdown";
 import OpenButton from "../components/OpenButton";
@@ -156,6 +157,7 @@ export default function AskPage() {
               <p className="page-lede">
                 Ask across your files, like a summary of recent notes.
               </p>
+              <HowTo steps={['Pick the files to use (optional).', 'Ask a question in plain words.', 'Read the answer, then open its sources.']} />
               <div className="examples">
                 <p className="examples-label">Try one of these</p>
                 <div className="example-list">
@@ -196,9 +198,9 @@ export default function AskPage() {
           {send.isError && (
             <div className="banner banner-error" role="alert">
               {isAgentUnreachable(send.error)
-                ? "Can't reach the local agent. Start it on port 8420, then try again."
+                ? "HiveMind isn't running. Start it, then try again."
                 : send.error.code === "service_unavailable"
-                  ? "Ask needs AWS credentials configured in agent/.env. See the agent README."
+                  ? "Ask isn't set up on this computer yet. Ask whoever set up HiveMind for help."
                   : `Ask failed: ${send.error.message}. Your question is still in the box.`}
             </div>
           )}

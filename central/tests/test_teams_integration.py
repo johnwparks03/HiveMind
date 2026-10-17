@@ -60,8 +60,10 @@ def test_create_team_then_get_me(cfg, make_user):
     assert _call(cfg, "GET", "/teams/me", token) == (200, {"team": None})
     status, team = _call(cfg, "POST", "/teams", token, {"name": "Alpha"})
     assert status == 201 and team["name"] == "Alpha" and team["created_at"]
+    # GET /teams/me also lists the members (emails are optional, set via PUT /teams/me/email)
     assert _call(cfg, "GET", "/teams/me", token) == (
-        200, {"team": {"team_id": team["team_id"], "name": "Alpha"}})
+        200, {"team": {"team_id": team["team_id"], "name": "Alpha",
+                       "members": [{"email": None, "is_you": True}]}})
     status, body = _call(cfg, "POST", "/teams", token, {"name": "Beta"})
     assert status == 409 and _error_code(body) == "already_in_team"
     assert _call(cfg, "POST", "/teams/me/leave", token)[0] == 204

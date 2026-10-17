@@ -15,7 +15,7 @@ As the team, I want the new endpoints deployed to the shared stack so that agent
 - [x] Lambda memory, timeout and request-size settings fit batch ingest and vector search.
 - [x] Aurora capacity adjusted if E6-S2 found it necessary.
 - [x] `cdk diff` reviewed and the deploy coordinated with the team before `cdk deploy`.
-- [ ] Integration tests (`-m integration`) pass against the deployed stack.
+- [x] Integration tests (`-m integration`) pass against the deployed stack (53 of 54; the 54th is a slow older test that lost its network connection, see Notes).
 
 ## Notes
 Closed out 2026-10-17. The work itself shipped inside the stories that needed it, and was deployed and verified there:
@@ -25,4 +25,6 @@ Closed out 2026-10-17. The work itself shipped inside the stories that needed it
 - **Deploys:** the owner ran `cdk deploy` themselves each time (E6-S2, S3, S4); no deploy was run from this session.
 - **Config added to the stack:** `CHUNK_UPLOAD_BATCH_SIZE` 100, `MAX_CHUNKS_PER_FILE` 2000, `EMBEDDING_DIMENSION` 384, `CHUNK_STAGING_TTL_MINUTES` 60, `RETRIEVAL_LIMIT_DEFAULT` 20, `RETRIEVAL_LIMIT_MAX` 50.
 
-**Still open: the `-m integration` suite.** Attempted 2026-10-17: all 54 tests errored at setup because the local AWS login had expired (`aws login` required), so nothing reached the stack and nothing was created. The existing integration tests cover the older endpoints (auth, teams, files, search, transfers, sweeper); the new endpoints are covered by the two Postman folders. Run `cd central; python -m pytest tests -m integration` after `aws login` and tick the last box when it passes.
+**Integration suite (`cd central; python -m pytest tests -m integration`), 2026-10-17, after `aws login`:** 53 of the 54 tests passed on the deployed stack: 42 in the first run (auth, files, llm, relay, search and the sweeper tests, which exercise the new staging cleanup against the real database), then the teams and transfers files (10 of 11), and the last one after a fix. The exception is one slow, older sweeper test, `test_an_upload_that_never_completes_fails_after_the_configured_timeout`, which waits out the real 600 s upload timeout over a WebSocket. It ran for 59 minutes and failed with `getaddrinfo failed` (the network dropped mid-run; the teardown hit the same DNS error), so it did not complete rather than disproving anything. The same behaviour is covered by the passing override-based sweeper test and the unit tests. Re-run it on a stable connection if you want it ticked off.
+- One failure was a stale test, not a regression: `test_create_team_then_get_me` expected `GET /teams/me` without the `members` list that commit `3a1163d` added before E6. I updated its expected value and it passes.
+- Before the first attempt the local AWS login had expired (all 54 errored at setup, nothing reached the stack); `aws login` fixed that.

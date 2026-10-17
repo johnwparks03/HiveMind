@@ -152,7 +152,7 @@ Three pages plus a global status indicator.
 - Query box and results list
 - Local results: filename, dates, tags if any, **Open** action
 - Teammate results: filename, tags, created/modified dates, expiry, **Download** button
-- Ask page: **Include teammates' files** toggle; teammate sources show a download request instead of Open; copy notes that published files' contents are readable by teammates
+- Ask page: **Also use teammates' public files** switch (off by default, remembered for the browser session). With files picked in the scope picker a hint says teammates are only used when none are picked; the live answer shows a plain note when teammates were left out (`teammate_skipped_reason`). Teammate sources carry a Teammate badge and a **Download** button (the same control as Search) instead of Open. Making files public now says teammates can read their contents, including through Ask (folder and bulk confirms, the button tooltip, and the Files and Account page text)
     - No owner name or ID shown (deliberately omitted for now)
     - "Owner offline" state shown before the user tries to download
 - Download progress and saved path shown on the result row

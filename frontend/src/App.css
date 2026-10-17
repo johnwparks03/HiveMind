@@ -1840,3 +1840,32 @@ input:focus {
     overflow: visible;
   }
 }
+
+/* Ask: teammate sources, the teammates switch and its notes (E6-S7). */
+.source-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--ink-soft);
+  vertical-align: middle;
+}
+
+.ask-transfer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.ask-teammates {
+  margin: 8px 0 4px;
+}
+
+.ask-footnote {
+  margin-top: 8px;
+}

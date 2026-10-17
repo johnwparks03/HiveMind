@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
+import { SHARE_CONSENT_ONE } from "../lib/sharing";
 import { Spinner } from "./Loading";
 
 // Per-file publish toggle (docs/stories BACKLOG.md E3-S9). Tags still exist on
@@ -37,6 +38,7 @@ export default function PublishControl({ file, canShare }) {
             className={`btn btn-sm ${isPublic ? "btn-outline" : "btn-primary"}`}
             onClick={() => (isPublic ? unpublish.mutate() : publish.mutate())}
             disabled={busy}
+            title={isPublic ? undefined : SHARE_CONSENT_ONE}
           >
             {unpublish.isPending || (working && isPublic) ? (
               <><Spinner />Unsharing…</>

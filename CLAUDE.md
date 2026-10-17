@@ -61,6 +61,9 @@ npm install
 npm run dev
 ```
 Open `http://localhost:5173` with the agent already running on port 8420.
+Frontend tests and checks (run in `frontend/`): `node --test src` (pure helpers and the API client;
+there are no component tests), `npm run lint`, `npm run build`.
+The manual two-person check for Ask over teammates' documents is in `docs/e2e/README.md`.
 
 **Central tests** (`central/`, needs `pip install -r requirements.txt`):
 ```

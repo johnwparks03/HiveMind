@@ -98,8 +98,8 @@ export default function AccountPage() {
       {session.data && !signedIn && (
         <>
           <h2 className="page-title">Sign <span className="accent-word">in</span></h2>
-          <p className="page-lede">Sign in to share with your team. Your files stay on this computer until you choose to share them.</p>
-          <HowTo steps={['Sign in with your email and password.', 'Your files stay on this computer until you make them public.', 'Sign out here anytime.']} />
+          <p className="page-lede">Sign in to share with your team. Your files stay on this computer until you choose to share them, and teammates can read the files you make public, including through Ask.</p>
+          <HowTo steps={['Sign in with your email and password.', 'Your files stay on this computer until you make them public. Teammates can then read them.', 'Sign out here anytime.']} />
 
           <div className="account-card">
             <form className="account-form" onSubmit={handleSubmit} noValidate>

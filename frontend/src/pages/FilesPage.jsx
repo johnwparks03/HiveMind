@@ -15,6 +15,7 @@ import {
   totalsByState,
 } from "../lib/files";
 import { bulkEligible, bulkResultText, removeConfirmText, selectedInView, toggleSelected } from "../lib/selection";
+import { shareConfirmText, unshareConfirmText, unshareFolderConfirmText } from "../lib/sharing";
 
 // Poll quickly while anything is indexing, slowly when idle (E2-S8 technical notes).
 const FAST_POLL_MS = 2000;
@@ -134,13 +135,13 @@ export default function FilesPage() {
       window.alert("Nothing new to make public. Every readable file here is already public.");
       return;
     }
-    if (window.confirm(`Make ${count} file${count === 1 ? "" : "s"} public?`)) {
+    if (window.confirm(shareConfirmText(count))) {
       shareFolder.mutate(folder.folder_id);
     }
   }
 
   function handleUnshare(folder) {
-    if (window.confirm(`Make all public files in ${folderName(folder.path)} private?`)) {
+    if (window.confirm(unshareFolderConfirmText(folderName(folder.path)))) {
       unshareFolder.mutate(folder.folder_id);
     }
   }
@@ -173,9 +174,7 @@ export default function FilesPage() {
   function handleBulkShare(action) {
     const files = action === "share" ? shareable : unshareable;
     const n = files.length;
-    const text = action === "share"
-      ? `Make ${n} file${n === 1 ? "" : "s"} public?`
-      : `Make ${n} public file${n === 1 ? "" : "s"} private?`;
+    const text = action === "share" ? shareConfirmText(n) : unshareConfirmText(n);
     if (window.confirm(text)) bulkShare.mutate({ action, files });
   }
 
@@ -224,8 +223,8 @@ export default function FilesPage() {
   return (
     <section className="files-page" aria-labelledby="files-title">
       <h2 id="files-title" className="page-title">Your folders</h2>
-      <p className="page-lede">Add a folder of files to your HiveMind agent so you can search them and make them public to your team.</p>
-      <HowTo steps={['Choose a folder to add it.', 'Wait while HiveMind reads your files.', 'Make files public to share them with your team.']} />
+      <p className="page-lede">Add a folder of files to your HiveMind agent so you can search them and make them public to your team. Teammates can read the contents of public files, including when they use Ask.</p>
+      <HowTo steps={['Choose a folder to add it.', 'Wait while HiveMind reads your files.', 'Make files public to share them. Teammates can then read them.']} />
 
       <div className="add-folder">
         <div className="add-folder-row">

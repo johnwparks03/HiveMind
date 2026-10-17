@@ -66,6 +66,45 @@ test("listFiles normalises agent column names to contract names", async () => {
   assert.equal(files[1].failure_reason, "no extractable text");
 });
 
+test("asking in a chat sends include_teammates, off unless the caller turns it on", async () => {
+  respond = () => jsonResponse(201, { messages: [] });
+  await api.askInChat("c1", "budget?", ["f1"]);
+  await api.askInChat("c1", "budget?", [], true);
+  const bodies = calls.filter((c) => c.url.endsWith("/chats/c1/messages")).map((c) => JSON.parse(c.options.body));
+  assert.deepEqual(bodies[0], { question: "budget?", file_ids: ["f1"], include_teammates: false });
+  assert.deepEqual(bodies[1], { question: "budget?", file_ids: [], include_teammates: true });
+});
+
+test("the live skip reason on the answer is handed back, and is null when the agent sends none", async () => {
+  respond = () =>
+    jsonResponse(201, {
+      messages: [
+        { role: "user", content: "q", sources: null },
+        { role: "assistant", content: "a", sources: [], teammate_skipped_reason: "local_scope" },
+      ],
+    });
+  const withReason = await api.askInChat("c1", "q", ["f1"], true);
+  assert.equal(withReason.teammateSkippedReason, "local_scope");
+  assert.equal(withReason.messages.length, 2);
+
+  respond = () => jsonResponse(201, { messages: [{ role: "user" }, { role: "assistant", content: "a" }] });
+  assert.equal((await api.askInChat("c1", "q", [], false)).teammateSkippedReason, null);
+  respond = () => jsonResponse(201, { messages: [{ role: "user" }, { role: "assistant", teammate_skipped_reason: null }] });
+  assert.equal((await api.askInChat("c1", "q", [], true)).teammateSkippedReason, null);
+});
+
+test("ask also carries include_teammates", async () => {
+  respond = () => jsonResponse(200, { answer: "a", sources: [] });
+  await api.ask("q", [], true);
+  const body = JSON.parse(calls.find((c) => c.url.endsWith("/ask")).options.body);
+  assert.equal(body.include_teammates, true);
+});
+
+test("an Ask error still reaches the caller with its code", async () => {
+  respond = () => jsonResponse(503, { error: { code: "service_unavailable", message: "no credentials" } });
+  await assert.rejects(api.askInChat("c1", "q", [], true), (err) => err.code === "service_unavailable");
+});
+
 test("a refused connection is reported as the agent being unreachable", async () => {
   globalThis.fetch = async () => {
     throw new TypeError("fetch failed");

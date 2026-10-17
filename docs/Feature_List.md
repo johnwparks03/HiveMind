@@ -327,6 +327,8 @@ Three pages plus a global status indicator.
 - No Bedrock usage caps
 - File downloads work only while the owner's agent is online; Ask over teammates' documents does not need the owner online
 - `/search` central matching is metadata-only; untagged files are findable only by filename and date. Ask retrieves chunk text instead
+- Only the first 2,000 chunks of a file are uploaded for teammates' Ask (`MAX_CHUNKS_PER_FILE`)
+- Ask searches teammates' files only when the whole library is in scope and the question has a topic and no date range; otherwise the answer uses local files and says why (`teammate_skipped_reason`)
 - Chunk text and embeddings of public files are stored at rest in AWS and readable by team members until unpublish or expiry
 - Teammate chunks reach the requester's laptop and agent-direct Bedrock (demo/MVP exception)
 - Tags reflect only the first part of a file

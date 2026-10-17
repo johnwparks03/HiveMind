@@ -16,11 +16,9 @@ def _send(method: str, path: str, **kwargs) -> httpx.Response:
                        "central service is not configured: set HIVEMIND_CENTRAL_API_URL in agent/.env",
                        {"missing": "HIVEMIND_CENTRAL_API_URL"})
     headers = {"Authorization": f"Bearer {session.access_token()}"}
+    kwargs.setdefault("timeout", config.CENTRAL_TIMEOUT_SECONDS)  # callers may pass a longer one
     try:
-        return httpx.request(
-            method, config.CENTRAL_API_URL + path, headers=headers,
-            timeout=config.CENTRAL_TIMEOUT_SECONDS, **kwargs,
-        )
+        return httpx.request(method, config.CENTRAL_API_URL + path, headers=headers, **kwargs)
     except httpx.HTTPError:
         raise ApiError(503, "service_unavailable", "could not reach the central service") from None
 

@@ -49,6 +49,15 @@ PUBLISH_WORKER_POLL_SECONDS = 2
 # catch a crash mid-publish or a file deleted/moved locally that's still public.
 PUBLISH_RECONCILE_INTERVAL_SECONDS = 300
 
+# Chunk upload (E6-S6): a published file's chunk text and embeddings go to central in
+# batches via PUT /files/{id}/chunks. MAX_CHUNKS_PER_FILE and EMBEDDING_DIMENSION must
+# match the central service's config (infra/stack.py); a file with more chunks is
+# uploaded only up to the first MAX_CHUNKS_PER_FILE, like tags use the start of a file.
+CHUNK_UPLOAD_BATCH_SIZE = 100
+MAX_CHUNKS_PER_FILE = 2000
+# A batch is about 0.5-1 MB of JSON, so it gets a longer timeout than a normal call.
+CHUNK_UPLOAD_TIMEOUT_SECONDS = 60
+
 # Relay WebSocket, owner side (agent/app/central/relay.py). URL is the CDK output
 # "WebSocketUrl". infra/stack.py sets no custom idle-timeout or max-connection-age
 # override on the WebSocket API (confirmed 2026-10-16) - it runs on API Gateway's
@@ -164,6 +173,8 @@ ASK_MAX_TOTAL_CHARS = 8000
 # outputTokens: 800 exactly). Raised; ask_service.py also now detects and flags
 # truncation explicitly so this fails visibly instead of silently, if it recurs.
 ASK_MAX_ANSWER_TOKENS = 2000
+# How many teammate chunks to ask central for when Ask includes teammates' files (E6-S6).
+TEAMMATE_CHUNK_LIMIT = 20
 
 # Tag generation (agent/app/folders/scanner.py): runs automatically on add/rescan for
 # every newly indexed file (explicit product decision, 2026-10-15 — cost/latency

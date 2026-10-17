@@ -17,7 +17,7 @@ def api(isolated_store, client):
 def fake_ask(monkeypatch):
     calls = []
 
-    def fake(question, folder_ids=None, file_ids=None):
+    def fake(question, folder_ids=None, file_ids=None, include_teammates=False):
         calls.append(question)
         return {
             "answer": f"Answer to: {question}",
@@ -115,7 +115,7 @@ def test_unknown_chats_are_404(api, fake_ask):
 
 
 def test_a_failed_answer_saves_nothing_so_the_question_can_be_retried(api, monkeypatch):
-    def broken(question, folder_ids=None, file_ids=None):
+    def broken(question, folder_ids=None, file_ids=None, include_teammates=False):
         raise ApiError(503, "service_unavailable", "model unavailable")
 
     monkeypatch.setattr("app.api.routes_chats.ask", broken)

@@ -12,6 +12,7 @@ class ChatQuestion(BaseModel):
     question: str
     folder_ids: list[str] | None = None
     file_ids: list[str] | None = None
+    include_teammates: bool = False
 
 
 @router.get("/chats")
@@ -48,6 +49,12 @@ def post_chat_message(chat_id: str, body: ChatQuestion):
         raise ApiError(404, "not_found", "chat not found")
 
     # Ask first: if the model call fails, nothing is saved and the question can be retried.
-    answer = ask(question, folder_ids=body.folder_ids, file_ids=body.file_ids)
+    answer = ask(
+        question, folder_ids=body.folder_ids, file_ids=body.file_ids,
+        include_teammates=body.include_teammates,
+    )
     messages = store.add_exchange(chat_id, question, answer["answer"], answer["sources"])
+    if "teammate_skipped_reason" in answer:
+        # Shown with the live answer only; not saved with the chat.
+        messages[-1]["teammate_skipped_reason"] = answer["teammate_skipped_reason"]
     return {"messages": messages}

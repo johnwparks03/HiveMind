@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS files (
     tags                TEXT,              -- JSON array, set at publish time (not used locally yet)
     public_state        TEXT NOT NULL DEFAULT 'private',  -- private | public (central features, not used yet)
     publish_state       TEXT,              -- pending | published | failed
+    publish_failed_intent TEXT,            -- publish | unpublish: which direction failed, so retry() redoes it
     published_at        TEXT,
     expires_at           TEXT,
     last_confirmed       TEXT
@@ -41,9 +42,11 @@ CREATE TABLE IF NOT EXISTS excluded_files (
 -- Durable publish/unpublish queue (agent/app/central/publish.py). One row per
 -- file_id: a repeat enqueue with a new intent overwrites the row ("latest intent
 -- wins" instead of queuing contradictory work), and survives an agent restart
--- mid-publish.
+-- mid-publish. No foreign key to files: a queued unpublish must outlive the local
+-- row of a file that was deleted, removed with its folder, or found missing (E6-S6),
+-- so the file's chunk text does not stay readable centrally.
 CREATE TABLE IF NOT EXISTS publish_queue (
-    file_id         TEXT PRIMARY KEY REFERENCES files(file_id),
+    file_id         TEXT PRIMARY KEY,
     intent          TEXT NOT NULL CHECK (intent IN ('publish', 'unpublish')),
     attempts        INTEGER NOT NULL DEFAULT 0,
     next_attempt_at TEXT NOT NULL,
@@ -64,7 +67,8 @@ CREATE TABLE IF NOT EXISTS chat_messages (
     chat_id    TEXT NOT NULL REFERENCES chats(chat_id) ON DELETE CASCADE,
     role       TEXT NOT NULL CHECK (role IN ('user', 'assistant')),
     content    TEXT NOT NULL,
-    sources    TEXT,              -- JSON list of {file_id, filename}; null for user messages
+    sources    TEXT,              -- JSON list of {file_id, filename, source}; source is 'local' or
+                              -- 'teammate' (absent on older rows: treat as local); null for user messages
     created_at TEXT NOT NULL
 );
 
@@ -100,9 +104,43 @@ def get_connection() -> sqlite3.Connection:
     return conn
 
 
+def _migrate_publish_queue(conn: sqlite3.Connection) -> None:
+    """E6-S6: databases created before this had a foreign key from publish_queue to files,
+    which would block queueing an unpublish for a file whose row is being deleted. SQLite
+    cannot drop a constraint, so rebuild the table once. Idempotent: a table without the
+    foreign key is left alone, and queued rows are kept."""
+    if not conn.execute("PRAGMA foreign_key_list(publish_queue)").fetchall():
+        return
+    conn.executescript("""
+        BEGIN;
+        CREATE TABLE publish_queue_new (
+            file_id         TEXT PRIMARY KEY,
+            intent          TEXT NOT NULL CHECK (intent IN ('publish', 'unpublish')),
+            attempts        INTEGER NOT NULL DEFAULT 0,
+            next_attempt_at TEXT NOT NULL,
+            last_error      TEXT
+        );
+        INSERT INTO publish_queue_new SELECT file_id, intent, attempts, next_attempt_at, last_error
+            FROM publish_queue;
+        DROP TABLE publish_queue;
+        ALTER TABLE publish_queue_new RENAME TO publish_queue;
+        COMMIT;
+    """)
+
+
+def _migrate_files_columns(conn: sqlite3.Connection) -> None:
+    """E6-S6: remember which direction of a publish failed. Idempotent ADD COLUMN for
+    databases created before the column existed."""
+    columns = {row["name"] for row in conn.execute("PRAGMA table_info(files)").fetchall()}
+    if "publish_failed_intent" not in columns:
+        conn.execute("ALTER TABLE files ADD COLUMN publish_failed_intent TEXT")
+
+
 def init_db() -> None:
     with get_connection() as conn:
         conn.executescript(SCHEMA)
+        _migrate_files_columns(conn)
+        _migrate_publish_queue(conn)
 
 
 @contextmanager

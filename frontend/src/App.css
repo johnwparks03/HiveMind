@@ -1869,3 +1869,11 @@ input:focus {
 .ask-footnote {
   margin-top: 8px;
 }
+
+/* A spinner inside a status pill sits where the dot would. */
+.pill .spinner {
+  width: 11px;
+  height: 11px;
+  margin-right: 0;
+  border-width: 2px;
+}

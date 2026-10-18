@@ -1,7 +1,8 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
-import { failureText, isTerminal, startErrorText, statusText } from "../lib/transfer";
+import { failureText, startErrorText, statusText, transferPhase } from "../lib/transfer";
+import { Spinner } from "./Loading";
 
 // Download button and progress for one teammate file (docs/stories BACKLOG.md E4-S4/S5). The agent
 // handles the relay/S3 round-trip and polls central itself; this polls the agent's own
@@ -24,6 +25,7 @@ export default function TransferControl({ fileId, filename, disabled = false, di
   });
 
   const status = transfer.data?.status;
+  const phase = transferPhase({ requestPending: request.isPending, transferId, status });
 
   function retry() {
     setTransferId(null);
@@ -32,36 +34,38 @@ export default function TransferControl({ fileId, filename, disabled = false, di
 
   return (
     <div className={className}>
-      {!transferId && (
+      {(phase === "idle" || phase === "starting") && (
         <button
           type="button"
           className="btn btn-outline btn-sm"
           onClick={() => request.mutate()}
-          disabled={request.isPending || disabled}
+          disabled={phase === "starting" || disabled}
           title={disabled ? disabledTitle : undefined}
         >
-          Download
+          {phase === "starting" ? <><Spinner />Requesting…</> : "Download"}
         </button>
       )}
 
-      {status === "downloaded" && (
+      {phase === "working" && (
+        <span className="pill pill-pending" role="status">
+          <Spinner />
+          {statusText(status ?? "requested")}
+        </span>
+      )}
+
+      {phase === "downloaded" && (
         <span className="pill pill-indexed">Saved to {transfer.data.saved_path}</span>
       )}
 
-      {status === "failed" && (
+      {(phase === "failed" || phase === "expired") && (
         <>
-          <span className="pill pill-failed">{failureText(transfer.data.error_code)}</span>
+          <span className="pill pill-failed">
+            {phase === "expired" ? "This download expired before it finished." : failureText(transfer.data.error_code)}
+          </span>
           <button type="button" className="btn btn-outline btn-sm" onClick={retry}>
             Retry
           </button>
         </>
-      )}
-
-      {status && !isTerminal(status) && (
-        <span className="pill pill-pending">
-          <span className="pill-dot" aria-hidden="true" />
-          {statusText(status)}
-        </span>
       )}
 
       {request.isError && (

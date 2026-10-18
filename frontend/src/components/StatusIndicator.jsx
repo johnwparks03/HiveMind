@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
+import { Spinner } from "./Loading";
 
 // Local-only for now: agent reachability. Signed-in and relay state arrive with the central service (Feature_List 2.4).
 export default function StatusIndicator() {
@@ -24,7 +25,7 @@ export default function StatusIndicator() {
 
   return (
     <div className="status" role="status" title={hint}>
-      <span className={`dot dot-${state}`} aria-hidden="true" />
+      {state === "checking" ? <Spinner /> : <span className={`dot dot-${state}`} aria-hidden="true" />}
       <span className="status-label">{label}</span>
     </div>
   );

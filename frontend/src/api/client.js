@@ -65,18 +65,27 @@ export const api = {
   // Online-only (local Bedrock call, decided 2026-10-15, demo/MVP) — unlike search,
   // there's no offline fallback for synthesizing an answer across files.
   // fileIds optionally scopes which files to consider; omitted/empty searches everything.
-  ask: (question, fileIds) =>
-    request("/ask", { method: "POST", body: JSON.stringify({ question, file_ids: fileIds ?? [] }) }),
+  // includeTeammates also uses teammates' public files; the answer then carries teammate_skipped_reason.
+  ask: (question, fileIds, includeTeammates) =>
+    request("/ask", {
+      method: "POST",
+      body: JSON.stringify({ question, file_ids: fileIds ?? [], include_teammates: Boolean(includeTeammates) }),
+    }),
   // Saved Ask chats (agent-local). A chat is created on first question if the user hasn't started one.
   listChats: () => request("/chats").then((data) => data.chats),
   createChat: () => request("/chats", { method: "POST" }),
   getChat: (chatId) => request(`/chats/${chatId}`),
   deleteChat: (chatId) => request(`/chats/${chatId}`, { method: "DELETE" }),
-  askInChat: (chatId, question, fileIds) =>
+  // Resolves to { messages, teammateSkippedReason }. The reason (why teammates' files were left out, or
+  // null) is only on the live answer; it is not saved with the chat, so the caller has to keep it.
+  askInChat: (chatId, question, fileIds, includeTeammates) =>
     request(`/chats/${chatId}/messages`, {
       method: "POST",
-      body: JSON.stringify({ question, file_ids: fileIds ?? [] }),
-    }).then((data) => data.messages),
+      body: JSON.stringify({ question, file_ids: fileIds ?? [], include_teammates: Boolean(includeTeammates) }),
+    }).then((data) => ({
+      messages: data.messages,
+      teammateSkippedReason: data.messages?.[data.messages.length - 1]?.teammate_skipped_reason ?? null,
+    })),
   listFolders: () => request("/folders").then((data) => data.folders),
   listFiles: () => request("/files").then((data) => data.files.map(normaliseFile)),
   addFolder: (path) => request("/folders", { method: "POST", body: JSON.stringify({ path }) }),

@@ -85,9 +85,10 @@ def test_acks_uploads_and_completes_for_a_valid_public_file(isolated_store, tmp_
 
     uploaded = {}
 
-    def _fake_put(url, content=None, timeout=None):
+    def _fake_put(url, content=None, headers=None, timeout=None):
         uploaded["url"] = url
         uploaded["body"] = b"".join(content)
+        uploaded["headers"] = headers
         return httpx.Response(200, request=httpx.Request("PUT", url))
 
     monkeypatch.setattr(relay.httpx, "put", _fake_put)
@@ -100,6 +101,7 @@ def test_acks_uploads_and_completes_for_a_valid_public_file(isolated_store, tmp_
     assert complete_body == {"size_bytes": len(b"hello world")}
     assert uploaded["url"] == PAYLOAD["upload_url"]
     assert uploaded["body"] == b"hello world"
+    assert uploaded["headers"] == {"Content-Length": "11"}  # S3 needs the size up front
 
 
 def test_upload_error_reports_fail_not_complete(isolated_store, tmp_path, central, monkeypatch):
@@ -107,7 +109,7 @@ def test_upload_error_reports_fail_not_complete(isolated_store, tmp_path, centra
     path.write_text("hello world")
     _seed_file("a", str(path), public_state="public")
 
-    def _broken_put(url, content=None, timeout=None):
+    def _broken_put(url, content=None, headers=None, timeout=None):
         raise httpx.ConnectError("boom")
 
     monkeypatch.setattr(relay.httpx, "put", _broken_put)
@@ -137,3 +139,84 @@ def test_state_defaults_to_disconnected():
 
 def test_close_is_a_no_op_with_no_live_connection():
     relay.close()  # must not raise even with nothing connected
+
+
+# --- the real upload request, against a local server standing in for S3 ---------------------------------
+
+
+def _serve_puts():
+    """A local HTTP server that records how each PUT arrives, as S3 would see it."""
+    import http.server
+    import threading
+
+    seen = []
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def do_PUT(self):
+            headers = {k.lower(): v for k, v in self.headers.items()}
+            if headers.get("transfer-encoding", "").lower() == "chunked":
+                # What S3 rejects with 501 NotImplemented.
+                seen.append({"chunked": True, "body": b""})
+                self.send_response(501)
+                self.send_header("Content-Type", "application/xml")
+                body = b"<Error><Code>NotImplemented</Code><Message>chunked</Message></Error>"
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+                return
+            body = self.rfile.read(int(headers["content-length"]))
+            seen.append({"chunked": False, "content_length": int(headers["content-length"]), "body": body})
+            self.send_response(200)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+
+        def log_message(self, *args):
+            pass
+
+    server = http.server.HTTPServer(("127.0.0.1", 0), Handler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    return server, seen
+
+
+def test_the_upload_goes_out_with_a_content_length_not_chunked(isolated_store, tmp_path, central, monkeypatch):
+    # A bare generator makes httpx send Transfer-Encoding: chunked, which S3 refuses for a presigned PUT.
+    monkeypatch.setattr(config, "TRANSFER_UPLOAD_CHUNK_BYTES", 4)  # several pieces, still one declared length
+    path = tmp_path / "a.txt"
+    path.write_bytes(b"hello world, streamed in small pieces")
+    _seed_file("a", str(path), public_state="public")
+    server, seen = _serve_puts()
+    try:
+        relay._handle_upload_request({**PAYLOAD, "upload_url": f"http://127.0.0.1:{server.server_port}/key"})
+    finally:
+        server.shutdown()
+
+    assert seen == [{"chunked": False, "content_length": 37, "body": b"hello world, streamed in small pieces"}]
+    routes = [route for route, _ in central.calls]
+    assert "POST /transfers/t1/complete" in routes and "POST /transfers/t1/fail" not in routes
+
+
+def test_a_refused_upload_is_logged_with_its_status_but_never_the_url(isolated_store, tmp_path, central, monkeypatch, caplog):
+    path = tmp_path / "a.txt"
+    path.write_text("hello world")
+    _seed_file("a", str(path), public_state="public")
+
+    def _refused(url, content=None, headers=None, timeout=None):
+        request = httpx.Request("PUT", url)
+        return httpx.Response(501, request=request, text="<Error><Code>NotImplemented</Code></Error>")
+
+    monkeypatch.setattr(relay.httpx, "put", _refused)
+    with caplog.at_level("WARNING", logger="app.central.relay"):
+        relay._handle_upload_request({**PAYLOAD, "upload_url": "https://bucket.example/key?X-Amz-Signature=SECRET"})
+
+    assert "HTTP 501 NotImplemented" in caplog.text
+    assert "SECRET" not in caplog.text and "X-Amz-Signature" not in caplog.text
+    assert any(route == "POST /transfers/t1/fail" for route, _ in central.calls)
+
+
+def test_describe_upload_error_names_the_kind_of_failure():
+    assert relay._describe_upload_error(httpx.ConnectError("x")) == "ConnectError"
+    refused = httpx.HTTPStatusError(
+        "x", request=httpx.Request("PUT", "https://b/k"), response=httpx.Response(403, text="<Code>AccessDenied</Code>"))
+    assert relay._describe_upload_error(refused) == "HTTP 403 AccessDenied"
+    plain = httpx.HTTPStatusError("x", request=httpx.Request("PUT", "https://b/k"), response=httpx.Response(500, text="oops"))
+    assert relay._describe_upload_error(plain) == "HTTP 500"

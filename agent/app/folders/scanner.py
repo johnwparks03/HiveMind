@@ -3,10 +3,12 @@ detection so unchanged files aren't re-indexed. The continuous watcher (watchdog
 lives in watcher.py and calls back into scan_folder on any change.
 """
 import json
+import threading
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
+from app.central import publish
 from app.config import TAG_EXCERPT_MAX_CHARS
 from app.db import session
 from app.errors import ApiError
@@ -33,6 +35,29 @@ def _generate_tags_best_effort(filename: str, excerpt: str | None) -> str | None
         return None
 
 
+_scan_locks: dict[str, threading.Lock] = {}
+_scan_locks_guard = threading.Lock()
+
+
+def _folder_lock(folder_id: str) -> threading.Lock:
+    with _scan_locks_guard:
+        return _scan_locks.setdefault(folder_id, threading.Lock())
+
+
+def _is_shared(row) -> bool:
+    """True when the file is public centrally, or a publish for it is queued or in flight:
+    the cases where a local deletion must also tell central, because the file's chunk text
+    would otherwise stay readable by teammates until it expires."""
+    return row["public_state"] == "public" or row["publish_state"] is not None
+
+
+def _sync_central(changes: list[tuple[str, str]]) -> None:
+    """Queues the central side of local changes. Runs after the scan's own database
+    transaction has closed (SQLite has one writer), and never raises into the scan."""
+    for file_id, intent in changes:
+        publish.enqueue_sync(file_id, intent)
+
+
 def add_folder(path: str) -> str:
     folder_id = str(uuid.uuid4())
     with session() as conn:
@@ -48,9 +73,12 @@ def exclude_files(file_ids: list[str]) -> int:
     """Removes files from HiveMind: drops their index entries and remembers their paths so
     rescans skip them. Nothing is deleted from disk. Returns how many were removed."""
     removed = 0
+    unpublish: list[tuple[str, str]] = []
     with session() as conn:
         for file_id in file_ids:
-            row = conn.execute("SELECT path FROM files WHERE file_id = ?", (file_id,)).fetchone()
+            row = conn.execute(
+                "SELECT path, public_state, publish_state FROM files WHERE file_id = ?", (file_id,)
+            ).fetchone()
             if not row:
                 continue
             conn.execute(
@@ -59,7 +87,10 @@ def exclude_files(file_ids: list[str]) -> int:
             )
             delete_file(file_id)
             conn.execute("DELETE FROM files WHERE file_id = ?", (file_id,))
+            if _is_shared(row):
+                unpublish.append((file_id, "unpublish"))
             removed += 1
+    _sync_central(unpublish)
     return removed
 
 
@@ -76,25 +107,35 @@ def remove_folder(folder_id: str) -> bool:
         row = conn.execute("SELECT folder_id FROM folders WHERE folder_id = ?", (folder_id,)).fetchone()
         if not row:
             return False
-        file_ids = [r["file_id"] for r in conn.execute(
-            "SELECT file_id FROM files WHERE folder_id = ?", (folder_id,)
-        ).fetchall()]
-        for file_id in file_ids:
-            delete_file(file_id)
+        rows = conn.execute(
+            "SELECT file_id, public_state, publish_state FROM files WHERE folder_id = ?", (folder_id,)
+        ).fetchall()
+        for row in rows:
+            delete_file(row["file_id"])
         conn.execute("DELETE FROM files WHERE folder_id = ?", (folder_id,))
         conn.execute("DELETE FROM folders WHERE folder_id = ?", (folder_id,))
+        unpublish = [(row["file_id"], "unpublish") for row in rows if _is_shared(row)]
+    _sync_central(unpublish)
     return True
 
 
 def scan_folder(folder_id: str, path: str) -> dict:
     """Walks the folder, registers new files, re-indexes changed ones, skips
     unchanged ones (by content hash), and marks missing ones as removed.
+    One scan of a folder at a time: the watcher, the rescan route and add_folder can overlap, and
+    two scans of the same folder would both try to register the same new file.
     """
+    with _folder_lock(folder_id):
+        return _scan_folder(folder_id, path)
+
+
+def _scan_folder(folder_id: str, path: str) -> dict:
     source = LocalFilesystemSource(path)
     found = source.list_files()
     found_paths = {f.source_path for f in found}
 
     stats = {"added": 0, "reindexed": 0, "unchanged": 0, "failed": 0, "removed": 0}
+    central_changes: list[tuple[str, str]] = []
 
     with session() as conn:
         existing = {
@@ -151,6 +192,12 @@ def scan_folder(folder_id: str, path: str) -> dict:
                     ),
                 )
                 stats["reindexed"] += 1
+                if existing_row["public_state"] == "public":
+                    # Content changed under a published file: re-send its metadata and chunks,
+                    # or pull it back if it can no longer be indexed, so teammates never
+                    # read stale text.
+                    indexed = index_result["index_status"] == "indexed"
+                    central_changes.append((file_id, "publish" if indexed else "unpublish"))
             else:
                 conn.execute(
                     """INSERT INTO files
@@ -182,5 +229,8 @@ def scan_folder(folder_id: str, path: str) -> dict:
                 conn.execute("DELETE FROM files WHERE file_id = ?", (row["file_id"],))
                 delete_file(row["file_id"])
                 stats["removed"] += 1
+                if _is_shared(row):
+                    central_changes.append((row["file_id"], "unpublish"))
 
+    _sync_central(central_changes)
     return stats

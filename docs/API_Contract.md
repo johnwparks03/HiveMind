@@ -10,7 +10,7 @@ This contract is derived from the feature list. Paths, field names, header names
 |B|**Central API**|Local agent → central service|HTTPS (API Gateway HTTP API)|
 |C|**Relay**|Central service ↔ local agent|WebSocket (API Gateway WebSocket API) plus presigned S3 URLs|
 
-The frontend never calls the central service. Bedrock is only called from the central `/llm/*` endpoints.
+The frontend never calls the central service. Bedrock is called from the central `/llm/*` endpoints, and, as a demo/MVP exception (see `CLAUDE.md` and section 7), directly from the local agent for Ask.
 
 ## 1. Conventions
 
@@ -256,21 +256,22 @@ Flow: the agent parses the query itself with a local deterministic parser (alway
 
 Errors: `POST /search` itself does not return 503 for LLM-proxy failures — the local parser always produces a usable `interpreted` result, so local search always succeeds. A `503 service_unavailable` here means the **central search** portion failed after local results already came back with `include_teammates` true or a local miss; in that case `teammate.searched` is `false` with `skipped_reason: "central_unavailable"` rather than failing the whole request. Owner identity is not returned.
 
-### 2.5a Ask (local-only, decided 2026-10-15, demo/MVP)
+### 2.5a Ask (decided 2026-10-15, demo/MVP; teammate documents added in E6)
 
-**`POST /ask`** → `{ "question": "what did we do the last two weeks", "folder_ids": ["…"], "file_ids": ["…"] }`. Unlike `/search`, this is online-only (no offline fallback) — synthesizing an answer across documents genuinely needs a generative model, and there is no local one. The agent runs the same local retrieval as `/search` (date filter, then vector ranking — or, with no topic in the question, lists broadly by recency within the date range) across up to a few files' worth of content, then calls Bedrock directly (architecture exception, see `CLAUDE.md`) to synthesize an answer from those excerpts.
+**`POST /ask`** → `{ "question": "what did we do the last two weeks", "folder_ids": ["…"], "file_ids": ["…"], "include_teammates": false }`. `include_teammates` is optional (default `false`). When `true`, the agent also embeds the question topic locally, calls central `POST /retrieval/search` (section 3.3a) with that same vector (the question text never leaves the machine except to Bedrock), and merges the returned teammate chunks with its local chunks (grouped per file, ranked by distance, within the same size caps) before calling Bedrock. Unlike `/search`, this is online-only (no offline fallback) — synthesizing an answer across documents genuinely needs a generative model, and there is no local one. The agent runs the same local retrieval as `/search` (date filter, then vector ranking — or, with no topic in the question, lists broadly by recency within the date range) across up to a few files' worth of content, then calls Bedrock directly (architecture exception, see `CLAUDE.md`) to synthesize an answer from those excerpts.
 
-`folder_ids`/`file_ids` are both optional (decided 2026-10-16) and additive — the union of every file in a selected folder plus every individually selected file, not an intersection. Both omitted or empty means no restriction: search every indexed file, same as before this existed. The frontend's Ask page scope picker sends whichever files are checked (a checked folder resolves client-side to all of its files' `file_ids`; the agent also accepts `folder_ids` directly for any other caller). A scope that resolves to zero real files returns the same "no files matched" response as a genuinely empty result, without calling Bedrock.
+`folder_ids`/`file_ids` are both optional (decided 2026-10-16) and additive — the union of every file in a selected folder plus every individually selected file, not an intersection. Both omitted or empty means no restriction: search every indexed file, same as before this existed. The frontend's Ask page scope picker sends whichever files are checked (a checked folder resolves client-side to all of its files' `file_ids`; the agent also accepts `folder_ids` directly for any other caller). A scope that resolves to zero real files returns the same "no files matched" response as a genuinely empty result, without calling Bedrock, unless `include_teammates` is `true`: the picks narrow only the user's own files, and teammates' files are still searched whichever files or folders are picked.
 
 ```json
 // 200
 {
   "answer": "…",
-  "sources": [ { "file_id": "…", "filename": "…" } ]
+  "sources": [ { "file_id": "…", "filename": "…", "source": "local" } ],   // "source": "local" | "teammate"
+  "teammate_skipped_reason": null   // only present when include_teammates is true; null = teammates were searched
 }
 ```
 
-`sources` lists the files whose content was actually given to the model, not a claim that every one was cited in the answer. Errors: `503 service_unavailable` if AWS credentials aren't configured or Bedrock is unreachable. A question that matches no files returns `200` with a plain "no files matched" answer and an empty `sources`, not an error — scoped to the user's own local files only; teammate content isn't pulled in (central search is metadata-only today, so there's no file content there to retrieve).
+`sources` lists the files whose content was actually given to the model, not a claim that every one was cited in the answer. Errors: `503 service_unavailable` if AWS credentials aren't configured or Bedrock is unreachable. A question that matches no files returns `200` with a plain "no files matched" answer and an empty `sources`, not an error. Without `include_teammates` the scope is the user's own local files only. Each source carries `source: "local"` or `"teammate"`; a teammate source has no local path, so the frontend offers a download (`POST /transfers`) instead of Open. With `include_teammates` the response carries `teammate_skipped_reason`, `null` when teammates' files were searched and otherwise why they were left out: `no_topic` (the question has no topic to embed, so there is nothing to rank teammate chunks by), `date_filter` (the question has a date range, which central cannot apply to chunks), `no_team`, or `central_unavailable`. In every case the agent still answers from local files and never fails because of teammates. The reason belongs to the live response; it is not saved with a chat (`POST /chats/{id}/messages` returns it on the assistant message, `GET /chats/{id}` does not), while each saved source keeps its `source` flag (older saved sources without one are local). `POST /chats/{id}/messages` accepts `include_teammates` like `POST /ask`. Teammate excerpts are untrusted text: the Ask prompt treats them as data, never instructions.
 
 ### 2.6 Transfers
 
@@ -343,7 +344,35 @@ Rules:
 - On an existing row, `published_at`, `expires_at`, and `last_confirmed` are **preserved**. Only `confirm` extends expiry (decided).
 - Errors: `403 no_team`, `400 invalid_request`.
 
-**`DELETE /files/{file_id}`** → `204`. Idempotent: also `204` if the row does not exist. Another user's file returns `403 forbidden`.
+**`PUT /files/{file_id}/chunks`** (upload a published file's content chunks and embeddings; idempotent replace)
+
+```json
+// request (one batch)
+{
+  "chunks": [
+    { "chunk_index": 0, "text": "…", "embedding": [0.012, -0.034, "…384 floats"] }
+  ],
+  "batch": 1,
+  "total_batches": 3
+}
+// 200
+{ "file_id": "…", "chunk_count": 0, "committed": false }   // committed true, chunk_count = total, on the final batch
+```
+
+Rules:
+
+- The file must already exist in `public_files` (publish with `PUT /files/{id}` first) and belong to the caller.
+- Each batch holds at most `CHUNK_UPLOAD_BATCH_SIZE` chunks (config), sized under the API Gateway HTTP API 10 MB and Lambda synchronous 6 MB payload limits.
+- Batches are staged. The staged set replaces the file's existing chunks atomically when the final batch (`batch == total_batches`) arrives, so a reader never sees a partial or mixed set. Retrying a batch or the whole upload leaves exactly one chunk set.
+- Starting a new upload (`batch` 1) discards any earlier uncommitted staging for the file. Staging that is never committed is removed after `CHUNK_STAGING_TTL_MINUTES` (default 60) by the sweeper.
+- Retries: re-sending a batch (or the whole upload from batch 1) is safe and leaves one chunk set. If the final batch is re-sent after it already committed, staging is empty, so the request fails with `400 invalid_request` (`batch`) and the committed set is left intact; the agent restarts from batch 1. The same `400` is returned if an earlier batch is missing, `total_batches` changes between batches, or chunk indexes are not contiguous from 0 (`chunks`).
+- An empty `chunks` list is allowed only with `total_batches` 1 and commits an empty set (a file with no text).
+- `embedding` must have `EMBEDDING_DIMENSION` (384) entries. A file may have at most `MAX_CHUNKS_PER_FILE` chunks in total (config).
+- Sets `chunk_count` and `chunks_indexed_at` on the file row on commit. Request bodies, chunk text and vectors are never logged. Audit event: `chunks_put` on the final batch (section 5).
+- Chunks are deleted with the file row (`DELETE /files/{id}`, expiry, team leave).
+- Errors: `403 no_team`, `403 forbidden` (not the owner), `404 not_found` (no published file row), `400 invalid_request` (`details.fields` names the bad fields, e.g. wrong embedding length, over `MAX_CHUNKS_PER_FILE`, inconsistent `batch`/`total_batches`).
+
+**`DELETE /files/{file_id}`** → `204`. Idempotent: also `204` if the row does not exist. Another user's file returns `403 forbidden`. Its chunks are removed with it.
 
 **`POST /files/{file_id}/confirm`** → `200 { "expires_at", "last_confirmed" }`. Sets `expires_at` to now + 45 days. Errors: `404 not_found` (row was purged; the agent marks the file as no longer published).
 
@@ -353,7 +382,7 @@ Rules:
 // 200
 {
   "files": [
-    { "file_id": "…", "filename": "…", "published_at": "…", "expires_at": "…", "last_confirmed": "…" }
+    { "file_id": "…", "filename": "…", "published_at": "…", "expires_at": "…", "last_confirmed": "…", "chunk_count": 0 }
   ],
   "next_cursor": null
 }
@@ -393,6 +422,39 @@ Rules:
 - Dates `null`: topic-only search over all non-expired team files.
 - Ordering: relevance, then recency. Capped at a configurable maximum (e.g. 20).
 - Errors: `403 no_team`.
+
+### 3.3a Retrieval search (content chunks, for Ask)
+
+**`POST /retrieval/search`**
+
+```json
+// request (the agent embeds the question locally; query text never reaches central)
+{
+  "query_embedding": [0.012, -0.034, "…384 floats"],
+  "file_ids": ["…"],                              // optional: restrict to these files
+  "limit": 20                                     // optional
+}
+// 200
+{
+  "results": [
+    {
+      "file_id": "…", "filename": "…", "chunk_index": 3,
+      "text": "…", "distance": 0.31
+    }
+  ]
+}
+```
+
+Rules:
+
+- Scope: the caller's team only, excluding the caller's own files, rows past `expires_at`, and files with no indexed chunks. The team is derived from membership.
+- Ordering: ascending cosine `distance` across all matching chunks (ties broken by `file_id`, then `chunk_index`). `limit` defaults to `RETRIEVAL_LIMIT_DEFAULT` (20) and a larger value is clamped to `RETRIEVAL_LIMIT_MAX` (50), both config; a `limit` below 1 or that is not an integer is `400 invalid_request`.
+- `file_ids` (optional, at most 200 non-empty strings): ids that are unknown, expired, the caller's own, or on another team match nothing. They are not an error and reveal nothing. An empty list matches nothing.
+- The HNSW index filters after its scan, so the query runs with pgvector's iterative scan (`hnsw.iterative_scan = strict_order`, pgvector 0.8+) and still returns up to `limit` rows when the filter is selective.
+- Owner identity is not returned.
+- `query_embedding` must have `EMBEDDING_DIMENSION` (384) entries, produced with all-MiniLM-L6-v2 (normalized), or the call fails `400 invalid_request`.
+- The vector and the returned text are never logged. Audit event: `retrieval_search` (section 5).
+- Errors: `403 no_team`, `400 invalid_request`, `503 service_unavailable`.
 
 ### 3.4 LLM proxy (Bedrock)
 
@@ -531,11 +593,13 @@ Acknowledgment, completion, and failure go over HTTP, not the WebSocket, so they
 
 ## 5. Server-side behavior that affects the contract
 
-**Access log events** (append-only; identifiers, counts, and matched `file_id`s only; never filenames, content, or excerpts)
+**Access log events** (append-only; identifiers, counts, and matched `file_id`s only; never filenames, content, excerpts, chunk text, or query vectors)
 
 |Endpoint|`event_type`|`details`|
 |---|---|---|
 |`POST /search`|`search`|`topic`, `date_from`, `date_to`, `count`, `matched_file_ids`|
+|`PUT /files/{id}/chunks` (final batch)|`chunks_put`|`file_id`|
+|`POST /retrieval/search`|`retrieval_search`|matched `file_id`s only (one row per distinct file; one row with no file when empty)|
 |`PUT /files/{id}` (first publish)|`publish`|`file_id`|
 |`DELETE /files/{id}`|`unpublish`|`file_id`|
 |`POST /files/{id}/confirm`|`confirm`|`file_id`|
@@ -549,15 +613,16 @@ Acknowledgment, completion, and failure go over HTTP, not the WebSocket, so they
 **Scheduled jobs (not part of any API)**
 
 - Transfer sweeper, every minute: deletes the S3 object of every transfer more than 15 minutes old and marks it `expired` (a transfer already `failed` keeps that status), marks transfers with no acknowledgment after 60 seconds `failed` / `owner_unresponsive`, and marks transfers still `uploading` 600 seconds after the ack `failed` / `upload_failed`. Repeated runs change nothing further.
-- Nightly purge: deletes expired `public_files` rows, expired invites, and stale `connections` rows.
+- Nightly purge: deletes expired `public_files` rows, expired invites, and stale `connections` rows. A file's chunks are deleted with its `public_files` row (cascade), so unpublish, delete, team leave and expiry all purge them. Retrieval also excludes rows past `expires_at` before the purge runs.
 
 ---
 
 ## 6. Agent internal behaviors that the contract assumes
 
-- **Publish pipeline per file:** `POST /llm/tags` (skipped if the file already has tags), then `PUT /files/{id}`. Both steps live in the persistent queue and are retried with exponential backoff, throttled to 5 concurrent requests.
-- **Unpublish and re-sync** use the same queue. Only the latest intent per file is kept.
-- **Reconciliation:** the agent periodically calls `GET /files/mine` and corrects files the server no longer has.
+- **Publish pipeline per file:** `POST /llm/tags` (skipped if the file already has tags), then `PUT /files/{id}`, then `PUT /files/{id}/chunks` (the file's chunks and embeddings read from the local Chroma index, uploaded in batches of `CHUNK_UPLOAD_BATCH_SIZE`). All steps live in the persistent queue and are retried with exponential backoff, throttled to 5 concurrent requests. Every attempt starts the chunk upload at batch 1 (the queue keeps one row per file, no per-batch progress). A file with more than `MAX_CHUNKS_PER_FILE` chunks is uploaded up to its first `MAX_CHUNKS_PER_FILE`; a file with none uploads an empty set, which also clears chunks of an earlier version. If the local chunks have a gap (the file is mid re-index) nothing is sent and the attempt is retried. A `400`, `403` or `404` answer to a chunk upload cannot be fixed by retrying, so the file is marked `failed` at once; the direction that failed is remembered so a retry redoes the publish and never unpublishes a file by mistake.
+- **Unpublish and re-sync** use the same queue. Only the latest intent per file is kept. When a public file's content is re-indexed, a publish is queued (metadata and chunks are re-sent); if it can no longer be indexed, an unpublish is queued instead, so teammates never read stale text. **Delete sync:** deleting a file, removing it from HiveMind, removing its folder, or a rescan finding it missing on disk queues an unpublish for every file that is public or has a publish queued, and the queue entry survives the local row. Unpublish needs no chunk call: deleting the file row removes its chunks.
+- **Chunk backfill:** during reconciliation, published files that central holds no chunks for (`GET /files/mine` reports `chunk_count` 0) are queued for upload, provided they are indexed, have local chunks, are not `failed` and have nothing queued already.
+- **Reconciliation:** the agent periodically calls `GET /files/mine`, following every page, and corrects files the server no longer has.
 - **Transfer polling:** the agent polls `GET /transfers/{id}` on the central service every 1 to 2 seconds, then downloads and writes to the Windows Downloads folder with a numeric suffix on collisions.
 - **Local search parses every query locally first** (deterministic parser, no network call). If online, the agent also tries `/llm/query` with a short timeout and uses its result instead on success; on failure or timeout it keeps the local parse. Local search never returns `503` because of this call.
 
@@ -579,6 +644,14 @@ Acknowledgment, completion, and failure go over HTTP, not the WebSocket, so they
 7. **`429 too_many_attempts`** added to the common errors for Cognito rate limiting.
 8. **Validation failures return `400 invalid_request`** with `details.fields` naming the bad fields, never their values.
 9. **Agent settings** come from `agent/.env` or the environment (`HIVEMIND_COGNITO_CLIENT_ID`, `HIVEMIND_CENTRAL_API_URL`). If unset, auth endpoints return `503 service_unavailable` with `details.missing`.
+
+### Settled for E6 (Ask over teammates' documents, central chunk index)
+
+10. **Central chunk index.** Chunk text and 384-dim embeddings of published files are stored centrally (Aurora Postgres + pgvector) so Ask can answer from teammates' documents even when the owner is offline. This supersedes the earlier rule that content and embeddings are never central, and the "possible later feature" of asking each teammate's agent to run an embedding search.
+11. **Consent.** Publishing a file means its content chunks are readable by teammates on the same team. There is no separate setting for the demo; the UI says so (E6-S7).
+12. **Bedrock stays agent-direct for Ask.** Teammate chunks returned by `POST /retrieval/search` pass through the requester's agent and are sent to Bedrock with the credentials in `agent/.env` (demo/MVP only, same exception as 2.5a). Moving this behind `/llm/*` is a later option.
+13. **Embeddings and dates stay local.** Embeddings are still computed on the owner's laptop (all-MiniLM-L6-v2, `EMBEDDING_DIMENSION` = 384) and the query is embedded on the requester's laptop, so query text never reaches central, only the vector. The in-document date is not uploaded.
+14. **No new error codes.** The chunk endpoints reuse `403 no_team`, `403 forbidden`, `404 not_found`, `400 invalid_request` (with `details.fields`) and `503 service_unavailable`.
 
 ### Still open
 

@@ -13,7 +13,6 @@ export default function FolderRow({
   pickedCount,
   onToggleSelection,
   canShare,
-  onRescan,
   onRemove,
   onShare,
   onUnshare,
@@ -59,9 +58,6 @@ export default function FolderRow({
         </button>
 
         <div className="folder-row-actions">
-          <button type="button" className="btn btn-outline btn-sm" onClick={onRescan} disabled={busy}>
-            Check for new files
-          </button>
           {canShare && !allShared(counts) && (
             <button type="button" className="btn btn-outline btn-sm" onClick={onShare} disabled={busy}>
               {sharing ? <><Spinner />Making public…</> : "Make public"}

@@ -7,13 +7,14 @@ A concrete, AWS-mapped build plan for the core loop: check your own files first,
 
 |Area|v1|v2|
 |---|---|---|
-|Retention|90-day default|**45 days**, server-set, re-confirm resets to 45 days from confirmation|
+|Retention|90-day default|**45 days**, server-set, re-confirm resets to 45 days from confirmation; a file's chunks are purged with it|
 |S3 expiry|Lifecycle rule (~15 min)|**Sweeper Lambda** every minute deleting objects older than 15 minutes; day-level lifecycle rule as a backstop|
-|Bedrock / Claude|Direct Claude API or Bedrock, undecided|**Bedrock, Claude Sonnet 5.5, proxied by the central service.** The agent never calls Bedrock directly.|
+|Bedrock / Claude|Direct Claude API or Bedrock, undecided|**Bedrock, Claude Sonnet 5.5.** Query understanding and tags are proxied by the central service. Multi-document Q&A (Ask) calls Bedrock directly from the agent (demo/MVP exception, decided 2026-10-15).|
 |Query parsing|Central Bedrock call required, no fallback|**Local deterministic parser is the required baseline; Bedrock is an optional, best-effort enhancement.** Local search never depends on the central service.|
 |Team membership|Cognito Groups|**Postgres** (`teams`, `memberships`, `invites`); one team per user|
 |Central dates|`published_at`, `expires_at`, `last_confirmed`|`file_created_at`, `file_modified_at`, `expires_at`, plus `published_at` and `last_confirmed`|
-|Central search|Not specified|**Metadata only** (filename, tags, dates) using Postgres full-text search|
+|Central search|Not specified|File search stays **metadata only** (filename, tags, dates; Postgres full-text search). Ask adds a **central chunk index**: chunk text and 384-dim embeddings in Aurora pgvector, searched by query vector (E6)|
+|Teammate Q&A|Not specified|Agent uploads each published file's chunks and embeddings; `POST /retrieval/search` returns the top teammate chunks, so Ask works even when the owner is offline (E6)|
 |Frontend|Not in blueprint|**React + Vite** app that talks only to the local agent|
 |Local state|Chroma only|Chroma **plus a SQLite file registry** and a persistent publish queue|
 |Tag generation|Not specified|**Bedrock call at publish time** through the proxy, using an excerpt and filename|
@@ -26,7 +27,7 @@ Items marked **(verify)** are AWS behaviors I believe are correct but have not c
 
 ## 01 Tech stack, component by component
 
-Everything here either runs free-tier on your AWS sandbox or costs nothing to start (open-source, local compute). The one paid line item is Bedrock calls, which are made once per search and once per published file.
+Everything here either runs free-tier on your AWS sandbox or costs nothing to start (open-source, local compute). The paid line items are Bedrock calls (once per search, once per published file, and once per Ask) and the Aurora Serverless v2 database, whose capacity grows with the chunk index.
 
 |Component|Technology|Why|
 |---|---|---|
@@ -34,7 +35,7 @@ Everything here either runs free-tier on your AWS sandbox or costs nothing to st
 |Local file registry|SQLite|One row per file for path, hash, dates, index status, tags, publish state; shared by the watcher, indexer, publish flow, and relay client|
 |Local file extraction|PyMuPDF (PDF), python-docx, python-pptx, plain text|General knowledge-transfer coverage (meeting notes, decks, docs)|
 |Change detection|watchdog + content hashing|Detects new, changed, moved, and deleted files; hashing avoids re-indexing untouched files|
-|Embeddings|sentence-transformers (all-MiniLM-L6-v2), local|Free, no API key, no network call; file content is not sent anywhere just to be indexed|
+|Embeddings|sentence-transformers (all-MiniLM-L6-v2), local|Free, no API key, no network call to embed. Vectors are computed on the owner's laptop; for published files the chunk text and vectors are then uploaded to the central chunk index|
 |Local vector store|Chroma (embedded, file-backed) with per-chunk date metadata|Zero infrastructure; metadata filters make "3 days ago" queries filter by date rather than hoping recency ranks well|
 |Credential storage|Windows Credential Manager via `keyring`|Stores only the Cognito refresh token; falls back to memory-only if unavailable|
 |Frontend|React + Vite dev server (fixed origin, e.g. `localhost:5173`)|UI for login, search, and file/folder management; talks only to the local agent|
@@ -44,7 +45,7 @@ Everything here either runs free-tier on your AWS sandbox or costs nothing to st
 |Central service runtime|Python + FastAPI on AWS Lambda behind API Gateway (HTTP API)|Serverless; scales to zero between demo sessions|
 |Agent signaling|API Gateway WebSocket API|Each agent holds a persistent outbound connection, which lets the relay reach a laptop with no public IP|
 |File transit|S3 bucket, presigned URLs, random object keys|The only place file bytes touch AWS, and only briefly|
-|Central metadata store|RDS Postgres (db.t3.micro), 12-month free tier|Teams, memberships, invites, public-file metadata, connection registry, transfers, access log|
+|Central metadata and chunk store|Aurora Serverless v2 Postgres 16 with the pgvector extension|Teams, memberships, invites, public-file metadata, connection registry, transfers, access log, and `public_chunks` (chunk text plus `vector(384)` embeddings, HNSW cosine index)|
 |Auth|Cognito User Pool (no Groups)|Accounts and JWT issuance; team membership is kept in Postgres|
 |Sign-up handling|Cognito pre sign-up Lambda trigger **(verify)**|Auto-confirms users so there is no email verification step|
 |Scheduled jobs|EventBridge Scheduler → Lambda|Transfer sweeper (every minute) and nightly purge|
@@ -71,10 +72,11 @@ Your laptop                                   Teammate's laptop
 ┌─────────────────────────────── AWS SANDBOX ──────────────────────────────┐
 │ Cognito (user pool)                                                      │
 │ API Gateway: HTTP API + WebSocket API                                    │
-│ Lambda: /teams · /files · /search · /llm · /transfer · WS handlers       │
-│ Bedrock (Claude Sonnet 5.5), called only by the /llm Lambdas             │
-│ RDS Postgres: teams · memberships · invites · public_files ·             │
+│ Lambda: /teams · /files · /search · /retrieval · /llm · /transfer · WS   │
+│ Bedrock (Claude Sonnet 5.5): /llm Lambdas, and the agent for Ask         │
+│ Aurora Postgres: teams · memberships · invites · public_files ·          │
 │               connections · transfers · access_log                       │
+│               + pgvector: public_chunks (text + vector(384), HNSW)       │
 │ S3 transit bucket: presigned URLs, 15-minute sweep                       │
 │ EventBridge Scheduler → sweeper Lambda (1 min) · purge Lambda (nightly)  │
 └──────────────────────────────────────────────────────────────────────────┘
@@ -83,12 +85,12 @@ Your laptop                                   Teammate's laptop
 **Transfer sequence**
 
 1. Requester's agent: auth + search (or the local search came up short)
-2. Requester calls `POST /transfer/request`; server sends `upload_request` over the owner's WebSocket
+2. Requester calls `POST /transfers`; server sends `upload_request` over the owner's WebSocket
 3. Owner's agent streams the file to a presigned PUT URL
 4. Requester polls, sees `ready`, and downloads from a presigned GET URL
 5. The sweeper deletes the object after 15 minutes regardless of whether it was downloaded
 
-File bytes pass through S3 only in transit. The metadata store and connection registry never see them.
+File bytes pass through S3 only in transit. The metadata store and connection registry never see them. Separately, a published file's chunk text and embeddings are stored in `public_chunks` (not the file bytes) until the file is unpublished, deleted or expires.
 
 ---
 
@@ -96,7 +98,7 @@ File bytes pass through S3 only in transit. The metadata store and connection re
 
 ### Embeddings: spend nothing
 
-Every file chunk is embedded once, on the owner's own laptop, with a free local model (all-MiniLM-L6-v2). No network call, no key, no per-token cost, and file content is not sent anywhere just to be indexed.
+Every file chunk is embedded once, on the owner's own laptop, with a free local model (all-MiniLM-L6-v2, 384 dimensions). No network call, no key, no per-token cost to embed. Local indexing sends nothing anywhere. When the owner publishes a file, its chunk text and vectors are uploaded to the central chunk index (`PUT /files/{file_id}/chunks`) so teammates' Ask can use them. The requester embeds the question locally too, so only a query vector, never the query text, reaches central.
 
 ### Query parsing: local baseline, Bedrock as enhancement
 
@@ -106,7 +108,7 @@ If the agent is online and logged in, it **additionally** calls the central prox
 
 ### Bedrock: query understanding (enhancement) and tags
 
-All LLM use goes through the central service, which calls Claude Sonnet 5.5 on Bedrock. Laptops need only their Cognito token, not AWS credentials.
+Query understanding and tag generation go through the central service, which calls Claude Sonnet 5.5 on Bedrock, so those features need only the Cognito token. **Exception (demo/MVP only, decided 2026-10-15):** Ask calls Bedrock directly from the local agent, using AWS credentials from `agent/.env`. With the central chunk index, teammate chunks therefore pass through the requester's laptop on their way to Bedrock.
 
 - `POST /llm/query` takes the raw query plus the agent's local date and timezone, and returns a topic and an absolute date range. The agent treats this as an optional upgrade over its own local parse, described above.
 - `POST /llm/tags` takes a file excerpt and filename, and returns 5 to 8 lowercase keyword tags. This one has no local equivalent — tag generation only happens at publish time, which already requires the central service for other reasons, so there's no standalone-operation requirement to preserve here.
@@ -114,8 +116,9 @@ All LLM use goes through the central service, which calls Claude Sonnet 5.5 on B
 **Content handling**
 
 - The agent sends an excerpt only (starting at 3,000 characters, configurable), with the cap also enforced server-side.
-- Excerpts and queries are never stored, and request bodies are never logged.
-- File text may be sent to the proxy for tagging. This is a deliberate change from "content never leaves the machine," which now applies to embeddings only.
+- Tagging excerpts and queries are never stored. Request bodies, chunk text and query vectors are never logged.
+- File text may be sent to the proxy for tagging.
+- **Chunk index (E6):** the "content never leaves the machine" rule is replaced. Chunk text and embeddings of *published* files are stored centrally in `public_chunks`. Publishing a file means its content chunks are readable by teammates; unpublished files are never uploaded. Chunks are deleted with the file (unpublish, delete, expiry, leaving the team) by foreign-key cascade.
 
 **Output validation**
 
@@ -145,7 +148,7 @@ The target query is "pull up the meeting notes from 3 days ago," which is a topi
 ### Central search
 
 - The agent sends the already-resolved topic and date range. Central search does not call the model again.
-- **Metadata only:** filename, tags, and dates. Content and embeddings are never searched centrally.
+- **File search (`POST /search`) is metadata only:** filename, tags, and dates. Content-based retrieval is a separate endpoint, `POST /retrieval/search`, described under "Central chunk retrieval" below.
 - Scope: the caller's team only, excluding the caller's own files and any rows past `expires_at`.
 - **Date match:** a file matches if either its created date or its modified date falls in the range.
 - **Matching:** Postgres full-text search over filename plus tags, using a generated `tsvector` column with a GIN index. Use a looser query form (such as `websearch_to_tsquery` or OR-ing terms) and normalize underscores, dots, and hyphens in filenames before indexing. Behavior against realistic tags is untested.
@@ -154,7 +157,17 @@ The target query is "pull up the meeting notes from 3 days ago," which is a topi
 - **Ordering and limit:** text relevance, falling back to recency, capped at a configurable number (e.g. 20).
 - **Result fields:** `file_id`, `filename`, `tags`, created and modified dates, `expires_at`, and whether the owner is online. Owner identity is not shown.
 - Untagged files are findable only by filename and date.
-- A possible later feature: if metadata matching proves too weak, the central service could ask each teammate's agent to run an embedding search.
+
+### Central chunk retrieval (Ask over teammates' documents, E6)
+
+Chosen over asking each teammate's agent to search on demand, because it works when the owner is offline and gives fast, consistently ranked results.
+
+- **Ingest:** after `PUT /files/{file_id}`, the owner's agent reads the file's chunks and embeddings from Chroma and uploads them with `PUT /files/{file_id}/chunks` in batches (`CHUNK_UPLOAD_BATCH_SIZE`). The upload is an idempotent replace: batches are staged and swapped in on the final batch, so a retry never leaves a partial or duplicate set. The embedding length must equal `EMBEDDING_DIMENSION` (384) and a file may have at most `MAX_CHUNKS_PER_FILE` chunks.
+- **Store:** `public_chunks(file_id, chunk_index, text, embedding vector(384))`, with `file_id` a foreign key to `public_files` `ON DELETE CASCADE` and an HNSW index using cosine distance.
+- **Search:** `POST /retrieval/search` takes the requester's query *vector* (never the query text) and optional `file_ids`. Scope: the caller's team only, excluding the caller's own files, expired rows, and files whose chunks are not yet indexed. Results are the nearest chunks by cosine distance (`RETRIEVAL_LIMIT_DEFAULT`, capped at `RETRIEVAL_LIMIT_MAX`) with `file_id`, `filename`, `chunk_index`, `text` and `distance`. Owner identity is not returned.
+- **Filtered vector search:** the HNSW index applies filters after its scan, so a selective filter (team, not-own, expiry, `file_ids`) can starve the result. The query therefore runs with `SET LOCAL hnsw.iterative_scan = 'strict_order'` (pgvector 0.8+, verified on our Aurora), which keeps scanning, in order, until `limit` rows pass the filter.
+- **Ask:** the agent merges these teammate chunks with its local chunks, labels them as teammate content, and calls Bedrock as before. Teammate sources offer Download (the existing transfer flow), not Open.
+- If central is unreachable, Ask falls back to local files only and says so.
 
 ---
 
@@ -180,7 +193,7 @@ Pull-through-owner means the owner's laptop must be reachable by a teammate's la
 
 ### Transfer flow and states
 
-1. Requester's agent calls `POST /transfer/request` with a `file_id`.
+1. Requester's agent calls `POST /transfers` with a `file_id`.
 2. Server checks that the file exists, has not expired, and belongs to the requester's team, then checks that the owner has a live connection. Otherwise it returns "owner offline."
 3. If a transfer for the same file and requester is in flight, it is reused.
 4. Server creates a `transfers` record, generates a presigned PUT URL, and sends `upload_request` to the owner.
@@ -224,7 +237,7 @@ This is a real change from "AWS never touches file bytes." Bytes now make a brie
 - Any user can create a team. Any member can create invite codes for their own team.
 - Invite codes expire after 7 days (configurable) and are multi-use.
 - A user in a team cannot join or create another until they leave.
-- Leaving a team removes the user's public files from central metadata and drops their connection record.
+- Leaving a team removes the user's public files (and, by cascade, their chunks) from central and drops their connection record.
 - If the last member leaves, the team and its invites are deleted.
 - The server derives `team_id` from membership. The agent never sends it.
 - Membership is kept in Postgres rather than Cognito Groups, because group membership is baked into the token and changes would not take effect until it refreshes.
@@ -253,8 +266,9 @@ This is a real change from "AWS never touches file bytes." Bytes now make a brie
 ### Publish pipeline and queue
 
 - **Tags are generated at publish time**, not at indexing time, so Bedrock is called only for files someone actually shares.
-- Per file: generate tags, then send metadata. If tagging fails, retry a few times, then publish with empty tags.
-- When a public file's content changes, metadata is re-synced but existing tags are **not** regenerated.
+- Per file: generate tags, send metadata, then upload the file's chunks and embeddings from Chroma in batches. If tagging fails, retry a few times, then publish with empty tags. A file is searchable by Ask once its chunk upload commits.
+- When a public file's content changes, metadata is re-synced and the file is re-chunked and its chunks re-uploaded; existing tags are **not** regenerated.
+- Files published before E6 are backfilled: the agent uploads chunks for any published file that has none centrally.
 - A persistent SQLite queue covers publish, unpublish, re-sync, and confirm. It uses exponential backoff with a retry cap, survives restarts, keeps only the latest intent per file, and relies on idempotent central operations.
 - Sending is throttled, starting at 5 concurrent requests, to avoid API Gateway and Lambda throttling during bulk shares.
 - Each file has a `publish_state` of `pending`, `published`, or `failed`.
@@ -313,7 +327,21 @@ file_modified_at  timestamp
 published_at      timestamp
 expires_at        timestamp             -- set by server: published_at + 45 days
 last_confirmed    timestamp             -- re-confirm sets expires_at to now + 45 days
+chunks_indexed_at timestamp             -- null until the file's chunk upload commits
+chunk_count       integer
 ```
+
+### `public_chunks` (central chunk index)
+
+```
+file_id      text references public_files(file_id) on delete cascade
+chunk_index  integer
+text         text
+embedding    vector(384)                -- pgvector; HNSW index, cosine distance
+primary key (file_id, chunk_index)
+```
+
+`public_chunks_staging` (same columns plus `batch`, `total_batches` and `staged_at`, no vector index) holds batches of an upload in progress. The final batch copies the staged set into `public_chunks` and deletes the old one in a single transaction, so readers never see a partial set. Rows cascade with the file; the sweeper deletes uploads abandoned for more than `CHUNK_STAGING_TTL_MINUTES`.
 
 The 45-day default is a placeholder. Swap it for whatever the firm's actual retention policy requires.
 
@@ -323,12 +351,14 @@ The 45-day default is a placeholder. Swap it for whatever the firm's actual rete
 - `DELETE /files/{file_id}`: unpublish
 - `POST /files/{file_id}/confirm`: expiry re-confirmation
 - `GET /files/mine`: the caller's published files, for reconciliation
+- `PUT /files/{file_id}/chunks`: idempotent, batched replace of a file's chunks and embeddings (owner only)
+- `POST /retrieval/search`: nearest teammate chunks for a query vector (see "Central chunk retrieval")
 
 The server enforces that users modify only their own rows and that every query is scoped to the caller's team.
 
 ### Enforcement
 
-- **Nightly purge:** an EventBridge-scheduled Lambda deletes `public_files` rows past `expires_at`, expired invites, and stale `connections` rows. Search already excludes expired rows, so a file ages out on its own even before the purge runs.
+- **Nightly purge:** an EventBridge-scheduled Lambda deletes `public_files` rows past `expires_at`, expired invites, and stale `connections` rows. A file's `public_chunks` rows are removed with it by foreign-key cascade. Search and retrieval already exclude expired rows, so a file ages out on its own even before the purge runs.
 - **Active re-consent:** files within 7 days of expiry (configurable) appear as "expiring soon" in the UI, and the owner re-confirms rather than silently extending. Continued visibility is always a recent, deliberate choice.
 
 ### Access log
@@ -339,8 +369,8 @@ A separate, append-only table that a real compliance review will ask for.
 access_log: log_id, timestamp, user_id, event_type, details (JSON)
 ```
 
-- **Events:** `search`, `transfer_request`, `publish`, `unpublish`, `confirm`, `team_create`, `team_join`, `team_leave`. Sign-in events live in Cognito and are not duplicated here.
-- Stores identifiers, counts, and matched `file_id`s only. **No filenames, file content, or query excerpts.** After a file is purged, its logged `file_id` can no longer be resolved to a name.
+- **Events:** `search`, `transfer_request`, `publish`, `unpublish`, `confirm`, `chunks_put`, `retrieval_search`, `team_create`, `team_join`, `team_leave`. Sign-in events live in Cognito and are not duplicated here.
+- Stores identifiers, counts, and matched `file_id`s only. **No filenames, file content, chunk text, query vectors, or query excerpts.** After a file is purged, its logged `file_id` can no longer be resolved to a name.
 - The Lambda's database role has `INSERT` only on this table.
 - Retention is indefinite for the MVP. This is a policy decision for legal, not engineering.
 - Viewed by direct database query. There is no admin screen.
@@ -356,7 +386,7 @@ access_log: log_id, timestamp, user_id, event_type, details (JSON)
 |Query parsing|Local deterministic parser required; Bedrock is an optional enhancement|Smarter local parsing (e.g. a small local model) if the regex/`dateparser` approach proves too weak|
 |File sources|Local filesystem only|`Source` interface ready now; Teams/SharePoint via Graph API is the priority next connector|
 |Networking|WebSocket relay + presigned S3 transit, cross-network from day one|True peer-to-peer (WebRTC/TURN) if bytes-via-AWS proves unacceptable|
-|Central search|Metadata only (filename, tags, dates)|Ask each teammate's agent to run an embedding search if metadata matching is too weak|
+|Central search|File search: metadata only (filename, tags, dates). Ask: central pgvector chunk index (E6)|Hybrid ranking, re-ranking, or moving Ask's Bedrock call behind a central `/llm` endpoint|
 |Teams|One team per user|Multiple teams|
 |Sign-up|Self sign-up, no email verification|Verified accounts, SSO, MFA|
 |LLM cost control|None|Per-user usage limits|
@@ -375,7 +405,9 @@ _Note: the last row of the v1 blueprint's table was cut off in the PDF text I re
 - Pre sign-up Lambda trigger for auto-confirm
 - WebSocket authorizer approach, and how the agent passes the token on connect
 - Bedrock model ID for Claude Sonnet 5.5, and that the sandbox has model access
-- Bedrock model invocation logging is off
+- Bedrock model invocation logging is off (more important now that Ask sends teammate content to Bedrock)
+- pgvector version available on Aurora PG 16.8, HNSW support, and Aurora capacity for the index (E6-S2)
+- API Gateway (10 MB) and Lambda synchronous (6 MB) payload limits against `CHUNK_UPLOAD_BATCH_SIZE` (platform figures from general knowledge, not yet checked against current docs)
 - S3 lifecycle granularity (days), which is why the sweeper exists
 - API Gateway WebSocket idle timeout (sets the agent's ping interval)
 - API Gateway and Lambda throttling limits (to tune the 5-concurrent publish throttle)
@@ -400,12 +432,16 @@ _Note: the last row of the v1 blueprint's table was cut off in the PDF text I re
 - The startup-token endpoint is protected only by CORS and origin checks, which does not stop a local process
 - SSO and MFA out of scope; no email verification on sign-up
 - No Bedrock usage caps
-- Transfer works only while the owner's agent is online
-- Central search is metadata-only; untagged files are findable only by filename and date
+- Transfer (download) works only while the owner's agent is online; Ask over teammates' documents does not need the owner online
+- Central file search is metadata-only; untagged files are findable only by filename and date
+- Chunk text and embeddings of published files are stored at rest in AWS (Aurora) and readable by members of the owner's team through Ask
+- Teammate chunks pass through the requester's laptop on their way to Bedrock, which the agent calls directly with credentials from `agent/.env` (demo only)
+- Only the first 2,000 chunks of a file are uploaded for teammates' Ask (`MAX_CHUNKS_PER_FILE`)
+- Ask searches teammates' files only when the question has a topic and no date range (picking files narrows only the user's own); otherwise the answer uses local files and says why
 - Tags reflect only the excerpt, not the whole file
 - Either-date matching means a file created long ago but edited recently matches recent date queries
 - The 15-minute S3 expiry is approximate (up to about 16 minutes)
 - The access log keeps `file_id`s only, so history is not readable after a purge
-- File excerpts pass through the central service for tagging (not stored or logged)
+- File excerpts pass through the central service for tagging (not stored or logged); chunk text is stored, as described above
 - One team per user
 - Access log retention is an open policy item for legal

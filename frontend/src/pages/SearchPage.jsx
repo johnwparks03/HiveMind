@@ -2,7 +2,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { api, isAgentUnreachable } from "../api/client";
 import HowTo from "../components/HowTo";
-import Loading from "../components/Loading";
+import Loading, { Spinner } from "../components/Loading";
 import ResultCard from "../components/ResultCard";
 import SearchIllustration from "../components/SearchIllustration";
 import DownloadFolderControl from "../components/DownloadFolderControl";
@@ -12,9 +12,9 @@ import { interpretedCaption } from "../lib/files";
 import { addRecent, loadRecent, removeRecent, saveRecent } from "../lib/recent";
 
 const EXAMPLES = [
-  "budget plan from last week",
-  "meeting notes from 3 days ago",
-  "roadmap deck from March",
+  "Budget plan from last week",
+  "Meeting notes from 3 days ago",
+  "Roadmap deck from March",
 ];
 
 export default function SearchPage() {
@@ -78,7 +78,7 @@ export default function SearchPage() {
             autoComplete="off"
           />
           <button type="submit" className="btn btn-primary" disabled={search.isPending || !text.trim()}>
-            {search.isPending ? "Searching…" : "Search"}
+            {search.isPending ? <><Spinner />Searching…</> : "Search"}
           </button>
         </form>
 

@@ -34,6 +34,10 @@ def apply_migrations(cur):
 def handler(event, context):
     from common import db
 
+    if (event or {}).get("action") == "verify":  # E6-S2 post-deploy check; always rolled back
+        import verify_chunks
+
+        return verify_chunks.run(db.get_connection(), (event or {}).get("rows", verify_chunks.DEFAULT_ROWS))
     with db.transaction() as cur:
         return {"applied": apply_migrations(cur)}
 

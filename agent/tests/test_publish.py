@@ -114,11 +114,17 @@ def test_cancel_all_clears_the_queue(isolated_store):
 # --- _publish / _unpublish (the real central call, mocked transport) --------------------
 
 
+def _metadata_put(central, file_id="a"):
+    """The body of the PUT /files/{id} call. Publishing also uploads chunks afterwards (E6-S6),
+    so the metadata call is no longer the last one."""
+    return next(body for route, body in central.calls if route == f"PUT /files/{file_id}")
+
+
 def test_publish_sends_existing_tags_without_regenerating(isolated_store, central):
     _seed_file(tags='["budget", "q4"]')
     central.reply("PUT /files/a", 200, {"published_at": "p", "expires_at": "e", "last_confirmed": "c"})
     publish._publish("a")
-    sent = central.calls[-1][1]
+    sent = _metadata_put(central)
     assert sent["filename"] == "a.txt"
     assert sent["tags"] == ["budget", "q4"]
     row = _file_row()
@@ -136,7 +142,7 @@ def test_publish_sends_timezone_aware_timestamps(isolated_store, central):
     _seed_file()
     central.reply("PUT /files/a", 200, {"published_at": "p", "expires_at": "e", "last_confirmed": "c"})
     publish._publish("a")
-    sent = central.calls[-1][1]
+    sent = _metadata_put(central)
     created = datetime.fromisoformat(sent["file_created_at"])
     modified = datetime.fromisoformat(sent["file_modified_at"])
     assert created.tzinfo is not None
@@ -155,7 +161,7 @@ def test_publish_generates_tags_when_none_exist(isolated_store, central, tmp_pat
     })
     central.reply(f"PUT /files/a", 200, {"published_at": "p", "expires_at": "e", "last_confirmed": "c"})
     publish._publish("a")
-    assert central.calls[-1][1]["tags"] == ["budget", "plan", "q4", "finance", "forecast"]
+    assert _metadata_put(central)["tags"] == ["budget", "plan", "q4", "finance", "forecast"]
 
 
 def test_publish_falls_back_to_no_tags_when_bedrock_unavailable(isolated_store, central, tmp_path):
@@ -166,7 +172,7 @@ def test_publish_falls_back_to_no_tags_when_bedrock_unavailable(isolated_store, 
     _seed_file(path=str(real_path), tags=None)
     central.reply("PUT /files/a", 200, {"published_at": "p", "expires_at": "e", "last_confirmed": "c"})
     publish._publish("a")  # must not raise
-    assert central.calls[-1][1]["tags"] == []
+    assert _metadata_put(central)["tags"] == []
 
 
 def test_publish_rejects_a_file_that_is_not_indexed(isolated_store, central):

@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from app.central import teams
 from app.db import session
 from app.errors import ApiError
-from app.folders import picker, share
+from app.folders import picker, share, watcher
 from app.folders.scanner import add_folder, list_folders, remove_folder, scan_folder
 
 router = APIRouter()
@@ -40,6 +40,7 @@ def post_folder(body: AddFolderRequest):
     if not os.path.isdir(body.path):
         raise ApiError(400, "invalid_request", "not a directory")
     folder_id = add_folder(body.path)
+    watcher.watch_folder(folder_id, body.path)
     return {"folder_id": folder_id}
 
 
@@ -55,6 +56,7 @@ def delete_folder(folder_id: str):
     """
     if not remove_folder(folder_id):
         raise ApiError(404, "not_found", "folder not found")
+    watcher.unwatch_folder(folder_id)
     return {}
 
 

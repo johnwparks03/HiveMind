@@ -5,6 +5,7 @@ import Loading, { Spinner } from "../components/Loading";
 import { api, isAgentUnreachable } from "../api/client";
 import FolderRow from "../components/FolderRow";
 import FileRow from "../components/FileRow";
+import { useDialog } from "../components/dialogContext";
 import {
   countsByFolder,
   countsFor,
@@ -15,6 +16,7 @@ import {
   totalsByState,
 } from "../lib/files";
 import { bulkEligible, bulkResultText, removeConfirmText, selectedInView, toggleSelected } from "../lib/selection";
+import { shareConfirmText, unshareConfirmText, unshareFolderConfirmText } from "../lib/sharing";
 
 // Poll quickly while anything is indexing, slowly when idle (E2-S8 technical notes).
 const FAST_POLL_MS = 2000;
@@ -37,6 +39,7 @@ const AUTO_COLLAPSE_OVER = 10;
 
 export default function FilesPage() {
   const queryClient = useQueryClient();
+  const { confirm, alert } = useDialog();
 
   const [filter, setFilter] = useState("all");
   const [shareFilters, setShareFilters] = useState([]); // "shared" / "unshared"; none or both = show all
@@ -75,11 +78,6 @@ export default function FilesPage() {
     onSuccess: (path) => {
       if (path) addFolder.mutate(path);
     },
-  });
-
-  const rescan = useMutation({
-    mutationFn: (id) => api.rescanFolder(id),
-    onSuccess: refresh,
   });
 
   const removeFolder = useMutation({
@@ -127,22 +125,25 @@ export default function FilesPage() {
     try {
       count = await sharePreview.mutateAsync(folder.folder_id);
     } catch {
-      window.alert("Couldn't check what's eligible to share. Try again in a moment.");
+      await alert({ title: "Couldn't check this folder", message: "Couldn't check what's eligible to share. Try again in a moment." });
       return;
     }
     if (count === 0) {
-      window.alert("Nothing new to make public. Every readable file here is already public.");
+      await alert({ title: "Nothing to make public", message: "Nothing new to make public. Every readable file here is already public." });
       return;
     }
-    if (window.confirm(`Make ${count} file${count === 1 ? "" : "s"} public?`)) {
+    if (await confirm({ title: "Make files public?", message: shareConfirmText(count), confirmLabel: "Make public" })) {
       shareFolder.mutate(folder.folder_id);
     }
   }
 
-  function handleUnshare(folder) {
-    if (window.confirm(`Make all public files in ${folderName(folder.path)} private?`)) {
-      unshareFolder.mutate(folder.folder_id);
-    }
+  async function handleUnshare(folder) {
+    const ok = await confirm({
+      title: "Make files private?",
+      message: unshareFolderConfirmText(folderName(folder.path)),
+      confirmLabel: "Make private",
+    });
+    if (ok) unshareFolder.mutate(folder.folder_id);
   }
 
   const folderList = folders.data ?? [];
@@ -161,8 +162,13 @@ export default function FilesPage() {
   // Only what's showing counts, so changing the filter never removes files you can't see.
   const selectedShown = selectedInView(selected, visible.map((f) => f.file_id));
 
-  function handleRemove(folder) {
-    const ok = window.confirm(`Remove ${folderName(folder.path)} from HiveMind? Its files stay on your computer.`);
+  async function handleRemove(folder) {
+    const ok = await confirm({
+      title: "Remove folder?",
+      message: `Remove ${folderName(folder.path)} from HiveMind? Its files stay on your computer.`,
+      confirmLabel: "Remove",
+      danger: true,
+    });
     if (ok) removeFolder.mutate(folder.folder_id);
   }
 
@@ -170,17 +176,20 @@ export default function FilesPage() {
   const shareable = bulkEligible(selectedFiles, "share");
   const unshareable = bulkEligible(selectedFiles, "unshare");
 
-  function handleBulkShare(action) {
+  async function handleBulkShare(action) {
     const files = action === "share" ? shareable : unshareable;
     const n = files.length;
-    const text = action === "share"
-      ? `Make ${n} file${n === 1 ? "" : "s"} public?`
-      : `Make ${n} public file${n === 1 ? "" : "s"} private?`;
-    if (window.confirm(text)) bulkShare.mutate({ action, files });
+    const sharing = action === "share";
+    const ok = await confirm({
+      title: sharing ? "Make files public?" : "Make files private?",
+      message: sharing ? shareConfirmText(n) : unshareConfirmText(n),
+      confirmLabel: sharing ? "Make public" : "Make private",
+    });
+    if (ok) bulkShare.mutate({ action, files });
   }
 
   // Grouped by folder only in the all-folders view; one folder is already a single list.
-  // Every folder appears once, with its files under it. Empty folders still show, so they can be rescanned or removed.
+  // Every folder appears once, with its files under it. Empty folders still show, so they can be removed.
   const groups = folderList.map((folder) => ({ folder, files: visible.filter((f) => f.folder_id === folder.folder_id) }));
   const isOpen = (id, count) => (openOverrides.has(id) ? openOverrides.get(id) : count <= AUTO_COLLAPSE_OVER);
 
@@ -214,9 +223,15 @@ export default function FilesPage() {
     );
   }
 
-  function handleRemoveSelected() {
+  async function handleRemoveSelected() {
     if (selectedShown.length === 0) return;
-    if (window.confirm(removeConfirmText(selectedShown.length))) removeFiles.mutate(selectedShown);
+    const ok = await confirm({
+      title: "Remove files?",
+      message: removeConfirmText(selectedShown.length),
+      confirmLabel: "Remove",
+      danger: true,
+    });
+    if (ok) removeFiles.mutate(selectedShown);
   }
 
   const loadError = folders.isError || files.isError;
@@ -224,8 +239,8 @@ export default function FilesPage() {
   return (
     <section className="files-page" aria-labelledby="files-title">
       <h2 id="files-title" className="page-title">Your folders</h2>
-      <p className="page-lede">Add a folder of files to your HiveMind agent so you can search them and make them public to your team.</p>
-      <HowTo steps={['Choose a folder to add it.', 'Wait while HiveMind reads your files.', 'Make files public to share them with your team.']} />
+      <p className="page-lede">Add a folder of files to your HiveMind agent so you can search them and make them public to your team. Teammates can read the contents of public files, including when they use Ask.</p>
+      <HowTo steps={['Choose a folder to add it.', 'Wait while HiveMind reads your files.', 'Make files public to share them. Teammates can then read them.']} />
 
       <div className="add-folder">
         <div className="add-folder-row">
@@ -239,7 +254,7 @@ export default function FilesPage() {
             onClick={() => pickFolder.mutate()}
             disabled={pickFolder.isPending || addFolder.isPending}
           >
-            {pickFolder.isPending ? "Opening…" : addFolder.isPending ? "Adding…" : "Upload a folder"}
+            {pickFolder.isPending ? <><Spinner />Opening…</> : addFolder.isPending ? <><Spinner />Adding…</> : "Upload a folder"}
           </button>
         </div>
         {(pickFolder.isError || addFolder.isError) && (
@@ -394,13 +409,12 @@ export default function FilesPage() {
                     pickedCount={pickedCount}
                     onToggleSelection={() => toggleGroupSelection(groupFiles)}
                     canShare={inGroup}
-                    onRescan={() => rescan.mutate(id)}
                     onRemove={() => handleRemove(folder)}
                     onShare={() => handleShare(folder)}
                     onUnshare={() => handleUnshare(folder)}
                     sharing={sharePreview.isPending || shareFolder.isPending}
                     unsharing={unshareFolder.isPending}
-                    busy={rescan.isPending || removeFolder.isPending || sharePreview.isPending || shareFolder.isPending || unshareFolder.isPending}
+                    busy={removeFolder.isPending || sharePreview.isPending || shareFolder.isPending || unshareFolder.isPending}
                   >
                     {renderRows(groupFiles)}
                   </FolderRow>

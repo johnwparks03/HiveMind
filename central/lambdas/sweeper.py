@@ -54,6 +54,18 @@ def _sweep_page(age_minutes, after):
     return len(rows), len(done), errors, (rows[-1][2], rows[-1][0])
 
 
+def staging_ttl_minutes():
+    return int(os.environ.get("CHUNK_STAGING_TTL_MINUTES", "60"))
+
+
+def clear_stale_staging():
+    """Drop chunk uploads (E6-S3) that were started but never committed. Returns the row count."""
+    with db.transaction() as cur:
+        cur.execute("DELETE FROM public_chunks_staging WHERE staged_at < now() - make_interval(mins => %s)",
+                    (staging_ttl_minutes(),))
+        return cur.rowcount
+
+
 def handler(event, context):
     age_minutes = max_age_minutes(event)
     with db.transaction() as cur:
@@ -66,7 +78,8 @@ def handler(event, context):
         delete_errors += errors
         if seen < transit.DELETE_BATCH:  # a short page means everything due has been visited
             break
+    staging_cleared = clear_stale_staging()  # last, so the transfer statements keep their order
     result = {"failed_unacked": failed_unacked, "failed_stalled": failed_stalled,
               "swept": swept, "delete_errors": delete_errors}
-    print(f"sweeper run: {result}")
+    print(f"sweeper run: {result} staging_cleared={staging_cleared}")
     return result

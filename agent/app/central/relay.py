@@ -9,6 +9,8 @@ S3 PUT, then reports complete/fail.
 """
 import asyncio
 import json
+import logging
+import re
 import time
 from pathlib import Path
 
@@ -20,6 +22,8 @@ from app.auth import session
 from app.central import client as central_client
 from app.db import session as db_session
 from app.errors import ApiError
+
+log = logging.getLogger(__name__)
 
 _task: asyncio.Task | None = None
 _loop: asyncio.AbstractEventLoop | None = None
@@ -52,6 +56,15 @@ def _iter_file(path: Path):
             yield chunk
 
 
+def _describe_upload_error(exc: Exception) -> str:
+    """What to log about a failed upload: the exception type, or for a refusal the HTTP status and S3's
+    error code. Never the URL (a presigned URL carries credentials) or any file content."""
+    if isinstance(exc, httpx.HTTPStatusError):
+        code = re.search(r"<Code>([^<]+)</Code>", exc.response.text or "")
+        return f"HTTP {exc.response.status_code}" + (f" {code.group(1)}" if code else "")
+    return type(exc).__name__
+
+
 def _handle_upload_request(payload: dict) -> None:
     """Runs off the event loop (asyncio.to_thread) since it does blocking file IO
     and sync HTTP calls; never load the whole file into memory (large PPTX/PDF)."""
@@ -73,10 +86,14 @@ def _handle_upload_request(payload: dict) -> None:
         return  # the ack deadline will fail this transfer centrally; nothing else to do
     try:
         size = path.stat().st_size
+        # S3 refuses a chunked upload (no Content-Length) to a presigned URL with 501 NotImplemented, which
+        # is what httpx sends for a bare generator. Declare the exact size and still stream in pieces.
         httpx.put(
-            payload["upload_url"], content=_iter_file(path), timeout=config.CENTRAL_TIMEOUT_SECONDS
+            payload["upload_url"], content=_iter_file(path), headers={"Content-Length": str(size)},
+            timeout=config.CENTRAL_TIMEOUT_SECONDS,
         ).raise_for_status()
-    except Exception:  # noqa: BLE001 - any upload failure reports upload_error, never crashes the relay
+    except Exception as exc:  # noqa: BLE001 - any upload failure reports upload_error, never crashes the relay
+        log.warning("relay upload failed: %s", _describe_upload_error(exc))
         _fail(transfer_id, "upload_error")
         return
     try:

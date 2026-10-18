@@ -59,7 +59,8 @@ class FakeS3:
 @pytest.fixture
 def wired(monkeypatch):
     monkeypatch.setenv("TRANSIT_BUCKET", "bucket")
-    for name in ("SWEEPER_MAX_AGE_MINUTES", "TRANSFER_ACK_TIMEOUT_SECONDS", "TRANSFER_UPLOAD_TIMEOUT_SECONDS"):
+    for name in ("SWEEPER_MAX_AGE_MINUTES", "TRANSFER_ACK_TIMEOUT_SECONDS", "TRANSFER_UPLOAD_TIMEOUT_SECONDS",
+                 "CHUNK_STAGING_TTL_MINUTES"):
         monkeypatch.delenv(name, raising=False)
 
     def install(rows=(), unacked=0, stalled=0, fail=()):
@@ -105,6 +106,17 @@ def test_a_direct_invocation_may_override_the_upload_timeout(wired):
     cur, _ = wired()
     sweeper.handler({"upload_timeout_seconds": 0}, None)
     assert cur.executed[1][1] == (0,)
+
+
+def test_stale_chunk_staging_is_cleared_using_the_configured_ttl(wired, monkeypatch):
+    cur, _ = wired()
+    sweeper.handler({}, None)
+    sql, params = cur.executed[-1]
+    assert sql.startswith("DELETE FROM public_chunks_staging WHERE staged_at < now()") and params == (60,)
+    monkeypatch.setenv("CHUNK_STAGING_TTL_MINUTES", "5")
+    cur, _ = wired()
+    sweeper.handler({}, None)
+    assert cur.executed[-1][1] == (5,)
 
 
 def test_the_same_timeout_statements_serve_the_api_and_the_sweeper():

@@ -1792,7 +1792,7 @@ input:focus {
   padding: 5px 10px;
 }
 
-/* Folder row actions: a little room between Check for new files, Make public, Make private and Remove. */
+/* Folder row actions: a little room between Make public, Make private and Remove. */
 .folder-row-actions {
   display: flex;
   flex-wrap: wrap;
@@ -1839,4 +1839,134 @@ input:focus {
   .ask-thread {
     overflow: visible;
   }
+}
+
+/* Ask: teammate sources, the teammates switch and its notes (E6-S7). */
+.source-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--ink-soft);
+  vertical-align: middle;
+}
+
+.ask-transfer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.ask-teammates {
+  margin: 8px 0 4px;
+}
+
+.ask-footnote {
+  margin-top: 8px;
+}
+
+/* A spinner inside a status pill sits where the dot would. */
+.pill .spinner {
+  width: 11px;
+  height: 11px;
+  margin-right: 0;
+  border-width: 2px;
+}
+
+/* A pill with long text (a save location, an error) wraps inside its card instead of running past it. */
+.pill-wrap {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+  min-width: 0;
+  flex-shrink: 1;
+  border-radius: 12px;
+  padding: 4px 10px;
+  line-height: 1.35;
+}
+
+.transfer-row,
+.ask-transfer {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.ask-source-row > span:first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* The checking state of the status indicator shows a spinner where the dot would be. */
+.status .spinner {
+  margin-right: 0;
+}
+
+/* HiveMind dialog: replaces the browser's confirm and alert popups. */
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(40, 39, 40, 0.45);
+}
+
+.dialog {
+  width: 100%;
+  max-width: 420px;
+  padding: 22px 24px 18px;
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-top: 4px solid var(--accent);
+  border-radius: var(--radius);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+}
+
+.dialog-title {
+  margin: 0 0 8px;
+  font-size: 18px;
+}
+
+.dialog-message {
+  margin: 0 0 20px;
+  color: var(--ink-soft);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* Saved chats: smaller text and tighter rows so more of each title and more chats fit. */
+.ask-sidebar { padding: 10px; gap: 8px; }
+
+.ask-chat-open {
+  font-size: 13px;
+  padding: 6px 9px;
+}
+
+.ask-chat-delete {
+  font-size: 16px;
+  padding: 2px 8px;
+}
+
+.ask-chat-list { gap: 1px; }
+
+/* The Change folder button sits apart from the sentence, as a clear outlined button. */
+.download-folder-change {
+  margin-left: 6px;
+  padding: 6px 14px;
+  font-weight: 600;
+  border-radius: 999px;
 }

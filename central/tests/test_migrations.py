@@ -35,7 +35,7 @@ def test_0002_defines_publish_and_relay_tables():
 def test_all_acceptance_tables_exist_across_migrations():
     sql = "\n".join(_sql(n) for n in MIGRATION_FILES)
     for table in ("teams", "memberships", "invites", "public_files", "connections",
-                  "transfers", "access_log"):
+                  "transfers", "access_log", "public_chunks", "public_chunks_staging"):
         assert f"CREATE TABLE {table} " in sql
 
 
@@ -49,9 +49,12 @@ def fresh_db():
     conn = psycopg2.connect(DSN)
     schema = "mig_" + uuid.uuid4().hex[:10]
     with conn, conn.cursor() as cur:
+        # pgvector is database-level, so install it once in public (the test Postgres must
+        # ship it, e.g. the pgvector/pgvector:pg16 image) and keep public on the search_path.
+        cur.execute("CREATE EXTENSION IF NOT EXISTS vector SCHEMA public")
         cur.execute(f"CREATE SCHEMA {schema}")
     conn.close()
-    conn = psycopg2.connect(DSN, options=f"-c search_path={schema}")
+    conn = psycopg2.connect(DSN, options=f"-c search_path={schema},public")
     yield conn
     conn.close()
     cleanup = psycopg2.connect(DSN)
@@ -109,6 +112,85 @@ def test_0004_adds_swept_at_and_the_sweeper_index():
 
 def test_0005_adds_the_membership_email_column():
     assert "ALTER TABLE memberships ADD COLUMN email text" in _sql("0005_membership_email.sql")
+
+
+def test_0006_defines_the_chunk_index():
+    sql = _sql("0006_chunk_index.sql")
+    assert "CREATE EXTENSION IF NOT EXISTS vector" in sql
+    assert "CREATE TABLE public_chunks (" in sql
+    assert re.search(r"file_id\s+text\s+NOT NULL REFERENCES public_files\(file_id\) ON DELETE CASCADE", sql)
+    assert "embedding   vector(384) NOT NULL" in sql
+    assert "PRIMARY KEY (file_id, chunk_index)" in sql
+    assert re.search(r"CREATE INDEX \w+ ON public_chunks USING hnsw \(embedding vector_cosine_ops\)", sql)
+    assert "ALTER TABLE public_files ADD COLUMN chunks_indexed_at timestamptz, ADD COLUMN chunk_count integer" in sql
+
+
+def test_0007_defines_the_chunk_staging_table():
+    sql = _sql("0007_chunk_staging.sql")
+    assert "CREATE TABLE public_chunks_staging (" in sql
+    assert re.search(r"file_id\s+text\s+NOT NULL REFERENCES public_files\(file_id\) ON DELETE CASCADE", sql)
+    assert "embedding     vector(384) NOT NULL" in sql and "PRIMARY KEY (file_id, chunk_index)" in sql
+    for column in ("batch", "total_batches", "staged_at"):
+        assert re.search(rf"{column}\s+(integer|timestamptz)\s+NOT NULL", sql)
+    assert "hnsw" not in sql  # staging is write-then-copy: no vector index
+
+
+def _vec(*head):
+    values = list(head) + [0.0] * (384 - len(head))
+    return "[" + ",".join(str(v) for v in values) + "]"
+
+
+def _seed_file(cur, file_id="f1", team_id=None):
+    team_id = team_id or str(uuid.uuid4())
+    cur.execute("INSERT INTO teams (id, name, created_by) VALUES (%s, 'T', 'u1')", (team_id,))
+    cur.execute("INSERT INTO public_files (file_id, owner_id, team_id, filename, tags, expires_at) "
+                "VALUES (%s, 'u1', %s, 'a.txt', ARRAY['x'], now() + interval '45 days')", (file_id, team_id))
+    return team_id
+
+
+@pytest.mark.skipif(not DSN, reason="set HIVEMIND_TEST_DATABASE_URL to run against a real Postgres")
+def test_chunks_cascade_with_file_and_team_and_survive_a_publish_resync(fresh_db):
+    with fresh_db, fresh_db.cursor() as cur:
+        migrate.apply_migrations(cur)
+        team_id = _seed_file(cur)
+        cur.execute("INSERT INTO public_chunks (file_id, chunk_index, text, embedding) "
+                    "VALUES ('f1', 0, 'hello', %s::vector), ('f1', 1, 'world', %s::vector)",
+                    (_vec(1), _vec(0, 1)))
+        # PUT /files/{id} re-sync is an upsert (ON CONFLICT DO UPDATE): chunks must stay.
+        cur.execute("INSERT INTO public_files (file_id, owner_id, team_id, filename, tags, expires_at) "
+                    "VALUES ('f1', 'u1', %s, 'renamed.txt', ARRAY['y'], now() + interval '45 days') "
+                    "ON CONFLICT (file_id) DO UPDATE SET filename = EXCLUDED.filename", (team_id,))
+        cur.execute("SELECT count(*) FROM public_chunks WHERE file_id = 'f1'")
+        assert cur.fetchone()[0] == 2
+        cur.execute("DELETE FROM public_files WHERE file_id = 'f1'")
+        cur.execute("SELECT count(*) FROM public_chunks")
+        assert cur.fetchone()[0] == 0
+        # Deleting the team cascades team -> public_files -> public_chunks.
+        cur.execute("INSERT INTO public_files (file_id, owner_id, team_id, filename, tags, expires_at) "
+                    "VALUES ('f2', 'u1', %s, 'b.txt', ARRAY['x'], now() + interval '45 days')", (team_id,))
+        cur.execute("INSERT INTO public_chunks (file_id, chunk_index, text, embedding) "
+                    "VALUES ('f2', 0, 'x', %s::vector)", (_vec(1),))
+        cur.execute("DELETE FROM teams WHERE id = %s", (team_id,))
+        cur.execute("SELECT count(*) FROM public_chunks")
+        assert cur.fetchone()[0] == 0
+
+
+@pytest.mark.skipif(not DSN, reason="set HIVEMIND_TEST_DATABASE_URL to run against a real Postgres")
+def test_chunk_embeddings_enforce_dimension_and_order_by_cosine_distance(fresh_db):
+    import psycopg2
+
+    with fresh_db, fresh_db.cursor() as cur:
+        migrate.apply_migrations(cur)
+        _seed_file(cur)
+        cur.execute("INSERT INTO public_chunks (file_id, chunk_index, text, embedding) VALUES "
+                    "('f1', 0, 'far', %s::vector), ('f1', 1, 'near', %s::vector)",
+                    (_vec(0, 1), _vec(1, 0.1)))
+        cur.execute("SELECT text FROM public_chunks ORDER BY embedding <=> %s::vector LIMIT 1", (_vec(1),))
+        assert cur.fetchone() == ("near",)
+    with pytest.raises(psycopg2.Error):
+        with fresh_db, fresh_db.cursor() as cur:
+            cur.execute("INSERT INTO public_chunks (file_id, chunk_index, text, embedding) "
+                        "VALUES ('f1', 2, 'bad', '[1,2,3]'::vector)")
 
 
 def test_in_flight_statuses_are_defined_once_and_match_the_index_predicate():

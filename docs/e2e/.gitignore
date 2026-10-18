@@ -1,0 +1,5 @@
+# Holds a real email and password for mine.py. Never commit it.
+.env
+*.env
+!.env.example
+__pycache__/

@@ -91,6 +91,31 @@ def iter_chunks(where: dict | None) -> Iterator[tuple[dict, str]]:
         offset += CHROMA_PAGE_SIZE
 
 
+def has_chunks(file_id: str) -> bool:
+    return bool(get_collection().get(where={"file_id": file_id}, limit=1)["ids"])
+
+
+def get_file_chunks(file_id: str) -> list[tuple[int, str, list[float]]]:
+    """Every chunk of one file as (chunk_index, text, embedding), in chunk order. Used to
+    upload a published file's chunks to central (E6-S6). Sorted explicitly because
+    Chroma's get() does not guarantee an order."""
+    collection = get_collection()
+    rows: list[tuple[int, str, list[float]]] = []
+    offset = 0
+    while True:
+        page = collection.get(
+            where={"file_id": file_id}, limit=CHROMA_PAGE_SIZE, offset=offset,
+            include=["documents", "metadatas", "embeddings"],
+        )
+        for metadata, document, embedding in zip(page["metadatas"], page["documents"], page["embeddings"]):
+            rows.append((int(metadata["chunk_index"]), document, [float(x) for x in embedding]))
+        if len(page["ids"]) < CHROMA_PAGE_SIZE:
+            break
+        offset += CHROMA_PAGE_SIZE
+    rows.sort(key=lambda r: r[0])
+    return rows
+
+
 def query(
     embedding: list[float],
     date_from_ts: float | None,

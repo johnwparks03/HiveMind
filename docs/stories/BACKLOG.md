@@ -81,6 +81,18 @@ Feature freeze: start of day 3, week 3.
 | [E5-S6](e5-hardening/E5-S6-verify-in-aws-checklist.md) | Verify-in-AWS checklist | Central service | M | E4-S5 |
 | [E5-S7](e5-hardening/E5-S7-setup-and-run-instructions.md) | Setup and run instructions | All tracks | S | - |
 
+### E6: Ask over teammates' documents (central chunk index)
+
+| Story | Title | Track | Size | Depends on |
+|---|---|---|---|---|
+| [E6-S1](e6-team-ask/E6-S1-spec-and-rule-updates.md) | Spec and rule updates | All tracks | S | - |
+| [E6-S2](e6-team-ask/E6-S2-pgvector-migration.md) | pgvector migration and chunk table | Central service | M | E6-S1 |
+| [E6-S3](e6-team-ask/E6-S3-chunk-ingest-endpoint.md) | Chunk ingest endpoint | Central service | L | E6-S2 |
+| [E6-S4](e6-team-ask/E6-S4-retrieval-search-endpoint.md) | Retrieval search endpoint | Central service | M | E6-S2 |
+| [E6-S5](e6-team-ask/E6-S5-infra-routes-and-deploy.md) | Infra routes, sizing and deploy | Central service | M | E6-S3, E6-S4 |
+| [E6-S6](e6-team-ask/E6-S6-agent-chunk-upload-and-ask-merge.md) | Agent chunk upload and Ask merge | Local agent | L | E6-S5 |
+| [E6-S7](e6-team-ask/E6-S7-frontend-and-e2e.md) | Frontend toggle and E2E | Frontend + All tracks | M | E6-S6 |
+
 ## Critical path
 
 E0-S3 -> E1-S1 -> E1-S4 -> E3-S2 -> E3-S5 -> E3-S7 -> E4-S2 -> E4-S4 -> E4-S6 -> E5-S5

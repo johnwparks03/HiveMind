@@ -22,6 +22,7 @@ from app.central import download, publish, relay
 from app.config import FRONTEND_ORIGIN, HOST, PORT
 from app.db import init_db
 from app.errors import envelope, install_error_handlers
+from app.folders import watcher
 
 
 @asynccontextmanager
@@ -31,9 +32,11 @@ async def lifespan(_: FastAPI):
     publish.start()
     relay.start()
     download.start()
+    watcher.start()  # rescans a folder shortly after its files are edited
     try:
         yield
     finally:
+        watcher.stop()
         download.stop()
         relay.stop()
         publish.stop()

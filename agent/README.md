@@ -127,9 +127,12 @@ Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8420/team/leave -Headers $h
   the scan), used as a third search-ranking boost alongside the filename/format-word
   boosts. `POST /files/{id}/tags/generate` also retags one file by hand.
 
+## Folder watcher
+
+The agent watches every added folder with watchdog (`app/folders/watcher.py`) and rescans a folder shortly after its files are edited, added, moved or deleted, so nothing needs the Rescan button (`POST /folders/{id}/rescan` still works). It waits `WATCH_DEBOUNCE_SECONDS` (3) after the last change, and at most `WATCH_MAX_WAIT_SECONDS` (30) if changes keep arriving. It only reacts to PDF, DOCX, PPTX and TXT files and ignores Office and editor temp files. At startup each folder is rescanned once in the background (`WATCH_SCAN_ON_START`) to catch edits made while the agent was off. A published file that is edited is re-sent to central, and one that is deleted is unpublished. Only a folder id and counts are logged, never file names.
+
 ## Not built yet
 
-- Continuous file watcher (watchdog) — only initial/on-demand scan right now (`POST /folders/{id}/rescan`)
 - Central service integration beyond sign-in and teams: publish, central search, relay
   transfer, the optional `/llm/query` enhancement (Technical_Blueprint.md §03). `GET /session`
   returns `relay: "disconnected"` until the relay exists

@@ -3,6 +3,7 @@ detection so unchanged files aren't re-indexed. The continuous watcher (watchdog
 lives in watcher.py and calls back into scan_folder on any change.
 """
 import json
+import threading
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -32,6 +33,15 @@ def _generate_tags_best_effort(filename: str, excerpt: str | None) -> str | None
         return json.dumps(generate_tags(filename, excerpt))
     except (bedrock.BedrockUnavailable, ApiError):
         return None
+
+
+_scan_locks: dict[str, threading.Lock] = {}
+_scan_locks_guard = threading.Lock()
+
+
+def _folder_lock(folder_id: str) -> threading.Lock:
+    with _scan_locks_guard:
+        return _scan_locks.setdefault(folder_id, threading.Lock())
 
 
 def _is_shared(row) -> bool:
@@ -112,7 +122,14 @@ def remove_folder(folder_id: str) -> bool:
 def scan_folder(folder_id: str, path: str) -> dict:
     """Walks the folder, registers new files, re-indexes changed ones, skips
     unchanged ones (by content hash), and marks missing ones as removed.
+    One scan of a folder at a time: the watcher, the Rescan button and add_folder can overlap, and
+    two scans of the same folder would both try to register the same new file.
     """
+    with _folder_lock(folder_id):
+        return _scan_folder(folder_id, path)
+
+
+def _scan_folder(folder_id: str, path: str) -> dict:
     source = LocalFilesystemSource(path)
     found = source.list_files()
     found_paths = {f.source_path for f in found}

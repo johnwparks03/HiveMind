@@ -37,8 +37,8 @@ Tick each as you go, and note anything surprising.
 6. **Download with the owner online.** A restarts their agent and waits for it to connect. B clicks Download again. Expect the file in B's Downloads folder (`Saved to ...` shows the path).
 7. **Picked files (B).** With the switch on, B picks specific files in "Using all your files" and asks the Falcon question. Expect the answer to still use the teammate's `falcon-budget.txt` (teammate source, Download button) alongside B's own picks. Picking files narrows only B's own files; there is no hint or note about it.
 8. **Switch off (B).** Turn the switch off and ask the Falcon question again. Expect no teammate source.
-9. **Edit sync (A).** A edits `falcon-budget.txt` (change `$48,200` to `$52,900`), saves, and clicks Rescan on that folder. After a minute, `mine.py` still shows the file, and B asking the Falcon question gets **$52,900**, never the old figure.
-10. **Delete sync (A).** A removes `falcon-budget.txt` from HiveMind (or deletes it from disk and rescans). After a minute, `mine.py` no longer lists it, and B asking the Falcon question gets no teammate source for it.
+9. **Edit sync (A).** A edits `falcon-budget.txt` (change `$48,200` to `$52,900`) and saves. No Rescan is needed: the agent's folder watcher notices within a few seconds. After a minute, `mine.py` still shows the file, and B asking the Falcon question gets **$52,900**, never the old figure.
+10. **Delete sync (A).** A removes `falcon-budget.txt` from HiveMind (or just deletes the file from disk; the watcher notices). After a minute, `mine.py` no longer lists it, and B asking the Falcon question gets no teammate source for it.
 11. **Search regression (B).** On the Search page, tick "Also search teammates' public files", search for `handbook`, and download `long-handbook.txt` from the result card. This exercises the download control that Search and Ask now share.
 12. **Cleanup.** A and B leave the team, A removes the fixtures folder from HiveMind, and `mine.py` shows nothing left.
 

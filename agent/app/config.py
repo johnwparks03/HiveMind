@@ -147,6 +147,14 @@ QUERY_EXPANSION_MAX_TOTAL_WORDS = 6
 
 SUPPORTED_EXTENSIONS = {".pdf", ".docx", ".pptx", ".txt"}
 
+# Folder watcher (app/folders/watcher.py): a change in an added folder starts a timer, more changes in
+# the same folder restart it, and the folder is rescanned once it has been quiet this long. A folder
+# that never goes quiet is rescanned after WATCH_MAX_WAIT_SECONDS anyway. On start, every folder is
+# rescanned once in the background to catch edits made while the agent was not running.
+WATCH_DEBOUNCE_SECONDS = 3
+WATCH_MAX_WAIT_SECONDS = 30
+WATCH_SCAN_ON_START = True
+
 # Saved Ask chats: how much of the first question becomes the sidebar title.
 CHAT_TITLE_MAX_CHARS = 60
 

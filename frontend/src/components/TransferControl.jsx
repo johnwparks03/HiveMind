@@ -1,7 +1,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
-import { failureText, startErrorText, statusText, transferPhase } from "../lib/transfer";
+import { failureText, isTerminal, startErrorText, statusText, transferPhase } from "../lib/transfer";
 import { Spinner } from "./Loading";
 
 // Download button and progress for one teammate file (docs/stories BACKLOG.md E4-S4/S5). The agent

@@ -72,7 +72,7 @@ python -m pytest tests -m integration   # against the deployed stack; needs a va
 ```
 **Infra deploy:** `cd infra`, activate `.venv`, `cdk diff`, then `cdk deploy` (coordinate first; see AWS section).
 
-**Lint:** not set up yet. Record commands here as each is built.
+**Lint:** frontend: `npm run lint` in `frontend/` (oxlint; undefined names, such as a missing import, are errors). Other parts: not set up yet. Record commands here as each is built.
 
 ## AWS (shared demo account)
 - **Account:** 954976288579. **Region:** us-east-1. Stack name: `HiveMind`.

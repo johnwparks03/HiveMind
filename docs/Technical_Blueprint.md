@@ -437,7 +437,7 @@ _Note: the last row of the v1 blueprint's table was cut off in the PDF text I re
 - Chunk text and embeddings of published files are stored at rest in AWS (Aurora) and readable by members of the owner's team through Ask
 - Teammate chunks pass through the requester's laptop on their way to Bedrock, which the agent calls directly with credentials from `agent/.env` (demo only)
 - Only the first 2,000 chunks of a file are uploaded for teammates' Ask (`MAX_CHUNKS_PER_FILE`)
-- Ask searches teammates' files only when the whole library is in scope and the question has a topic and no date range; otherwise the answer uses local files and says why
+- Ask searches teammates' files only when the question has a topic and no date range (picking files narrows only the user's own); otherwise the answer uses local files and says why
 - Tags reflect only the excerpt, not the whole file
 - Either-date matching means a file created long ago but edited recently matches recent date queries
 - The 15-minute S3 expiry is approximate (up to about 16 minutes)

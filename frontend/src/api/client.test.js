@@ -80,11 +80,11 @@ test("the live skip reason on the answer is handed back, and is null when the ag
     jsonResponse(201, {
       messages: [
         { role: "user", content: "q", sources: null },
-        { role: "assistant", content: "a", sources: [], teammate_skipped_reason: "local_scope" },
+        { role: "assistant", content: "a", sources: [], teammate_skipped_reason: "no_topic" },
       ],
     });
   const withReason = await api.askInChat("c1", "q", ["f1"], true);
-  assert.equal(withReason.teammateSkippedReason, "local_scope");
+  assert.equal(withReason.teammateSkippedReason, "no_topic");
   assert.equal(withReason.messages.length, 2);
 
   respond = () => jsonResponse(201, { messages: [{ role: "user" }, { role: "assistant", content: "a" }] });

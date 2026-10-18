@@ -13,7 +13,6 @@ import {
   loadIncludeTeammates,
   saveIncludeTeammates,
   skippedReasonText,
-  teammateScopeHint,
 } from "../lib/ask";
 
 const EXAMPLES = [
@@ -156,7 +155,6 @@ export default function AskPage() {
 
   const messages = activeId ? chat.data?.messages ?? [] : [];
   const skippedText = activeId ? skippedReasonText(skippedReason) : null;
-  const scopeHint = teammateScopeHint(includeTeammates, scopeFileIds.size);
   const showExamples = !activeId && !pendingQuestion;
 
   return (
@@ -263,7 +261,6 @@ export default function AskPage() {
             <Switch checked={includeTeammates} onChange={changeIncludeTeammates}>
               Also use teammates' public files
             </Switch>
-            {scopeHint && <p className="footnote ask-footnote">{scopeHint}</p>}
           </div>
           <form className="ask-form" onSubmit={handleSubmit}>
             <label htmlFor="ask-input" className="sr-only">Ask a question about your files</label>

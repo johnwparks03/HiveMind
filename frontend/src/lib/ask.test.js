@@ -6,7 +6,6 @@ import {
   loadIncludeTeammates,
   saveIncludeTeammates,
   skippedReasonText,
-  teammateScopeHint,
 } from "./ask.js";
 
 test("only a source flagged teammate is a teammate source; older saved sources are local", () => {
@@ -17,11 +16,11 @@ test("only a source flagged teammate is a teammate source; older saved sources a
 });
 
 test("every skip reason the agent can send has its own plain wording", () => {
-  const reasons = ["local_scope", "no_topic", "date_filter", "no_team", "central_unavailable"];
+  const reasons = ["no_topic", "date_filter", "no_team", "central_unavailable"];
   const texts = reasons.map(skippedReasonText);
   assert.ok(texts.every((t) => typeof t === "string" && t.length > 20));
   assert.equal(new Set(texts).size, reasons.length);
-  assert.match(skippedReasonText("local_scope"), /picked specific files/);
+  assert.match(skippedReasonText("no_topic"), /no topic/);
   assert.match(skippedReasonText("central_unavailable"), /your own files only/);
 });
 
@@ -29,12 +28,6 @@ test("no reason means nothing to show, and an unknown reason still gets a senten
   assert.equal(skippedReasonText(null), null);
   assert.equal(skippedReasonText(undefined), null);
   assert.match(skippedReasonText("something_new"), /weren't used/);
-});
-
-test("the scope hint appears only when teammates are on and files are picked", () => {
-  assert.match(teammateScopeHint(true, 2), /haven't picked specific files/);
-  assert.equal(teammateScopeHint(true, 0), null);
-  assert.equal(teammateScopeHint(false, 3), null);
 });
 
 function fakeStorage(initial = {}) {

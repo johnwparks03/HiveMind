@@ -34,3 +34,5 @@ Implemented (2026-10-17). Decisions confirmed with the user: the switch is off b
 **Not yet done: the two end-to-end criteria.** `docs/e2e/README.md` has the 12-step two-person checklist, `docs/e2e/fixtures/` has the files (`falcon-budget.txt` 5 chunks, `long-handbook.txt` 300 chunks = three full 100-chunk batches) and `docs/e2e/mine.py` lists a user's published files with their `chunk_count` (not yet run against the live stack). Run it, record the result here, and tick the two E2E boxes. If it passes, also tick the open items in the E6-S5 notes (full-size batch through API Gateway) and E6-S6 notes (the real two-agent run).
 
 No new endpoints, so no new Postman folder.
+
+**Update 2026-10-18 (after the first end-to-end run):** the narrowed-scope rule (`local_scope`) was removed on request. Picking files or folders now narrows only the user's own files; teammates' files are searched whichever are picked. The skip reasons are now `no_topic`, `date_filter`, `no_team` and `central_unavailable`.

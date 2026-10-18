@@ -7,7 +7,6 @@ export function isTeammateSource(source) {
 
 // Why teammates' files were left out of an answer (the agent's `teammate_skipped_reason`).
 const SKIPPED_TEXT = {
-  local_scope: "Teammates' files weren't used because you picked specific files. Clear the selection to include them.",
   no_topic: "Teammates' files weren't used because the question has no topic to match. Try naming what you're looking for.",
   date_filter: "Teammates' files weren't used because the question has a date range, which can't be applied to their files.",
   no_team: "Join a team (see the Team tab) to include teammates' files.",
@@ -18,13 +17,6 @@ const SKIPPED_TEXT = {
 export function skippedReasonText(reason) {
   if (!reason) return null;
   return SKIPPED_TEXT[reason] ?? "Teammates' files weren't used for this answer.";
-}
-
-// With specific files picked, the agent leaves teammates out, so say so before the user sends.
-export function teammateScopeHint(includeTeammates, pickedFileCount) {
-  return includeTeammates && pickedFileCount > 0
-    ? "Teammates' files are only used when you haven't picked specific files."
-    : null;
 }
 
 // The switch is off by default and remembered for the browser session only. Storage is passed in

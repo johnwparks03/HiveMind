@@ -121,16 +121,38 @@ def test_the_prompt_covers_teammate_text_and_still_calls_excerpts_untrusted(stub
 # --- when teammates are left out -------------------------------------------------------------
 
 
-def test_a_narrowed_scope_skips_teammates(stubs):
-    _local()
+def test_picked_files_narrow_only_the_local_side_teammates_are_still_searched(stubs):
+    _local("local1", "Picked.txt")
+    _local("local2", "Not picked.txt", text="other words")
+    stubs["rows"] = [row("t1", "Team plan.docx", "plan text", 0.0)]
     result = ask(include_teammates=True, file_ids=["local1"])
-    assert result["teammate_skipped_reason"] == "local_scope" and stubs["search_calls"] == []
-    assert [s["source"] for s in result["sources"]] == ["local"]
+    assert result["teammate_skipped_reason"] is None and len(stubs["search_calls"]) == 1
+    assert {(s["file_id"], s["source"]) for s in result["sources"]} == {("t1", "teammate"), ("local1", "local")}
 
 
-def test_a_scope_that_resolves_to_nothing_is_a_no_match_with_the_reason(stubs):
+def test_picks_that_resolve_to_nothing_still_let_teammates_answer(stubs):
+    stubs["rows"] = [row("t1", text="only a teammate knows this")]
     result = ask(include_teammates=True, folder_ids=["no-such-folder"])
-    assert result == {"answer": ask_service.NO_MATCH, "sources": [], "teammate_skipped_reason": "local_scope"}
+    assert result["teammate_skipped_reason"] is None
+    assert [s["source"] for s in result["sources"]] == ["teammate"] and stubs["bedrock"]
+
+
+def test_picks_that_resolve_to_nothing_and_no_teammate_match_is_a_no_match(stubs):
+    result = ask(include_teammates=True, folder_ids=["no-such-folder"])
+    assert result == {"answer": ask_service.NO_MATCH, "sources": [], "teammate_skipped_reason": None}
+    assert stubs["bedrock"] == []
+
+
+def test_picks_that_resolve_to_nothing_without_teammates_never_embeds_or_calls_central(stubs):
+    result = ask(include_teammates=False, folder_ids=["no-such-folder"])
+    assert result == {"answer": ask_service.NO_MATCH, "sources": []}
+    assert stubs["search_calls"] == [] and stubs["bedrock"] == []
+
+
+def test_empty_picks_with_central_down_say_why(stubs):
+    stubs["reason"] = "central_unavailable"
+    result = ask(include_teammates=True, folder_ids=["no-such-folder"])
+    assert result == {"answer": ask_service.NO_MATCH, "sources": [], "teammate_skipped_reason": "central_unavailable"}
 
 
 def test_a_question_without_a_topic_skips_teammates(stubs):
@@ -218,12 +240,12 @@ def test_ask_route_passes_include_teammates_through(api, monkeypatch):
 
     def fake(question, folder_ids=None, file_ids=None, include_teammates=False):
         seen.update(question=question, include_teammates=include_teammates)
-        return {"answer": "a", "sources": [], "teammate_skipped_reason": "local_scope"}
+        return {"answer": "a", "sources": [], "teammate_skipped_reason": "no_topic"}
 
     monkeypatch.setattr("app.api.routes_ask.ask", fake)
     resp = api.post("/ask", json={"question": "q", "include_teammates": True})
     assert resp.status_code == 200 and seen == {"question": "q", "include_teammates": True}
-    assert resp.json()["teammate_skipped_reason"] == "local_scope"
+    assert resp.json()["teammate_skipped_reason"] == "no_topic"
     api.post("/ask", json={"question": "q"})
     assert seen["include_teammates"] is False
 

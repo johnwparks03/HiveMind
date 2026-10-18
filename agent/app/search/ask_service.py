@@ -148,29 +148,31 @@ def ask(
     file_ids: list[str] | None = None,
     include_teammates: bool = False,
 ) -> dict:
-    """Teammates' files (E6) are searched through central only when the whole library is
-    in scope and the question has a topic and no date range, because central can only rank
-    chunks by similarity; otherwise `teammate_skipped_reason` says why they were left out
-    ('local_scope', 'no_topic', 'date_filter'), or 'no_team' / 'central_unavailable'."""
+    """The folder/file picks narrow only the user's own files. Teammates' files (E6) are searched
+    through central whatever was picked, as long as the question has a topic and no date range
+    (central can only rank chunks by similarity); otherwise `teammate_skipped_reason` says why
+    they were left out ('no_topic', 'date_filter'), or 'no_team' / 'central_unavailable'."""
     scope = _resolve_scope(folder_ids, file_ids)
-    skipped = "local_scope" if include_teammates and scope is not None else None
-    if scope is not None and not scope:
+    picks_resolve_to_nothing = scope is not None and not scope
+    if picks_resolve_to_nothing and not include_teammates:
         # A scope was given (folders and/or files selected) but it resolved to
         # nothing real — distinct from scope=None, which means "search everything."
-        return _result(NO_MATCH, [], include_teammates, skipped)
+        return _result(NO_MATCH, [], include_teammates, None)
 
     parsed: ParsedQuery = parse_query_locally(question)
     date_from_ts = parsed.date_from.timestamp() if parsed.date_from else None
     date_to_ts = parsed.date_to.timestamp() if parsed.date_to else None
 
     embedding = embed([parsed.topic])[0] if parsed.topic else None
-    files = (
-        _gather_by_topic(parsed.topic, date_from_ts, date_to_ts, scope, embedding)
-        if parsed.topic
-        else _gather_by_recency(date_from_ts, date_to_ts, scope)
-    )
+    if picks_resolve_to_nothing:
+        files = []  # nothing of the user's own to read, but teammates' files may still answer
+    elif parsed.topic:
+        files = _gather_by_topic(parsed.topic, date_from_ts, date_to_ts, scope, embedding)
+    else:
+        files = _gather_by_recency(date_from_ts, date_to_ts, scope)
 
-    if include_teammates and skipped is None:
+    skipped = None
+    if include_teammates:
         if embedding is None:
             skipped = "no_topic"
         elif date_from_ts is not None or date_to_ts is not None:

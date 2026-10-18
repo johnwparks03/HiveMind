@@ -1,6 +1,6 @@
 """Watches the added folders for edits (watchdog) and rescans a folder once its changes settle, so
 an edited, new, moved or deleted file is picked up without anyone pressing Rescan. A rescan is the
-same `scan_folder` the Rescan button runs: it re-indexes only changed files, queues the publish
+same `scan_folder` that `POST /folders/{id}/rescan` runs: it re-indexes only changed files, queues the publish
 re-sync for a public file, and unpublishes one that was deleted.
 
 Editors rarely write a file in one step (a temp file, then a rename, then a touch), so a change only

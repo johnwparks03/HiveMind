@@ -129,7 +129,7 @@ Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8420/team/leave -Headers $h
 
 ## Folder watcher
 
-The agent watches every added folder with watchdog (`app/folders/watcher.py`) and rescans a folder shortly after its files are edited, added, moved or deleted, so nothing needs the Rescan button (`POST /folders/{id}/rescan` still works). It waits `WATCH_DEBOUNCE_SECONDS` (3) after the last change, and at most `WATCH_MAX_WAIT_SECONDS` (30) if changes keep arriving. It only reacts to PDF, DOCX, PPTX and TXT files and ignores Office and editor temp files. At startup each folder is rescanned once in the background (`WATCH_SCAN_ON_START`) to catch edits made while the agent was off. A published file that is edited is re-sent to central, and one that is deleted is unpublished. Only a folder id and counts are logged, never file names.
+The agent watches every added folder with watchdog (`app/folders/watcher.py`) and rescans a folder shortly after its files are edited, added, moved or deleted, so the UI has no Rescan button (`POST /folders/{id}/rescan` still works). It waits `WATCH_DEBOUNCE_SECONDS` (3) after the last change, and at most `WATCH_MAX_WAIT_SECONDS` (30) if changes keep arriving. It only reacts to PDF, DOCX, PPTX and TXT files and ignores Office and editor temp files. At startup each folder is rescanned once in the background (`WATCH_SCAN_ON_START`) to catch edits made while the agent was off. A published file that is edited is re-sent to central, and one that is deleted is unpublished. Only a folder id and counts are logged, never file names.
 
 ## Not built yet
 

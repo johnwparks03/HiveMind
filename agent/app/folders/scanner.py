@@ -122,7 +122,7 @@ def remove_folder(folder_id: str) -> bool:
 def scan_folder(folder_id: str, path: str) -> dict:
     """Walks the folder, registers new files, re-indexes changed ones, skips
     unchanged ones (by content hash), and marks missing ones as removed.
-    One scan of a folder at a time: the watcher, the Rescan button and add_folder can overlap, and
+    One scan of a folder at a time: the watcher, the rescan route and add_folder can overlap, and
     two scans of the same folder would both try to register the same new file.
     """
     with _folder_lock(folder_id):

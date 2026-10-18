@@ -1,3 +1,4 @@
+import Loading, { Spinner } from "../components/Loading";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api, isAgentUnreachable } from "../api/client";
@@ -66,7 +67,7 @@ export default function AccountPage() {
 
   return (
     <section className="account-page" aria-label={signedIn ? "Signed in" : "Sign in"}>
-      {session.isPending && <p className="muted">Checking sign-in…</p>}
+      {session.isPending && <Loading label="Checking sign-in…" />}
 
       {session.isError && (
         <div className="banner banner-error" role="alert">
@@ -87,7 +88,7 @@ export default function AccountPage() {
             onClick={() => logOut.mutate()}
             disabled={logOut.isPending}
           >
-            {logOut.isPending ? "Signing out…" : "Sign out"}
+            {logOut.isPending ? <><Spinner />Signing out…</> : "Sign out"}
           </button>
           {logOut.isError && (
             <p className="inline-error" role="alert">Couldn't sign out. Try again.</p>
@@ -127,7 +128,7 @@ export default function AccountPage() {
               )}
 
               <button type="submit" className="btn btn-primary" disabled={signIn.isPending}>
-                {signIn.isPending ? "Signing in…" : "Sign in"}
+                {signIn.isPending ? <><Spinner />Signing in…</> : "Sign in"}
               </button>
             </form>
           </div>

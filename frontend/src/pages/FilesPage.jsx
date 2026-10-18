@@ -78,11 +78,6 @@ export default function FilesPage() {
     },
   });
 
-  const rescan = useMutation({
-    mutationFn: (id) => api.rescanFolder(id),
-    onSuccess: refresh,
-  });
-
   const removeFolder = useMutation({
     mutationFn: (id) => api.removeFolder(id),
     onSuccess: (_data, id) => {
@@ -179,7 +174,7 @@ export default function FilesPage() {
   }
 
   // Grouped by folder only in the all-folders view; one folder is already a single list.
-  // Every folder appears once, with its files under it. Empty folders still show, so they can be rescanned or removed.
+  // Every folder appears once, with its files under it. Empty folders still show, so they can be removed.
   const groups = folderList.map((folder) => ({ folder, files: visible.filter((f) => f.folder_id === folder.folder_id) }));
   const isOpen = (id, count) => (openOverrides.has(id) ? openOverrides.get(id) : count <= AUTO_COLLAPSE_OVER);
 
@@ -238,7 +233,7 @@ export default function FilesPage() {
             onClick={() => pickFolder.mutate()}
             disabled={pickFolder.isPending || addFolder.isPending}
           >
-            {pickFolder.isPending ? "Opening…" : addFolder.isPending ? "Adding…" : "Upload a folder"}
+            {pickFolder.isPending ? <><Spinner />Opening…</> : addFolder.isPending ? <><Spinner />Adding…</> : "Upload a folder"}
           </button>
         </div>
         {(pickFolder.isError || addFolder.isError) && (
@@ -393,13 +388,12 @@ export default function FilesPage() {
                     pickedCount={pickedCount}
                     onToggleSelection={() => toggleGroupSelection(groupFiles)}
                     canShare={inGroup}
-                    onRescan={() => rescan.mutate(id)}
                     onRemove={() => handleRemove(folder)}
                     onShare={() => handleShare(folder)}
                     onUnshare={() => handleUnshare(folder)}
                     sharing={sharePreview.isPending || shareFolder.isPending}
                     unsharing={unshareFolder.isPending}
-                    busy={rescan.isPending || removeFolder.isPending || sharePreview.isPending || shareFolder.isPending || unshareFolder.isPending}
+                    busy={removeFolder.isPending || sharePreview.isPending || shareFolder.isPending || unshareFolder.isPending}
                   >
                     {renderRows(groupFiles)}
                   </FolderRow>

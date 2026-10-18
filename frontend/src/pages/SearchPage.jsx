@@ -2,7 +2,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { api, isAgentUnreachable } from "../api/client";
 import HowTo from "../components/HowTo";
-import Loading from "../components/Loading";
+import Loading, { Spinner } from "../components/Loading";
 import ResultCard from "../components/ResultCard";
 import SearchIllustration from "../components/SearchIllustration";
 import DownloadFolderControl from "../components/DownloadFolderControl";
@@ -78,7 +78,7 @@ export default function SearchPage() {
             autoComplete="off"
           />
           <button type="submit" className="btn btn-primary" disabled={search.isPending || !text.trim()}>
-            {search.isPending ? "Searching…" : "Search"}
+            {search.isPending ? <><Spinner />Searching…</> : "Search"}
           </button>
         </form>
 

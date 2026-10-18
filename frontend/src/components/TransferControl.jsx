@@ -34,32 +34,36 @@ export default function TransferControl({ fileId, filename, disabled = false, di
 
   return (
     <div className={className}>
-      {(phase === "idle" || phase === "starting") && (
+      {phase === "idle" && (
         <button
           type="button"
           className="btn btn-outline btn-sm"
           onClick={() => request.mutate()}
-          disabled={phase === "starting" || disabled}
+          disabled={disabled}
           title={disabled ? disabledTitle : undefined}
         >
-          {phase === "starting" ? <><Spinner />Requesting…</> : "Download"}
+          Download
         </button>
       )}
 
-      {phase === "working" && (
+      {/* One pill from the click until the file is saved, so there is no white button flashing to blue.
+          "Requesting..." is also what central reports for a request it has just accepted. */}
+      {(phase === "starting" || phase === "working") && (
         <span className="pill pill-pending" role="status">
           <Spinner />
-          {statusText(status ?? "requested")}
+          {phase === "starting" ? statusText("requested") : statusText(status ?? "requested")}
         </span>
       )}
 
       {phase === "downloaded" && (
-        <span className="pill pill-indexed">Saved to {transfer.data.saved_path}</span>
+        <span className="pill pill-indexed pill-wrap" title={transfer.data.saved_path}>
+          Saved to {transfer.data.saved_path}
+        </span>
       )}
 
       {(phase === "failed" || phase === "expired") && (
         <>
-          <span className="pill pill-failed">
+          <span className="pill pill-failed pill-wrap">
             {phase === "expired" ? "This download expired before it finished." : failureText(transfer.data.error_code)}
           </span>
           <button type="button" className="btn btn-outline btn-sm" onClick={retry}>

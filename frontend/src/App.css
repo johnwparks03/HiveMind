@@ -1792,7 +1792,7 @@ input:focus {
   padding: 5px 10px;
 }
 
-/* Folder row actions: a little room between Check for new files, Make public, Make private and Remove. */
+/* Folder row actions: a little room between Make public, Make private and Remove. */
 .folder-row-actions {
   display: flex;
   flex-wrap: wrap;
@@ -1876,4 +1876,32 @@ input:focus {
   height: 11px;
   margin-right: 0;
   border-width: 2px;
+}
+
+/* A pill with long text (a save location, an error) wraps inside its card instead of running past it. */
+.pill-wrap {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+  min-width: 0;
+  flex-shrink: 1;
+  border-radius: 12px;
+  padding: 4px 10px;
+  line-height: 1.35;
+}
+
+.transfer-row,
+.ask-transfer {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.ask-source-row > span:first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* The checking state of the status indicator shows a spinner where the dot would be. */
+.status .spinner {
+  margin-right: 0;
 }

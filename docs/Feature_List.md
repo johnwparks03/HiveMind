@@ -32,7 +32,7 @@ HiveMind is a team knowledge-finding tool. A user searches their own files first
 
 ### 1.2 Change detection
 
-- File watcher (watchdog, `app/folders/watcher.py`) for new, changed, moved, and deleted files: a change in an added folder waits until the folder has been quiet for `WATCH_DEBOUNCE_SECONDS` (3), or at most `WATCH_MAX_WAIT_SECONDS` (30) if changes keep coming, then runs the same rescan as the Rescan button. Only PDF, DOCX, PPTX and TXT count; Office and editor temp files are ignored. A rescan of one folder never overlaps another. When the agent starts it rescans each folder once (`WATCH_SCAN_ON_START`) to catch edits made while it was closed. A public file that was edited is re-sent to central, and a public file that was deleted is unpublished
+- File watcher (watchdog, `app/folders/watcher.py`) for new, changed, moved, and deleted files: a change in an added folder waits until the folder has been quiet for `WATCH_DEBOUNCE_SECONDS` (3), or at most `WATCH_MAX_WAIT_SECONDS` (30) if changes keep coming, then runs the same rescan as `POST /folders/{id}/rescan` (the UI no longer has a Rescan button). Only PDF, DOCX, PPTX and TXT count; Office and editor temp files are ignored. A rescan of one folder never overlaps another. When the agent starts it rescans each folder once (`WATCH_SCAN_ON_START`) to catch edits made while it was closed. A public file that was edited is re-sent to central, and a public file that was deleted is unpublished
 - Content-hash comparison so unchanged files aren't re-indexed
 - Work queue so bulk folder adds don't block the agent
 

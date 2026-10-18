@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import DownloadFolderControl from "../components/DownloadFolderControl";
-import { Spinner } from "../components/Loading";
+import Loading, { Spinner } from "../components/Loading";
 import HowTo from "../components/HowTo";
 import TeammateResultCard from "../components/TeammateResultCard";
 import { api, isAgentUnreachable } from "../api/client";
@@ -25,7 +25,7 @@ export default function GroupsPage() {
     queryClient.invalidateQueries({ queryKey: ["group"] });
   }
 
-  if (session.isPending) return <Shell><p className="muted">Checking sign-in…</p></Shell>;
+  if (session.isPending) return <Shell><Loading label="Checking sign-in…" /></Shell>;
 
   if (session.isError) {
     return (
@@ -51,7 +51,7 @@ export default function GroupsPage() {
     );
   }
 
-  if (group.isPending) return <Shell><p className="muted">Loading your team…</p></Shell>;
+  if (group.isPending) return <Shell><Loading label="Loading your team…" /></Shell>;
 
   if (group.isError) {
     return (
@@ -114,7 +114,7 @@ function CreateGroup({ onCreated }) {
         <input id="group-name" type="text" value={name} onChange={(e) => setName(e.target.value)} />
         {create.isError && <p className="inline-error" role="alert">{groupErrorMessage(create.error)}</p>}
         <button type="submit" className="btn btn-primary" disabled={create.isPending || !name.trim()}>
-          {create.isPending ? "Creating…" : "Create team"}
+          {create.isPending ? <><Spinner />Creating…</> : "Create team"}
         </button>
       </form>
     </div>
@@ -153,7 +153,7 @@ function JoinGroup({ onJoined }) {
         />
         {join.isError && <p className="inline-error" role="alert">{groupErrorMessage(join.error)}</p>}
         <button type="submit" className="btn btn-primary" disabled={join.isPending || !code.trim()}>
-          {join.isPending ? "Joining…" : "Join team"}
+          {join.isPending ? <><Spinner />Joining…</> : "Join team"}
         </button>
       </form>
     </div>
@@ -225,7 +225,7 @@ function GroupDetail({ group, onChanged }) {
           onClick={() => createInvite.mutate()}
           disabled={createInvite.isPending}
         >
-          {createInvite.isPending ? "Creating code…" : invite ? "Create a new code" : "Create invite code"}
+          {createInvite.isPending ? <><Spinner />Creating code…</> : invite ? "Create a new code" : "Create invite code"}
         </button>
       </section>
 
@@ -264,7 +264,7 @@ function GroupDetail({ group, onChanged }) {
 function TeamFiles() {
   const files = useQuery({ queryKey: ["group-files"], queryFn: api.getGroupFiles });
 
-  if (files.isPending) return <p className="muted">Loading public files…</p>;
+  if (files.isPending) return <Loading label="Loading public files…" />;
 
   if (files.isError) {
     return (

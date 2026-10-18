@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api, isAgentUnreachable } from "../api/client";
 import HowTo from "../components/HowTo";
-import Loading from "../components/Loading";
+import Loading, { Spinner } from "../components/Loading";
 import Markdown from "../components/Markdown";
 import OpenButton from "../components/OpenButton";
 import ScopePicker from "../components/ScopePicker";
@@ -164,7 +164,7 @@ export default function AskPage() {
           New chat
         </button>
 
-        {chats.isPending && <p className="muted ask-side-note">Loading chats…</p>}
+        {chats.isPending && <Loading label="Loading chats…" />}
         {chats.data?.length === 0 && <p className="muted ask-side-note">Your chats will show here.</p>}
 
         <ul className="ask-chat-list">
@@ -273,7 +273,7 @@ export default function AskPage() {
               autoComplete="off"
             />
             <button type="submit" className="btn btn-primary" disabled={send.isPending || !text.trim()}>
-              {send.isPending ? "Thinking…" : "Send"}
+              {send.isPending ? <><Spinner />Thinking…</> : "Send"}
             </button>
           </form>
         </div>

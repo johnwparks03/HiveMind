@@ -1,3 +1,4 @@
+import { Spinner } from "./Loading";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 
@@ -28,7 +29,7 @@ export default function DownloadFolderControl() {
 
   return (
     <p className="download-folder-control muted">
-      Teammate downloads save to <strong>{folder.data?.path ?? "…"}</strong>.
+      Teammate downloads save to <strong>{folder.isPending ? <Spinner /> : folder.data?.path ?? "…"}</strong>.
       <button type="button" className="btn btn-ghost btn-sm" onClick={() => choose.mutate()} disabled={busy}>
         Change
       </button>

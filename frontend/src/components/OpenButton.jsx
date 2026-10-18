@@ -1,5 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { api } from "../api/client";
+import { Spinner } from "./Loading";
 
 // Opens the file in its Windows default app via the agent. Shows the error inline, next to the button.
 export default function OpenButton({ fileId, filename }) {
@@ -14,7 +15,7 @@ export default function OpenButton({ fileId, filename }) {
         disabled={open.isPending}
         aria-label={`Open ${filename}`}
       >
-        {open.isPending ? "Opening…" : "Open"}
+        {open.isPending ? <><Spinner />Opening…</> : "Open"}
       </button>
       {open.isError && (
         <span className="inline-error" role="alert">

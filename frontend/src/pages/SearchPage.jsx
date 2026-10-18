@@ -12,9 +12,9 @@ import { interpretedCaption } from "../lib/files";
 import { addRecent, loadRecent, removeRecent, saveRecent } from "../lib/recent";
 
 const EXAMPLES = [
-  "budget plan from last week",
-  "meeting notes from 3 days ago",
-  "roadmap deck from March",
+  "Budget plan from last week",
+  "Meeting notes from 3 days ago",
+  "Roadmap deck from March",
 ];
 
 export default function SearchPage() {

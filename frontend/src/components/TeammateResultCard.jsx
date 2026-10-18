@@ -11,7 +11,7 @@ export default function TeammateResultCard({ result }) {
         <h3 className="result-name">{result.filename}</h3>
         <span className={`pill ${result.owner_online ? "pill-indexed" : "pill-pending"}`}>
           <span className="pill-dot" aria-hidden="true" />
-          {result.owner_online ? "Online now" : "Offline"}
+          {result.owner_online ? "Owner online" : "Owner offline"}
         </span>
       </div>
 
@@ -21,9 +21,6 @@ export default function TeammateResultCard({ result }) {
         )}
         {result.file_modified_at && (
           <div><dt>Modified</dt><dd>{formatDate(result.file_modified_at)}</dd></div>
-        )}
-        {result.expires_at && (
-          <div><dt>Expires</dt><dd>{formatDate(result.expires_at)}</dd></div>
         )}
       </dl>
 

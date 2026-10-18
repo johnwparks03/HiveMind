@@ -50,3 +50,5 @@ No new endpoints, so no new Postman folder.
 4. The "Saved to ..." and failure pills wrap inside their card (`pill-wrap`) instead of running past its border; the full path is also the tooltip.
 Checked: lint clean (undefined names are errors), build passes, 66 frontend tests pass. I could not screenshot the pills (headless Edge is blocked on this machine), so the wrapping is from the CSS and needs a look on the Team page with a long save path.
 
+**Further UI changes (2026-10-18):** (1) The Ask thread scrolls to the newest message when a question is sent, when its answer arrives and when a chat is opened. (2) The browser's confirm and alert popups are replaced by a HiveMind dialog (`DialogProvider` and `useDialog()` in `frontend/src/components/`, mounted in `main.jsx`); all nine popups on the Files, Team and Ask pages use it, and destructive confirms (remove, delete, leave) have a red button. Escape or a click outside cancels. (3) The "Expires" row is gone from teammates' files on the Team page. Checked: lint has no errors, 66 frontend tests pass, build passes; the look and the scrolling were not checked in a browser.
+

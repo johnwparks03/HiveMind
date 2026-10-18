@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api, isAgentUnreachable } from "../api/client";
+import { useDialog } from "../components/dialogContext";
 import HowTo from "../components/HowTo";
 import Loading, { Spinner } from "../components/Loading";
 import Markdown from "../components/Markdown";
@@ -16,9 +17,9 @@ import {
 } from "../lib/ask";
 
 const EXAMPLES = [
-  "what did we do the last two weeks",
-  "give me a breakdown of this sprint",
-  "what's the status of the budget plan",
+  "What did we do the last two weeks",
+  "Give me a breakdown of this sprint",
+  "What's the status of the budget plan",
 ];
 
 // sessionStorage can be blocked (private windows, embedded views): then the switch just isn't remembered.
@@ -66,6 +67,8 @@ function Sources({ sources }) {
 // Chat-style Ask: saved conversations on the left, the thread in the middle, the question box below.
 export default function AskPage() {
   const queryClient = useQueryClient();
+  const { confirm } = useDialog();
+  const threadEndRef = useRef(null);
   const [activeId, setActiveId] = useState(null); // null = a new, unsaved chat
   const [text, setText] = useState("");
   const [scopeFileIds, setScopeFileIds] = useState(() => new Set());
@@ -147,14 +150,24 @@ export default function AskPage() {
     run(text);
   }
 
-  function handleDelete(chatId, title) {
-    if (window.confirm(`Delete "${title || "this chat"}"? Its saved messages will be removed.`)) {
-      remove.mutate(chatId);
-    }
+  async function handleDelete(chatId, title) {
+    const ok = await confirm({
+      title: "Delete chat?",
+      message: `Delete "${title || "this chat"}"? Its saved messages will be removed.`,
+      confirmLabel: "Delete",
+      danger: true,
+    });
+    if (ok) remove.mutate(chatId);
   }
 
   const messages = activeId ? chat.data?.messages ?? [] : [];
   const skippedText = activeId ? skippedReasonText(skippedReason) : null;
+
+  // Keep the newest message in view: when a question is sent (it shows right away), when its answer
+  // arrives, and when another chat is opened.
+  useEffect(() => {
+    threadEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [messages.length, pendingQuestion, skippedText, activeId, send.isError]);
   const showExamples = !activeId && !pendingQuestion;
 
   return (
@@ -253,6 +266,7 @@ export default function AskPage() {
                   : `Ask failed: ${send.error.message}. Your question is still in the box.`}
             </div>
           )}
+          <div ref={threadEndRef} aria-hidden="true" />
         </div>
 
         <div className="ask-composer">

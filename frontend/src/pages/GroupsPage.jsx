@@ -3,6 +3,7 @@ import { useState } from "react";
 import DownloadFolderControl from "../components/DownloadFolderControl";
 import Loading, { Spinner } from "../components/Loading";
 import HowTo from "../components/HowTo";
+import { useDialog } from "../components/dialogContext";
 import TeammateResultCard from "../components/TeammateResultCard";
 import { api, isAgentUnreachable } from "../api/client";
 import { formatDate } from "../lib/files";
@@ -174,6 +175,8 @@ function GroupDetail({ group, onChanged }) {
     },
   });
 
+  const { confirm } = useDialog();
+
   const leave = useMutation({
     mutationFn: api.leaveGroup,
     onSuccess: () => {
@@ -183,8 +186,13 @@ function GroupDetail({ group, onChanged }) {
     },
   });
 
-  function handleLeave() {
-    const ok = window.confirm(`Leave ${group.name}? You will stop sharing files with this team.`);
+  async function handleLeave() {
+    const ok = await confirm({
+      title: "Leave team?",
+      message: `Leave ${group.name}? You will stop sharing files with this team.`,
+      confirmLabel: "Leave",
+      danger: true,
+    });
     if (ok) leave.mutate();
   }
 

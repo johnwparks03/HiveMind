@@ -26,7 +26,7 @@ Call the two people **A** (the owner) and **B** (the asker).
 Tick each as you go, and note anything surprising.
 
 1. **Publish (A).** A adds the `fixtures` folder on the Files page and waits for both files to be read. A makes both files public (the confirm now says teammates can read the contents, including through Ask).
-2. **Chunks reached central.** Run `python docs/e2e/mine.py` with A's sign-in details (see the top of that file). Expect about `5` chunks for `falcon-budget.txt` and `300` for `long-handbook.txt`.
+2. **Chunks reached central.** Copy `docs/e2e/.env.example` to `docs/e2e/.env` (gitignored) and put A's HiveMind email and password in it. The Cognito client id and central API URL are read from `agent/.env`. Then run `python docs/e2e/mine.py` (or pass another env file, e.g. `python docs/e2e/mine.py b.env`). Expect about `5` chunks for `falcon-budget.txt` and `300` for `long-handbook.txt`.
    - 300 chunks means three batches of 100 went through, including the full-size batch (closes the S5 caveat).
 3. **Owner goes offline (A).** A stops their agent (or closes the laptop).
 4. **Ask (B).** On the Ask page B turns on "Also use teammates' public files" and asks:

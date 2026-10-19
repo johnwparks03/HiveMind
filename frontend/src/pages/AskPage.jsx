@@ -1,6 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { api, isAgentUnreachable } from "../api/client";
+import chatIconUrl from "../assets/icons/chat.svg";
+import plusIconUrl from "../assets/icons/plus.svg";
+import trashIconUrl from "../assets/icons/trash.svg";
 import { useDialog } from "../components/dialogContext";
 import HowTo from "../components/HowTo";
 import Loading, { Spinner } from "../components/Loading";
@@ -174,8 +177,10 @@ export default function AskPage() {
     <section className={`ask-page${showExamples ? "" : " is-chatting"}`} aria-labelledby="ask-title">
       <aside className="ask-sidebar" aria-label="Saved chats">
         <button type="button" className="btn btn-primary ask-new" onClick={startNewChat}>
+          <img src={plusIconUrl} alt="" width="11" height="11" />
           New chat
         </button>
+        <p className="ask-side-label" aria-hidden="true">Saved chats</p>
 
         {chats.isPending && <Loading label="Loading chats…" />}
         {chats.data?.length === 0 && <p className="muted ask-side-note">Your chats will show here.</p>}
@@ -202,7 +207,7 @@ export default function AskPage() {
                 title="Delete chat"
                 onClick={() => handleDelete(c.chat_id, c.title)}
               >
-                ×
+                <img src={trashIconUrl} alt="" width="11" height="12" />
               </button>
             </li>
           ))}
@@ -213,7 +218,10 @@ export default function AskPage() {
         <div className={`ask-thread${showExamples ? " is-empty" : ""}`} aria-live="polite">
           {showExamples && (
             <div className="ask-empty">
-              <h2 className="page-title">Ask about <span className="accent-word">your files</span></h2>
+              <span className="ask-hero-icon" aria-hidden="true">
+                <img src={chatIconUrl} alt="" width="30" height="30" />
+              </span>
+              <h2 id="ask-title" className="page-title">Ask about your files</h2>
               <p className="page-lede">
                 Ask across your files, like a summary of recent notes. Turn on teammates' files to include what your team has made public.
               </p>
@@ -270,11 +278,13 @@ export default function AskPage() {
         </div>
 
         <div className="ask-composer">
-          <ScopePicker selectedFileIds={scopeFileIds} onChange={setScopeFileIds} />
-          <div className="include-teammates ask-teammates">
-            <Switch checked={includeTeammates} onChange={changeIncludeTeammates}>
-              Also use teammates' public files
-            </Switch>
+          <div className="ask-controls">
+            <ScopePicker selectedFileIds={scopeFileIds} onChange={setScopeFileIds} />
+            <div className="include-teammates ask-teammates">
+              <Switch checked={includeTeammates} onChange={changeIncludeTeammates}>
+                Also use teammates' public files
+              </Switch>
+            </div>
           </div>
           <form className="ask-form" onSubmit={handleSubmit}>
             <label htmlFor="ask-input" className="sr-only">Ask a question about your files</label>

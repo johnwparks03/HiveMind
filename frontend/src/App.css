@@ -1,4 +1,5 @@
-/* Layout and components. Colours come from the tokens below; change them here, not per component. */
+/* Layout and components. Colours, radii, shadows and fonts come from the tokens in index.css; change them there, not per component.
+   Visual design: Figma "HiveMind" file. See frontend/design.md. */
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
@@ -14,99 +15,154 @@
   background: var(--bg);
 }
 
-/* Header */
+/* Header: logo and tabs on the left, agent status and account on the right. */
 .app-header {
   position: sticky;
   top: 0;
   z-index: 10;
   display: flex;
   align-items: center;
-  gap: 24px;
-  padding: 12px 24px;
-  background: var(--surface);
-  border-top: 4px solid var(--accent);
-  border-bottom: 1px solid var(--line);
+  gap: 16px;
+  min-height: 56px;
+  padding: 0 16px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.04);
   flex-wrap: wrap;
 }
 
-.brand {
-  font-weight: 700;
-  font-size: 16px;
-  letter-spacing: -0.01em;
-  margin-right: auto;
-  display: flex;
-  align-items: center;
-  gap: 10px;
+.header-ribbon {
+  height: 8px;
+  background: var(--surface-ribbon);
+  box-shadow: var(--shadow-1);
 }
 
-/* Small green square beside the wordmark: the brand green as a fill, not as text. */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 17px;
+  letter-spacing: -0.025em;
+  color: var(--ink);
+}
 
+.brand-logo {
+  flex: none;
+  width: 32px;
+  height: 32px;
+}
 
 .tabs {
   display: flex;
   gap: 4px;
+  padding: 4px;
+  background: var(--surface-ribbon);
+  border-radius: var(--r-sm);
 }
 
 .tab {
-  padding: 6px 12px;
-  border-radius: 8px;
+  padding: 4px 12px;
+  border-radius: var(--r-sm);
   color: var(--ink-soft);
   text-decoration: none;
+  font-size: 13px;
   font-weight: 500;
+  letter-spacing: 0.01em;
 }
 
 .tab:hover {
   color: var(--ink);
-  background: var(--bg);
 }
 
 .tab[aria-current="page"] {
+  background: var(--surface);
   color: var(--ink);
-  font-weight: 700;
-  box-shadow: inset 0 -3px 0 var(--accent);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0;
+  box-shadow: 0 1px 1px rgba(15, 23, 42, 0.06);
 }
+
+.header-end {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.account-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--r-lg);
+  background: var(--accent);
+}
+
+.account-btn:hover { background: var(--accent-hover); }
 
 .status {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 12.5px;
-  color: var(--ink-soft);
+  gap: 4px;
+  height: 22px;
+  padding: 1px 9px;
+  border: 1px solid rgba(130, 81, 0, 0.2);
+  border-radius: var(--r-lg);
+  background: var(--pill-bg);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--accent-hover);
+}
+
+.status:has(.dot-offline) {
+  background: var(--error-soft);
+  border-color: rgba(186, 26, 26, 0.25);
+  color: var(--error);
 }
 
 .dot {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
-  background: var(--muted, #9aa1ad);
+  background: var(--muted);
 }
 
-.dot-online { background: var(--ok); }
+.dot-online { background: var(--accent-hover); }
 .dot-offline { background: var(--error); }
-.dot-checking { background: #9aa1ad; }
+.dot-checking { background: var(--muted); }
 
 /* Page */
 .page {
   width: 100%;
-  max-width: 1200px;
+  max-width: 1560px;
   margin: 0 auto;
-  padding: 32px 20px 64px;
+  padding: 16px 16px 48px;
 }
 
 .page-title {
-  font-size: 22px;
+  font-size: 28px;
+  line-height: 36px;
+  font-weight: 700;
   margin: 0 0 4px;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.025em;
+  color: var(--ink);
 }
 
 .page-lede {
-  margin: 0 0 24px;
+  margin: 0 0 16px;
   color: var(--ink-soft);
+  font-size: 15px;
+  line-height: 22px;
   max-width: 65ch;
 }
 
 .section-title {
   font-size: 15px;
+  font-weight: 600;
   margin: 0;
 }
 
@@ -121,16 +177,21 @@
   white-space: nowrap;
 }
 
+/* One word of a headline used to be highlighted; the redesign keeps the markup but drops the effect. */
+.accent-word { font-style: normal; }
+
 /* Buttons */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 8px 14px;
-  border-radius: 8px;
+  gap: 4px;
+  padding: 8px 12px;
+  border-radius: var(--r-sm);
   border: 1px solid transparent;
-  font-weight: 500;
-  font-size: 13.5px;
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.01em;
   white-space: nowrap;
   transition: background 120ms ease, border-color 120ms ease;
 }
@@ -149,7 +210,7 @@ input:focus-visible,
 .btn-primary {
   background: var(--accent);
   color: var(--on-accent);
-  font-weight: 700;
+  box-shadow: var(--shadow-1);
 }
 
 .btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
@@ -158,16 +219,34 @@ input:focus-visible,
   background: var(--surface);
   color: var(--ink);
   border-color: var(--line);
+  box-shadow: var(--shadow-1);
 }
 
 .btn-outline:hover:not(:disabled) { border-color: var(--accent); }
+
+/* Quiet secondary buttons inside cards and rows (Open, Make private, ...) use the light blue tint. */
+.result-card .btn-outline,
+.file-row .btn-outline,
+.file-group-head .btn-outline,
+.selection-bar .btn-outline {
+  background: var(--surface-ribbon);
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.result-card .btn-outline:hover:not(:disabled),
+.file-row .btn-outline:hover:not(:disabled),
+.file-group-head .btn-outline:hover:not(:disabled),
+.selection-bar .btn-outline:hover:not(:disabled) {
+  background: var(--pill-bg);
+}
 
 .btn-ghost {
   background: transparent;
   color: var(--ink-soft);
 }
 
-.btn-ghost:hover:not(:disabled) { background: var(--bg); color: var(--ink); }
+.btn-ghost:hover:not(:disabled) { background: var(--surface-ribbon); color: var(--ink); }
 
 .btn-danger-ghost {
   background: transparent;
@@ -184,9 +263,18 @@ input:focus-visible,
 
 .btn-danger-outline:hover:not(:disabled) { background: var(--error-soft); }
 
+.btn-danger {
+  background: var(--error);
+  color: #fff;
+}
+
+.btn-danger:hover:not(:disabled) {
+  filter: brightness(0.92);
+}
+
 .btn-sm {
-  padding: 5px 10px;
-  font-size: 12.5px;
+  padding: 6px 10px;
+  font-size: 12px;
 }
 
 /* Inputs */
@@ -197,12 +285,15 @@ input[type="password"] {
   flex: 1;
   min-width: 0;
   padding: 10px 12px;
-  border: 1.5px solid var(--line);
-  border-radius: 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
   background: var(--surface);
   color: var(--ink);
+  box-shadow: var(--shadow-inset);
   transition: border-color 150ms ease;
 }
+
+input::placeholder { color: var(--placeholder); }
 
 input:focus {
   outline: none;
@@ -234,42 +325,68 @@ input:focus {
   color: var(--error);
 }
 
-/* Search page */
+/* Search page: a centred column, like the design. */
+.search-page {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding-top: 24px;
+}
+
 .search-form {
   display: flex;
   gap: 8px;
   margin-bottom: 8px;
+  padding: 8px;
+  background: var(--surface);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-1);
 }
 
 .search-form input {
   font-size: 15px;
-  padding: 12px 14px;
+  padding: 10px 12px 10px 40px;
+  border: none;
+  box-shadow: none;
+  background: var(--surface) no-repeat 12px center / 16px 16px
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23554336' stroke-width='2.2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E");
+}
+
+.search-form .btn {
+  padding: 0 20px;
 }
 
 .include-teammates {
-  margin-bottom: 12px;
+  display: inline-block;
+  margin: 8px 0 12px;
+  padding: 6px 12px;
+  background: var(--surface);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-1);
 }
 
 /* Toggle switch (components/Switch.jsx). */
 .switch {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
   padding: 0;
   background: none;
   border: none;
-  font-size: 13px;
-  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--ink);
   cursor: pointer;
 }
 
 .switch-track {
   position: relative;
   flex: none;
-  width: 36px;
-  height: 20px;
-  border-radius: 999px;
-  background: var(--line);
+  width: 32px;
+  height: 16px;
+  border-radius: var(--r-lg);
+  background: var(--pill-bg);
+  box-shadow: inset 0 0 0 1px var(--line);
   transition: background 150ms ease;
 }
 
@@ -277,17 +394,16 @@ input:focus {
   position: absolute;
   top: 2px;
   left: 2px;
-  width: 16px;
-  height: 16px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
   background: #fff;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
   transition: transform 150ms ease;
 }
 
-.switch[aria-checked="true"] .switch-track { background: var(--accent); }
+.switch[aria-checked="true"] .switch-track { background: var(--accent); box-shadow: none; }
 .switch[aria-checked="true"] .switch-thumb { transform: translateX(16px); }
-.switch[aria-checked="true"] .switch-label { color: var(--ink); }
 
 .switch:focus-visible {
   outline: 2px solid var(--accent);
@@ -298,20 +414,23 @@ input:focus {
 .teammate-section {
   margin-top: 20px;
   padding-top: 16px;
-  border-top: 1px solid var(--line);
 }
 
-.search-form .btn {
-  padding: 0 20px;
+.examples {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
 }
 
 .examples-label {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
-  color: var(--ink-soft);
-  margin: 0 0 8px;
+  color: var(--ink-muted);
+  margin: 0;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.05em;
 }
 
 .example-list {
@@ -321,19 +440,21 @@ input:focus {
 }
 
 .example-chip {
-  padding: 7px 12px;
-  border-radius: 999px;
-  border: 1px solid var(--line);
-  background: var(--surface);
+  padding: 4px 12px;
+  border-radius: var(--r-lg);
+  border: none;
+  background: var(--surface-tint);
   color: var(--ink);
   font-size: 13px;
+  font-weight: 500;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
 }
 
-.example-chip:hover { border-color: var(--accent); background: var(--accent-soft); }
+.example-chip:hover { background: var(--pill-bg); }
 
 .caption {
   margin: 0;
-  font-style: italic;
+  font-weight: 500;
   color: var(--ink-soft);
 }
 
@@ -346,7 +467,7 @@ input:focus {
 .result-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 
 .ask-answer {
@@ -381,24 +502,28 @@ input:focus {
 
 .result-card {
   background: var(--surface);
-  border: 1px solid var(--line);
+  border-left: 4px solid #5c6b84;
   border-radius: var(--radius);
-  padding: 16px 18px;
+  padding: 12px;
+  box-shadow: var(--shadow-1);
   transition: box-shadow 150ms ease;
 }
 
-.result-card:hover { box-shadow: 0 4px 14px rgba(22, 26, 34, 0.08); }
+.result-list > .result-card:first-child { border-left-color: var(--accent); }
+.teammate-result-card { border-left: none; }
+
+.result-card:hover { box-shadow: 0 4px 14px rgba(11, 28, 48, 0.08); }
 
 .result-head {
   display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 12px;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 8px;
 }
 
 .result-name {
   margin: 0;
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -406,14 +531,24 @@ input:focus {
 }
 
 .match {
-  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: 12px;
-  font-weight: 700;
-  color: var(--ink);
-  background: var(--accent-soft);
+  font-weight: 600;
+  color: #0b6b4a;
+  background: var(--ok-soft);
   padding: 2px 8px;
   border-radius: 999px;
   white-space: nowrap;
+}
+
+.match::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
 }
 
 .tag-list {
@@ -459,6 +594,19 @@ input:focus {
   flex-wrap: wrap;
   gap: 6px;
   margin-bottom: 12px;
+  padding: 6px 8px;
+  background: var(--surface-tint);
+  border-radius: var(--r-sm);
+  font-size: 12px;
+}
+
+/* The Change folder button sits apart from the sentence, as a clear outlined button. */
+.download-folder-change {
+  margin-left: 6px;
+  padding: 4px 12px;
+  font-weight: 600;
+  border-radius: var(--r-sm);
+  color: var(--accent);
 }
 
 .no-tags-flag {
@@ -495,6 +643,7 @@ input:focus {
   padding: 2px 10px;
   font-size: 12px;
   background: transparent;
+  box-shadow: none;
   width: 64px;
 }
 
@@ -509,9 +658,9 @@ input:focus {
 .result-foot {
   display: flex;
   justify-content: space-between;
-  align-items: flex-end;
+  align-items: center;
   gap: 12px;
-  margin-top: 12px;
+  margin-top: 8px;
   flex-wrap: wrap;
 }
 
@@ -522,18 +671,19 @@ input:focus {
   flex-wrap: wrap;
 }
 
-.meta div { display: flex; flex-direction: column; }
+.meta div { display: flex; gap: 4px; }
 
 .meta dt {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  font-size: 12px;
   color: var(--ink-soft);
 }
 
+.meta dt::after { content: ":"; }
+
 .meta dd {
   margin: 0;
-  font-size: 13px;
+  font-size: 12px;
+  color: var(--ink);
 }
 
 .open-wrap {
@@ -544,7 +694,7 @@ input:focus {
 }
 
 .footnote {
-  margin-top: 24px;
+  margin-top: 16px;
   font-size: 12px;
   color: var(--ink-soft);
 }
@@ -560,10 +710,10 @@ input:focus {
 /* Files page */
 .add-folder {
   background: var(--surface);
-  border: 1px solid var(--line);
   border-radius: var(--radius);
-  padding: 16px 18px;
-  margin-bottom: 24px;
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow-1);
 }
 
 .add-folder-row {
@@ -596,16 +746,16 @@ input:focus {
 
 .folder-card {
   background: var(--surface);
-  border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: 14px 16px;
   display: flex;
   flex-direction: column;
   gap: 8px;
   height: 100%;
+  box-shadow: var(--shadow-1);
 }
 
-.folder-card.is-selected { border-color: var(--accent); box-shadow: var(--focus); }
+.folder-card.is-selected { box-shadow: var(--focus); }
 
 .folder-select {
   background: none;
@@ -643,14 +793,14 @@ input:focus {
 .progress {
   height: 6px;
   border-radius: 999px;
-  background: var(--line);
+  background: var(--pill-bg);
   overflow: hidden;
 }
 
 .progress-fill {
   display: block;
   height: 100%;
-  background: var(--ok);
+  background: var(--accent);
   transition: width 300ms ease;
 }
 
@@ -664,13 +814,7 @@ input:focus {
   min-width: 0;
 }
 
-.folder-share-row {
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: 1fr;
-  gap: 6px;
-}
-
+.folder-share-row,
 .folder-manage-row {
   display: grid;
   grid-auto-flow: column;
@@ -685,7 +829,7 @@ input:focus {
   font-size: 12px;
 }
 
-/* Spinner inside a light button: the default is tuned for the green primary button. */
+/* Spinner inside a light button: the default is tuned for the amber primary button. */
 .btn-outline .spinner,
 .btn-ghost .spinner {
   border-color: var(--line);
@@ -696,7 +840,7 @@ input:focus {
 .stat-failed { color: var(--error); }
 
 .files-section {
-  margin-top: 32px;
+  margin-top: 16px;
 }
 
 .files-head {
@@ -715,22 +859,31 @@ input:focus {
 }
 
 .filter-chip {
-  padding: 6px 12px;
+  padding: 4px 10px;
   border-radius: 999px;
-  border: 1px solid var(--line);
-  background: var(--surface);
+  border: 1px solid transparent;
+  background: var(--pill-bg);
   color: var(--ink-soft);
-  font-size: 13px;
+  font-size: 12px;
+  font-weight: 500;
 }
 
 .filter-chip[aria-pressed="true"] {
-  background: var(--ink);
-  border-color: var(--ink);
-  color: #fff;
+  background: var(--surface);
+  border-color: var(--accent);
+  color: var(--ink);
+  font-weight: 600;
 }
 
 /* Status and Sharing are separate filter groups: labelled, divided, and styled differently. */
-.filter-block { margin: 0 0 12px; }
+.filter-block {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-1);
+}
+
 .filter-block .filter-row { margin-bottom: 0; align-items: center; }
 .filter-block .filter-row + .filter-row {
   margin-top: 10px;
@@ -741,21 +894,14 @@ input:focus {
 .filter-label {
   width: 58px;
   flex: none;
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--ink-soft);
 }
 
-.filter-chip-share { border-radius: 8px; }
-
-.filter-chip-share[aria-pressed="true"] {
-  background: var(--accent-soft);
-  border-color: var(--accent);
-  color: var(--ink);
-  font-weight: 600;
-}
+.filter-chip-share { border-radius: var(--r-sm); }
 
 .chip-count {
   font-variant-numeric: tabular-nums;
@@ -768,8 +914,7 @@ input:focus {
   padding: 0;
   margin: 0;
   background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
+  border-radius: 0 0 var(--radius) var(--radius);
 }
 
 .file-row {
@@ -782,6 +927,8 @@ input:focus {
 }
 
 .file-row:first-child { border-top: none; }
+
+.file-row:hover { background: #fbfcff; }
 
 .file-main {
   min-width: 0;
@@ -796,7 +943,7 @@ input:focus {
 }
 
 .file-name {
-  font-weight: 500;
+  font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -832,24 +979,34 @@ input:focus {
   background: currentColor;
 }
 
-.pill-indexed { background: var(--ok-soft); color: var(--ink); }
-.pill-pending { background: var(--pending-soft); color: var(--ink); }
+.pill-indexed { background: var(--ok-soft); color: #0b6b4a; }
+.pill-pending { background: var(--pending-soft); color: var(--accent-hover); }
 .pill-failed { background: var(--error-soft); color: var(--error); }
 
-/* Narrow screens */
-@media (max-width: 640px) {
-  .app-header { gap: 12px; padding: 12px 16px; }
-  .brand { width: 100%; }
-  .page { padding: 24px 16px 48px; }
-  .search-form, .add-folder-row { flex-direction: column; }
-  .search-form .btn, .add-folder-row .btn { width: 100%; }
-  .file-row { flex-direction: column; align-items: stretch; }
+/* A spinner inside a status pill sits where the dot would. */
+.pill .spinner {
+  width: 11px;
+  height: 11px;
+  margin-right: 0;
+  border-width: 2px;
 }
 
-/* Brand accents. One italic word per headline; green sits behind it, text stays dark. */
-.accent-word {
-  font-style: italic;
-  box-shadow: inset 0 -0.16em 0 var(--accent);
+/* A pill with long text (a save location, an error) wraps inside its card instead of running past it. */
+.pill-wrap {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+  min-width: 0;
+  flex-shrink: 1;
+  border-radius: var(--r-lg);
+  padding: 4px 10px;
+  line-height: 1.35;
+}
+
+.transfer-row,
+.ask-transfer {
+  min-width: 0;
+  max-width: 100%;
 }
 
 /* Search empty state: the illustration, sitting under the search box. */
@@ -889,7 +1046,7 @@ input:focus {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  box-shadow: 0 8px 24px rgba(40, 39, 40, 0.12);
+  box-shadow: 0 8px 24px rgba(11, 28, 48, 0.12);
 }
 
 .recent-head {
@@ -897,13 +1054,15 @@ input:focus {
   align-items: center;
   justify-content: space-between;
   padding: 2px 12px 4px 14px;
-  font-size: 11.5px;
-  letter-spacing: 0.06em;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--ink-soft);
 }
 
-.recent-clear {
+.recent-clear,
+.recent-remove {
   border: 0;
   background: none;
   color: var(--ink-soft);
@@ -914,9 +1073,10 @@ input:focus {
   cursor: pointer;
 }
 
-.recent-clear:hover {
+.recent-clear:hover,
+.recent-remove:hover {
   color: var(--ink);
-  background: var(--bg);
+  background: var(--surface-ribbon);
 }
 
 .recent ul {
@@ -960,24 +1120,13 @@ input:focus {
 .recent-remove {
   flex: none;
   margin-right: 8px;
-  border: 0;
-  background: none;
-  color: var(--ink-soft);
-  font-size: 15px;
-  line-height: 1;
   padding: 4px 6px;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.recent-remove:hover {
-  color: var(--ink);
-  background: var(--bg);
 }
 
 /* Account: sign-in and sign-up card, and the signed-in state. */
 .account-page {
   text-align: center;
+  padding-top: 24px;
 }
 
 .account-page .page-lede {
@@ -991,8 +1140,8 @@ input:focus {
   padding: 28px;
   text-align: left;
   background: var(--surface);
-  border: 1px solid var(--line);
   border-radius: var(--radius);
+  box-shadow: var(--shadow-1);
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -1011,19 +1160,11 @@ input:focus {
   gap: 6px;
 }
 
-/* Same field look as the search box: 8px corners, light border, green focus ring. */
+/* Same field look as the search box. */
 .account-form input {
   width: 100%;
   padding: 11px 14px;
   font-size: 15px;
-  border: 1.5px solid var(--line);
-  border-radius: 8px;
-  background: var(--surface);
-  color: var(--ink);
-}
-
-.account-form input::placeholder {
-  color: #9a9a9a;
 }
 
 .account-form .field-label {
@@ -1047,16 +1188,6 @@ input:focus {
 .signed-in-text {
   margin: 0;
   font-size: 15px;
-}
-
-.btn-danger {
-  background: var(--error);
-  color: #fff;
-  font-weight: 700;
-}
-
-.btn-danger:hover:not(:disabled) {
-  filter: brightness(0.92);
 }
 
 /* Password fields: one eye control at the far right, shown only once something is typed.
@@ -1094,7 +1225,7 @@ input:focus {
 
 .reveal-toggle:hover {
   color: var(--ink);
-  background: var(--bg);
+  background: var(--surface-ribbon);
 }
 
 .reveal-toggle:focus-visible {
@@ -1103,6 +1234,10 @@ input:focus {
 }
 
 /* Groups: the invite code is shown large and in a monospace font so it's easy to read out. */
+.groups-page {
+  padding-top: 24px;
+}
+
 .groups-page .account-card {
   max-width: 440px;
   margin: 20px auto 0;
@@ -1118,7 +1253,7 @@ input:focus {
 
 .invite-code {
   margin: 4px 0 0;
-  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: 22px;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -1132,11 +1267,6 @@ input:focus {
 
 .groups-page .account-form {
   gap: 6px;
-}
-
-/* Bee logo in the header. */
-.bee-logo {
-  flex: none;
 }
 
 /* Loading: spinning ring with a label, and a pulsing status dot while the agent is being checked. */
@@ -1153,7 +1283,7 @@ input:focus {
 }
 
 .btn .spinner {
-  border-color: rgba(40, 39, 40, 0.25);
+  border-color: rgba(255, 255, 255, 0.35);
   border-top-color: var(--on-accent);
 }
 
@@ -1167,6 +1297,13 @@ input:focus {
 }
 
 .loading .spinner {
+  margin-right: 0;
+}
+
+/* The checking state of the status indicator shows a spinner where the dot would be. */
+.status .spinner {
+  width: 10px;
+  height: 10px;
   margin-right: 0;
 }
 
@@ -1187,10 +1324,6 @@ input:focus {
 }
 
 /* File selection: a checkbox per row, and a bar that appears once something is ticked. */
-.file-row {
-  align-items: center;
-}
-
 .file-check {
   flex: none;
   width: 16px;
@@ -1201,7 +1334,7 @@ input:focus {
 }
 
 .file-row.is-selected {
-  background: var(--accent-soft);
+  background: #fff8f1;
 }
 
 .select-all {
@@ -1216,14 +1349,15 @@ input:focus {
   gap: 8px 12px;
   margin: 0 0 12px;
   padding: 10px 14px;
-  background: var(--surface);
-  border: 1px solid var(--accent);
+  background: var(--pill-bg);
   border-radius: var(--radius);
   font-size: 14px;
+  font-weight: 600;
 }
 
 .selection-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
@@ -1234,27 +1368,34 @@ input:focus {
 
 /* Ask tab's folder/file scope picker. */
 .scope-picker {
-  margin: 0 0 16px;
+  margin: 0;
 }
 
 .scope-toggle {
-  background: none;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 8px 14px;
-  font-size: 13px;
-  color: var(--ink-soft);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 32px;
+  background: var(--surface);
+  border: none;
+  border-radius: var(--r-sm);
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--ink);
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
   cursor: pointer;
 }
 
-.scope-toggle:hover { border-color: var(--accent); }
+.scope-toggle:hover { box-shadow: 0 0 0 1px var(--accent); }
 
 .scope-panel {
   margin-top: 10px;
   padding: 12px 14px;
   background: var(--surface);
-  border: 1px solid var(--line);
   border-radius: var(--radius);
+  box-shadow: var(--shadow-1);
 }
 
 .scope-clear {
@@ -1302,27 +1443,43 @@ input:focus {
   cursor: pointer;
 }
 
-/* Ask as a chat: saved conversations on the left, the thread in the middle, the question box below. */
+/* Ask as a chat: saved conversations on the left, the thread in the middle, the question box below.
+   The page fills the window; the chat list and the conversation scroll on their own. */
 .ask-page {
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
+  grid-template-columns: 288px minmax(0, 1fr);
   gap: 16px;
-  min-height: 70vh;
+  height: calc(100vh - 112px);
+  min-height: 420px;
+  overflow: hidden;
 }
 
 .ask-sidebar {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
   padding: 12px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  align-self: start;
+  background: var(--surface-tint);
+  border-radius: var(--r-md);
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
 }
 
 .ask-new {
   width: 100%;
+  min-height: 36px;
+}
+
+.ask-side-label {
+  margin: 0;
+  padding: 0 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
 }
 
 .ask-side-note {
@@ -1336,28 +1493,45 @@ input:focus {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
 }
 
 .ask-chat-item {
   display: flex;
   align-items: center;
-  border-radius: 8px;
+  border-radius: var(--r-sm);
+  background: rgba(255, 255, 255, 0.7);
+  box-shadow: var(--shadow-1);
 }
 
 .ask-chat-item.is-active {
-  background: var(--accent-soft);
+  background: var(--surface);
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
+}
+
+.ask-chat-item.is-active .ask-chat-open::before {
+  content: "";
+  flex: none;
+  width: 8px;
+  height: 8px;
+  margin-right: 4px;
+  border-radius: 50%;
+  background: var(--accent);
 }
 
 .ask-chat-open {
   flex: 1;
   min-width: 0;
-  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  padding: 8px;
   border: 0;
   background: none;
   text-align: left;
   font: inherit;
-  font-size: 13.5px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
   color: var(--ink);
   white-space: nowrap;
   overflow: hidden;
@@ -1367,15 +1541,17 @@ input:focus {
 
 .ask-chat-delete {
   flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
   border: 0;
   background: none;
-  color: var(--ink-soft);
-  font-size: 15px;
-  line-height: 1;
-  padding: 4px 8px;
-  border-radius: 6px;
+  padding: 0;
+  border-radius: var(--r-sm);
   cursor: pointer;
-  opacity: 0.6;
+  opacity: 0.7;
 }
 
 .ask-chat-item:hover .ask-chat-delete,
@@ -1384,39 +1560,65 @@ input:focus {
 }
 
 .ask-chat-delete:hover {
-  color: var(--error);
   background: var(--error-soft);
 }
 
 .ask-main {
   display: flex;
   flex-direction: column;
+  height: 100%;
   min-width: 0;
   min-height: 0;
+  overflow: hidden;
+  background: var(--surface);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-1);
 }
 
 .ask-thread {
-  flex: 1;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  padding: 4px 4px 16px;
+  gap: 18px;
+  padding: 16px clamp(16px, 8vw, 136px);
 }
 
-/* Before the first question the composer sits right under the examples; once a chat starts it drops to the bottom. */
-.ask-thread.is-empty { flex: 0 0 auto; }
-
-/* Once a question is asked (including while it loads) the page fills the window, so the composer sits at the bottom of it. */
-.ask-page.is-chatting { min-height: calc(100vh - 170px); }
+/* Before the first question the hero sits in the middle of the panel and the composer at the bottom. */
+.ask-thread.is-empty { justify-content: center; }
 
 .ask-empty {
-  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 672px;
+  margin: 0 auto;
+  padding: 24px 0;
+  text-align: center;
 }
+
+.ask-empty .page-lede { max-width: 512px; }
+
+.ask-hero-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  margin-bottom: 16px;
+  border-radius: var(--r-xl);
+  background: var(--accent-tile);
+  box-shadow: var(--shadow-inset);
+}
+
+.ask-empty .how-to { width: 100%; text-align: left; }
+.ask-empty .examples { justify-content: center; margin-top: 4px; }
 
 .ask-msg {
   display: flex;
   flex-direction: column;
-  max-width: 85%;
+  max-width: 92%;
 }
 
 .ask-msg-user {
@@ -1430,22 +1632,23 @@ input:focus {
 }
 
 .ask-bubble {
-  padding: 10px 14px;
+  padding: 14px 18px;
   border-radius: 14px;
   white-space: pre-wrap;
-  line-height: 1.55;
+  font-size: 16px;
+  line-height: 1.65;
 }
 
 .ask-msg-user .ask-bubble {
-  background: var(--accent-soft);
+  background: var(--accent-tile);
   color: var(--ink);
   border-bottom-right-radius: 4px;
 }
 
 .ask-msg-assistant .ask-bubble {
-  background: var(--surface);
-  border: 1px solid var(--line);
+  background: var(--surface-tint);
   border-bottom-left-radius: 4px;
+  font-size: 16.5px;
 }
 
 .ask-sources-block {
@@ -1482,51 +1685,81 @@ input:focus {
 }
 
 .ask-composer {
-  position: sticky;
-  bottom: 0;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 12px 0 0;
-  background: var(--bg);
+  padding: 12px;
+  background: var(--surface-tint);
+  box-shadow: var(--shadow-up);
+}
+
+.ask-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+/* The picker's toggle sits in the controls row; its open panel drops onto a row of its own. */
+.ask-controls .scope-picker { display: contents; }
+.ask-controls .scope-panel { order: 3; flex-basis: 100%; margin-top: 0; }
+.ask-controls .include-teammates {
+  margin: 0;
+  padding: 0;
+  background: none;
+  box-shadow: none;
 }
 
 .ask-form {
+  position: relative;
   display: flex;
-  gap: 8px;
 }
 
 .ask-form input {
   flex: 1;
   min-width: 0;
-  padding: 12px 14px;
-  font-size: 15px;
+  padding: 14px 112px 14px 12px;
+  font-size: 14px;
+  border: none;
 }
 
 .ask-form .btn {
-  padding: 0 20px;
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  min-height: 36px;
+  padding: 0 14px;
 }
 
-@media (max-width: 720px) {
-  .ask-page {
-    grid-template-columns: 1fr;
-  }
+.ask-transfer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
 
-  .ask-sidebar {
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
-  }
+.ask-footnote {
+  margin-top: 8px;
+}
 
-  .ask-chat-list {
-    flex-direction: row;
-    overflow-x: auto;
-    max-width: 100%;
-  }
+.ask-source-row > span:first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 
-  .ask-msg {
-    max-width: 100%;
-  }
+/* Ask: teammate sources. */
+.source-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--ink-soft);
+  vertical-align: middle;
 }
 
 /* Files grouped under collapsible folder headers. */
@@ -1537,20 +1770,20 @@ input:focus {
   margin: 0 0 8px;
 }
 
-.file-group { margin: 0 0 12px; }
+.file-group {
+  margin: 0 0 12px;
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-1);
+  overflow: hidden;
+}
 
 .file-group-head {
   display: flex;
   align-items: center;
-  margin: 0 0 6px;
-  padding: 0 14px;
-  min-height: 46px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
+  padding: 0 16px;
+  min-height: 56px;
 }
-
-.file-group-head:hover { border-color: var(--accent); }
 
 .file-group-toggle {
   flex: 1;
@@ -1573,8 +1806,20 @@ input:focus {
 }
 
 .file-group-chevron { width: 18px; font-size: 18px; line-height: 1; text-align: center; color: var(--ink-soft); }
-.file-group-name { font-weight: 600; font-size: 15px; }
-.file-group-count { font-size: 13px; }
+.file-group-name { font-weight: 600; font-size: 17px; letter-spacing: -0.01em; }
+.file-group-count { font-size: 12px; }
+
+.folder-row-progress {
+  margin: 0 16px 10px;
+}
+
+/* Folder row actions: a little room between Make public, Make private and Remove. */
+.folder-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
 
 /* Markdown inside assistant answers. The bubble's pre-wrap would double the spacing, so turn it off here. */
 .ask-bubble.ask-answer { white-space: normal; }
@@ -1591,14 +1836,14 @@ input:focus {
 .markdown li { margin: 2px 0; }
 .markdown li > p { margin: 0; }
 .markdown a { color: var(--ink); text-decoration: underline; text-decoration-color: var(--accent); text-underline-offset: 2px; }
-.markdown code { font-family: ui-monospace, Consolas, monospace; font-size: 0.9em; background: var(--bg); padding: 1px 5px; border-radius: 4px; }
-.markdown pre { margin: 0 0 10px; padding: 10px 12px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; overflow-x: auto; }
+.markdown code { font-family: var(--font-mono); font-size: 0.9em; background: var(--surface); padding: 1px 5px; border-radius: 4px; }
+.markdown pre { margin: 0 0 10px; padding: 10px 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; overflow-x: auto; }
 .markdown pre code { background: none; padding: 0; }
 .markdown blockquote { margin: 0 0 10px; padding: 2px 12px; border-left: 3px solid var(--line); color: var(--ink-soft); }
 .markdown hr { border: none; border-top: 1px solid var(--line); margin: 14px 0; }
 .markdown table { border-collapse: collapse; margin: 0 0 10px; display: block; overflow-x: auto; max-width: 100%; }
 .markdown th, .markdown td { border: 1px solid var(--line); padding: 5px 10px; text-align: left; }
-.markdown th { background: var(--bg); font-weight: 600; }
+.markdown th { background: var(--surface); font-weight: 600; }
 
 /* Group card: member list and a quiet footer for Leave. */
 .members-label { margin: 12px 0 6px; }
@@ -1650,10 +1895,10 @@ input:focus {
 .how-to {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 12px;
   list-style: none;
   padding: 0;
-  margin: 0 0 20px;
+  margin: 0 0 16px;
   counter-reset: step;
 }
 
@@ -1661,14 +1906,16 @@ input:focus {
   flex: 1 1 200px;
   counter-increment: step;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 10px;
-  padding: 10px 12px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  font-size: 13.5px;
-  line-height: 1.4;
+  padding: 12px;
+  background: var(--surface-tint);
+  border-radius: var(--r-md);
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
+  font-size: 13px;
+  line-height: 18px;
+  letter-spacing: 0.005em;
+  color: var(--ink-soft);
 }
 
 .how-to li::before {
@@ -1677,50 +1924,14 @@ input:focus {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--r-lg);
   background: var(--accent);
   color: var(--on-accent);
-  font-size: 12px;
+  font-family: var(--font-mono);
+  font-size: 11px;
   font-weight: 700;
-}
-
-/* Ask: wider chat list, and larger, easier-to-read answers. */
-/* Saved chats sit at the left edge of the page, so the conversation gets the rest of the width. */
-.ask-page {
-  grid-template-columns: 260px minmax(0, 1fr);
-  gap: 20px;
-  margin-left: -20px;
-}
-
-.ask-chat-open {
-  font-size: 14.5px;
-  padding: 10px 12px;
-}
-
-.ask-bubble {
-  font-size: 16px;
-  line-height: 1.65;
-  padding: 14px 18px;
-}
-
-.ask-msg {
-  max-width: 92%;
-}
-
-.ask-msg-assistant .ask-bubble {
-  font-size: 16.5px;
-}
-
-.ask-thread {
-  gap: 18px;
-}
-
-@media (max-width: 720px) {
-  .ask-page {
-    grid-template-columns: 1fr;
-  }
 }
 
 /* Team page: one card. The invite comes first, then members and files, then Leave. */
@@ -1752,160 +1963,6 @@ input:focus {
   margin: 0;
 }
 
-@media (max-width: 720px) {
-  .team-choices {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* Saved chats scaled to 1.25x: wider list, larger titles, controls and spacing. */
-.ask-page {
-  grid-template-columns: 325px minmax(0, 1fr);
-  gap: 25px;
-}
-
-.ask-sidebar {
-  gap: 12px;
-  padding: 15px;
-}
-
-.ask-new {
-  font-size: 16.25px;
-  padding: 11px 18px;
-}
-
-.ask-side-note {
-  font-size: 16.25px;
-}
-
-.ask-chat-list {
-  gap: 3px;
-}
-
-.ask-chat-open {
-  font-size: 18px;
-  padding: 12px 15px;
-}
-
-.ask-chat-delete {
-  font-size: 19px;
-  padding: 5px 10px;
-}
-
-/* Folder row actions: a little room between Make public, Make private and Remove. */
-.folder-row-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-
-/* Ask: the chat list and the conversation scroll on their own. The page itself stays put. */
-.ask-page {
-  height: calc(100vh - 170px);
-  min-height: 420px;
-  overflow: hidden;
-}
-
-.ask-sidebar {
-  height: 100%;
-  min-height: 0;
-  overflow-y: auto;
-  align-self: stretch;
-}
-
-.ask-main {
-  height: 100%;
-  min-height: 0;
-}
-
-.ask-thread {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
-}
-
-@media (max-width: 720px) {
-  .ask-page {
-    height: auto;
-    overflow: visible;
-  }
-
-  .ask-sidebar {
-    height: auto;
-    overflow: visible;
-  }
-
-  .ask-thread {
-    overflow: visible;
-  }
-}
-
-/* Ask: teammate sources, the teammates switch and its notes (E6-S7). */
-.source-badge {
-  display: inline-block;
-  margin-left: 8px;
-  padding: 1px 8px;
-  border-radius: 999px;
-  border: 1px solid var(--line);
-  font-size: 11.5px;
-  font-weight: 500;
-  color: var(--ink-soft);
-  vertical-align: middle;
-}
-
-.ask-transfer {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-
-.ask-teammates {
-  margin: 8px 0 4px;
-}
-
-.ask-footnote {
-  margin-top: 8px;
-}
-
-/* A spinner inside a status pill sits where the dot would. */
-.pill .spinner {
-  width: 11px;
-  height: 11px;
-  margin-right: 0;
-  border-width: 2px;
-}
-
-/* A pill with long text (a save location, an error) wraps inside its card instead of running past it. */
-.pill-wrap {
-  white-space: normal;
-  overflow-wrap: anywhere;
-  max-width: 100%;
-  min-width: 0;
-  flex-shrink: 1;
-  border-radius: 12px;
-  padding: 4px 10px;
-  line-height: 1.35;
-}
-
-.transfer-row,
-.ask-transfer {
-  min-width: 0;
-  max-width: 100%;
-}
-
-.ask-source-row > span:first-child {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-/* The checking state of the status indicator shows a spinner where the dot would be. */
-.status .spinner {
-  margin-right: 0;
-}
-
 /* HiveMind dialog: replaces the browser's confirm and alert popups. */
 .dialog-backdrop {
   position: fixed;
@@ -1915,7 +1972,7 @@ input:focus {
   align-items: center;
   justify-content: center;
   padding: 16px;
-  background: rgba(40, 39, 40, 0.45);
+  background: rgba(11, 28, 48, 0.45);
 }
 
 .dialog {
@@ -1924,9 +1981,8 @@ input:focus {
   padding: 22px 24px 18px;
   background: var(--surface);
   color: var(--ink);
-  border: 1px solid var(--line);
   border-top: 4px solid var(--accent);
-  border-radius: var(--radius);
+  border-radius: var(--r-lg);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
 }
 
@@ -1948,25 +2004,54 @@ input:focus {
   gap: 8px;
 }
 
-/* Saved chats: smaller text and tighter rows so more of each title and more chats fit. */
-.ask-sidebar { padding: 10px; gap: 8px; }
+/* Narrow screens */
+@media (max-width: 720px) {
+  .team-choices {
+    grid-template-columns: 1fr;
+  }
 
-.ask-chat-open {
-  font-size: 13px;
-  padding: 6px 9px;
+  .ask-page {
+    grid-template-columns: 1fr;
+    height: auto;
+    overflow: visible;
+  }
+
+  .ask-sidebar {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    height: auto;
+    overflow: visible;
+  }
+
+  .ask-chat-list {
+    flex-direction: row;
+    overflow-x: auto;
+    max-width: 100%;
+  }
+
+  .ask-side-label { display: none; }
+
+  .ask-main {
+    height: auto;
+    min-height: 70vh;
+  }
+
+  .ask-thread {
+    overflow: visible;
+    padding: 16px;
+  }
+
+  .ask-msg {
+    max-width: 100%;
+  }
 }
 
-.ask-chat-delete {
-  font-size: 16px;
-  padding: 2px 8px;
-}
-
-.ask-chat-list { gap: 1px; }
-
-/* The Change folder button sits apart from the sentence, as a clear outlined button. */
-.download-folder-change {
-  margin-left: 6px;
-  padding: 6px 14px;
-  font-weight: 600;
-  border-radius: 999px;
+@media (max-width: 640px) {
+  .app-header { gap: 8px; padding: 8px 16px; }
+  .tabs { order: 3; width: 100%; overflow-x: auto; }
+  .page { padding: 16px 16px 48px; }
+  .search-form, .add-folder-row { flex-direction: column; }
+  .search-form .btn, .add-folder-row .btn { width: 100%; padding: 10px 20px; }
+  .file-row { flex-direction: column; align-items: stretch; }
 }

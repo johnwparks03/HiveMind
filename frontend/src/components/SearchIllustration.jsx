@@ -1,5 +1,5 @@
 // Empty-state artwork for the Search page: two brains trading ideas across a shared document.
-// Drawn as single outlines (no overlapping circles, per the Deloitte digital brand rules).
+// Drawn as single outlines (no overlapping circles, per the HiveMind design tokens).
 // Decorative only, so it's hidden from assistive tech; the text beside it carries the meaning.
 
 const BRAIN =
@@ -16,9 +16,9 @@ const FOLDS = [
 function Brain({ transform }) {
   return (
     <g transform={transform}>
-      <path d={BRAIN} fill="#eef6dc" stroke="#86bc25" strokeWidth="3" strokeLinejoin="round" />
+      <path d={BRAIN} fill="#ffdcc3" stroke="#8d4b00" strokeWidth="3" strokeLinejoin="round" />
       {FOLDS.map((d) => (
-        <path key={d} d={d} fill="none" stroke="#86bc25" strokeWidth="2" strokeLinecap="round" />
+        <path key={d} d={d} fill="none" stroke="#8d4b00" strokeWidth="2" strokeLinecap="round" />
       ))}
     </g>
   );
@@ -35,7 +35,7 @@ export default function SearchIllustration() {
       <defs>
         {/* userSpaceOnUse keeps the head at 10 units; the default scales it with the 3px stroke. */}
         <marker id="hm-arrow" markerWidth="10" markerHeight="10" refX="10" refY="5" orient="auto" markerUnits="userSpaceOnUse">
-          <path d="M 0 0 L 10 5 L 0 10 z" fill="#00a3e0" />
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#825100" />
         </marker>
       </defs>
 
@@ -46,7 +46,7 @@ export default function SearchIllustration() {
       <path
         d="M 166 84 Q 230 28 294 84"
         fill="none"
-        stroke="#00a3e0"
+        stroke="#825100"
         strokeWidth="3"
         strokeLinecap="round"
         markerEnd="url(#hm-arrow)"
@@ -54,7 +54,7 @@ export default function SearchIllustration() {
       <path
         d="M 294 136 Q 230 192 166 136"
         fill="none"
-        stroke="#00a3e0"
+        stroke="#825100"
         strokeWidth="3"
         strokeLinecap="round"
         markerEnd="url(#hm-arrow)"
@@ -62,12 +62,12 @@ export default function SearchIllustration() {
 
       {/* The shared document in the middle. */}
       <g transform="translate(230 110)">
-        <rect x="-22" y="-30" width="44" height="60" rx="4" fill="#ffffff" stroke="#282728" strokeWidth="2.5" />
-        <path d="M 12 -30 L 22 -20 L 12 -20 Z" fill="#e6e6e6" stroke="#282728" strokeWidth="2" strokeLinejoin="round" />
-        <path d="M -12 -12 H 12" stroke="#86bc25" strokeWidth="3" strokeLinecap="round" />
-        <path d="M -12 0 H 12" stroke="#282728" strokeWidth="2" strokeLinecap="round" opacity="0.5" />
-        <path d="M -12 12 H 12" stroke="#282728" strokeWidth="2" strokeLinecap="round" opacity="0.5" />
-        <path d="M -12 22 H 4" stroke="#282728" strokeWidth="2" strokeLinecap="round" opacity="0.5" />
+        <rect x="-22" y="-30" width="44" height="60" rx="4" fill="#ffffff" stroke="#0b1c30" strokeWidth="2.5" />
+        <path d="M 12 -30 L 22 -20 L 12 -20 Z" fill="#dce3f2" stroke="#0b1c30" strokeWidth="2" strokeLinejoin="round" />
+        <path d="M -12 -12 H 12" stroke="#8d4b00" strokeWidth="3" strokeLinecap="round" />
+        <path d="M -12 0 H 12" stroke="#0b1c30" strokeWidth="2" strokeLinecap="round" opacity="0.5" />
+        <path d="M -12 12 H 12" stroke="#0b1c30" strokeWidth="2" strokeLinecap="round" opacity="0.5" />
+        <path d="M -12 22 H 4" stroke="#0b1c30" strokeWidth="2" strokeLinecap="round" opacity="0.5" />
       </g>
     </svg>
   );

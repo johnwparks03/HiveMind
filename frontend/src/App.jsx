@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import BeeLogo from "./components/BeeLogo";
+import logoUrl from "./assets/hivemind-logo.png";
+import userIconUrl from "./assets/icons/user.svg";
 import StatusIndicator from "./components/StatusIndicator";
 import AccountPage from "./pages/AccountPage";
 import AskPage from "./pages/AskPage";
@@ -52,7 +53,7 @@ export default function App() {
     <div className="app">
       <header className="app-header">
         <div className="brand">
-          <BeeLogo />
+          <img className="brand-logo" src={logoUrl} alt="" width="32" height="32" />
           <span>HiveMind</span>
         </div>
         <nav className="tabs" aria-label="Main">
@@ -68,8 +69,14 @@ export default function App() {
             </a>
           ))}
         </nav>
-        <StatusIndicator />
+        <div className="header-end">
+          <StatusIndicator />
+          <a className="account-btn" href="#/account" aria-label={signedIn ? "Account (signed in)" : "Account"}>
+            <img src={userIconUrl} alt="" width="12" height="12" />
+          </a>
+        </div>
       </header>
+      <div className="header-ribbon" aria-hidden="true" />
 
       <main className="page">
         {/* Search and Ask stay mounted so their query/answer survive a trip to another tab. */}

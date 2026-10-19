@@ -72,6 +72,8 @@ python -m pytest tests -m integration   # against the deployed stack; needs a va
 ```
 **Infra deploy:** `cd infra`, activate `.venv`, `cdk diff`, then `cdk deploy` (coordinate first; see AWS section).
 
+**Frontend design:** colours, type, components and layout rules are in `frontend/design.md`; read it before changing UI styling.
+
 **Lint:** frontend: `npm run lint` in `frontend/` (oxlint; undefined names, such as a missing import, are errors). Other parts: not set up yet. Record commands here as each is built.
 
 ## AWS (shared demo account)

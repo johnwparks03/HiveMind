@@ -6,26 +6,20 @@ import StatusIndicator from "./components/StatusIndicator";
 import AccountPage from "./pages/AccountPage";
 import AskPage from "./pages/AskPage";
 import FilesPage from "./pages/FilesPage";
-import GroupsPage from "./pages/GroupsPage";
 import SearchPage from "./pages/SearchPage";
 import { api } from "./api/client";
+import { tabFromHash } from "./lib/tabs";
 import "./App.css";
 
 const TABS = [
   { id: "search", label: "Search" },
   { id: "ask", label: "Ask" },
   { id: "files", label: "Files" },
-  { id: "groups", label: "Team" },
   { id: "account", label: "Sign in" },
 ];
 
-function tabFromHash() {
-  const id = window.location.hash.replace("#/", "");
-  return TABS.some((t) => t.id === id) ? id : "search";
-}
-
 export default function App() {
-  const [tab, setTab] = useState(tabFromHash);
+  const [tab, setTab] = useState(() => tabFromHash(window.location.hash));
   // Bumped when the Search tab is clicked while already on Search, to clear it back to the entry page.
   const [searchKey, setSearchKey] = useState(0);
 
@@ -38,7 +32,12 @@ export default function App() {
   const signedIn = Boolean(session.data?.signed_in);
 
   useEffect(() => {
-    const onHashChange = () => setTab(tabFromHash());
+    const onHashChange = () => {
+      const next = tabFromHash(window.location.hash);
+      if (window.location.hash === "#/groups") window.history.replaceState(null, "", "#/account");
+      setTab(next);
+    };
+    onHashChange();
     window.addEventListener("hashchange", onHashChange);
     return () => window.removeEventListener("hashchange", onHashChange);
   }, []);
@@ -87,7 +86,6 @@ export default function App() {
           <AskPage />
         </div>
         {tab === "files" && <FilesPage />}
-        {tab === "groups" && <GroupsPage />}
         {tab === "account" && <AccountPage />}
       </main>
     </div>

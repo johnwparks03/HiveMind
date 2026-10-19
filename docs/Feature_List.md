@@ -160,7 +160,7 @@ Three pages plus a global status indicator.
 
 ### 2.3 Files and folders page
 
-- **Create or join a team** panel, shown whenever the user has no team (needed before sharing or searching teammates)
+- **Create or join a team** panel (on the Account page, beside sign-in), shown whenever the user has no team (needed before sharing or searching teammates)
 - Team info and invite code generation
 - Leave team action
 - **Add folder** button (opens the native dialog through the agent)

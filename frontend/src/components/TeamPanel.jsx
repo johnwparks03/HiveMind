@@ -1,20 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import DownloadFolderControl from "../components/DownloadFolderControl";
-import Loading, { Spinner } from "../components/Loading";
-import HowTo from "../components/HowTo";
-import { useDialog } from "../components/dialogContext";
-import TeammateResultCard from "../components/TeammateResultCard";
+import DownloadFolderControl from "./DownloadFolderControl";
+import Loading, { Spinner } from "./Loading";
+import { useDialog } from "./dialogContext";
+import TeammateResultCard from "./TeammateResultCard";
 import { api, isAgentUnreachable } from "../api/client";
 import { formatDate } from "../lib/files";
 import { groupErrorMessage, normaliseInviteCode } from "../lib/groups";
 
 // One group per person for the MVP. Groups live on the central service, so everything here
-// needs a sign-in; without one we say so instead of showing errors.
-export default function GroupsPage() {
+// needs a sign-in; the Account page passes the session state and we say so instead of showing errors.
+export default function TeamPanel({ signedIn }) {
   const queryClient = useQueryClient();
-  const session = useQuery({ queryKey: ["session"], queryFn: api.getSession, refetchInterval: 15000 });
-  const signedIn = Boolean(session.data?.signed_in);
 
   const group = useQuery({
     queryKey: ["group"],
@@ -26,27 +23,11 @@ export default function GroupsPage() {
     queryClient.invalidateQueries({ queryKey: ["group"] });
   }
 
-  if (session.isPending) return <Shell><Loading label="Checking sign-in…" /></Shell>;
-
-  if (session.isError) {
-    return (
-      <Shell>
-        <div className="banner banner-error" role="alert">
-          {isAgentUnreachable(session.error)
-            ? "HiveMind isn't running. Start it, then try again."
-            : "Couldn't check your sign-in status. Try again in a moment."}
-        </div>
-      </Shell>
-    );
-  }
-
   if (!signedIn) {
     return (
-      <Shell lede="Your team needs you to sign in first.">
+      <Shell lede="Sign in to create or join a team.">
         <div className="account-card">
-          <p className="signed-in-text">
-            <a href="#/account">Go to Sign in</a>
-          </p>
+          <p className="signed-in-text">Your team shows up here once you are signed in.</p>
         </div>
       </Shell>
     );
@@ -85,7 +66,6 @@ function Shell({ lede, children }) {
     <section className="groups-page" aria-label="Team">
       <h2 className="page-title">Your <span className="accent-word">team</span></h2>
       {lede && <p className="page-lede">{lede}</p>}
-      <HowTo steps={['Create a team, or join one with an invite code.', 'Invite people with a code.', 'See what your team has made public.']} />
       {children}
     </section>
   );

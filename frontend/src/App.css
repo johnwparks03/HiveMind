@@ -1966,6 +1966,28 @@ input:focus {
   border-radius: var(--radius);
 }
 
+/* Team card: invite and members side by side (stacking when the column is narrow), public files below. */
+.team-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.team-members {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.team-members .field-label { margin: 0; }
+
+.team-files .file-group-head { min-height: 48px; gap: 10px; }
+.team-files .download-folder-control { margin: 0; padding: 0 16px 12px; }
+.team-files-empty { margin: 0; padding: 0 16px 16px; }
+
+.account-col .groups-page .account-card { max-width: none; }
+
 /* Team page, not on a team yet: create and join sit side by side, and stack on narrow screens. */
 .team-choices {
   display: grid;

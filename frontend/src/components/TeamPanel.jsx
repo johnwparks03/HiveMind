@@ -3,7 +3,7 @@ import { useState } from "react";
 import DownloadFolderControl from "./DownloadFolderControl";
 import Loading, { Spinner } from "./Loading";
 import { useDialog } from "./dialogContext";
-import TeammateResultCard from "./TeammateResultCard";
+import TeammateFileRow from "./TeammateFileRow";
 import { api, isAgentUnreachable } from "../api/client";
 import { formatDate } from "../lib/files";
 import { groupErrorMessage, normaliseInviteCode } from "../lib/groups";
@@ -191,49 +191,50 @@ function GroupDetail({ group, onChanged }) {
         <h3 className="section-title">{group.name}</h3>
       </div>
 
-      <section className="team-invite" aria-labelledby="invite-heading">
-        <p className="field-label" id="invite-heading">Invite someone</p>
-        {invite ? (
-          <>
-            <p className="invite-code" aria-label={`Invite code ${invite.code}`}>{invite.code}</p>
-            <p className="muted">Valid until {formatDate(invite.expires_at)}. Anyone with this code can join.</p>
-            <button type="button" className="btn btn-outline" onClick={copyCode}>
-              {copied ? "Copied" : "Copy code"}
-            </button>
-          </>
-        ) : (
-          <p className="muted">Create a code and share it. It works for 7 days.</p>
-        )}
-        {createInvite.isError && (
-          <p className="inline-error" role="alert">{groupErrorMessage(createInvite.error)}</p>
-        )}
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={() => createInvite.mutate()}
-          disabled={createInvite.isPending}
-        >
-          {createInvite.isPending ? <><Spinner />Creating code…</> : invite ? "Create a new code" : "Create invite code"}
-        </button>
-      </section>
-
-      {members.length > 0 && (
-        <>
-          <p className="field-label members-label">Members ({members.length})</p>
-          <ul className="member-list" aria-label="Team members">
-            {members.map((m, i) => (
-              <li key={m.email ?? i} className="member-row">
-                {m.email ? (
-                  <span className="member-email">{m.email}</span>
-                ) : (
-                  <span className="member-email muted">Email not available yet</span>
-                )}
-                {m.is_you && <span className="member-you">You</span>}
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
+      <div className="team-columns">
+        <section className="team-invite" aria-labelledby="invite-heading">
+          <p className="field-label" id="invite-heading">Invite someone</p>
+          {invite ? (
+            <>
+              <p className="invite-code" aria-label={`Invite code ${invite.code}`}>{invite.code}</p>
+              <p className="muted">Valid until {formatDate(invite.expires_at)}. Anyone with this code can join.</p>
+              <button type="button" className="btn btn-outline" onClick={copyCode}>
+                {copied ? "Copied" : "Copy code"}
+              </button>
+            </>
+          ) : (
+            <p className="muted">Create a code and share it. It works for 7 days.</p>
+          )}
+          {createInvite.isError && (
+            <p className="inline-error" role="alert">{groupErrorMessage(createInvite.error)}</p>
+          )}
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() => createInvite.mutate()}
+            disabled={createInvite.isPending}
+          >
+            {createInvite.isPending ? <><Spinner />Creating code…</> : invite ? "Create a new code" : "Create invite code"}
+          </button>
+        </section>
+        <section className="team-members" aria-labelledby="members-heading">
+          <p className="field-label" id="members-heading">Members ({members.length})</p>
+          {members.length > 0 && (
+            <ul className="member-list" aria-label="Team members">
+              {members.map((m, i) => (
+                <li key={m.email ?? i} className="member-row">
+                  {m.email ? (
+                    <span className="member-email">{m.email}</span>
+                  ) : (
+                    <span className="member-email muted">Email not available yet</span>
+                  )}
+                  {m.is_you && <span className="member-you">You</span>}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
 
       <TeamFiles />
 
@@ -264,18 +265,24 @@ function TeamFiles() {
     );
   }
 
-  if (files.data.length === 0) {
-    return <p className="muted">No public files yet. Make one public from the Files page.</p>;
-  }
-
   return (
-    <>
-      <DownloadFolderControl />
-      <div className="result-list group-files">
-        {files.data.map((file) => (
-          <TeammateResultCard key={file.file_id} result={file} />
-        ))}
+    <div className="file-group team-files">
+      <div className="file-group-head">
+        <span className="file-group-name">Public files</span>
+        <span className="muted file-group-count">
+          {files.data.length} file{files.data.length === 1 ? "" : "s"}
+        </span>
       </div>
-    </>
+      <DownloadFolderControl />
+      {files.data.length === 0 ? (
+        <p className="muted team-files-empty">No public files yet. Make one public from the Files page.</p>
+      ) : (
+        <ul className="file-list">
+          {files.data.map((file) => (
+            <TeammateFileRow key={file.file_id} file={file} />
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }

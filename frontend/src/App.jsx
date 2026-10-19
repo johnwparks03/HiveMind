@@ -15,7 +15,6 @@ const TABS = [
   { id: "search", label: "Search" },
   { id: "ask", label: "Ask" },
   { id: "files", label: "Files" },
-  { id: "account", label: "Sign in" },
 ];
 
 export default function App() {
@@ -64,13 +63,19 @@ export default function App() {
               aria-current={tab === t.id ? "page" : undefined}
               onClick={(e) => handleTabClick(t.id, e)}
             >
-              {t.id === "account" && signedIn ? "Sign out" : t.label}
+              {t.label}
             </a>
           ))}
         </nav>
         <div className="header-end">
           <StatusIndicator />
-          <a className="account-btn" href="#/account" aria-label={signedIn ? "Account (signed in)" : "Account"}>
+          <a
+            className="account-btn"
+            href="#/account"
+            aria-label={signedIn ? "Profile (signed in)" : "Profile (signed out)"}
+            title="Profile"
+            aria-current={tab === "account" ? "page" : undefined}
+          >
             <img src={userIconUrl} alt="" width="12" height="12" />
           </a>
         </div>

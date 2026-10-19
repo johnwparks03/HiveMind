@@ -103,6 +103,10 @@
 
 .account-btn:hover { background: var(--accent-hover); }
 
+.account-btn[aria-current="page"] {
+  box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--accent);
+}
+
 .status {
   display: flex;
   align-items: center;

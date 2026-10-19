@@ -69,8 +69,7 @@ export default function AccountPage() {
 
   return (
     <section className="account-page" aria-label="Account">
-      <div className="account-columns">
-        <div className="account-col">
+      <div className="account-top">
           {session.isPending && <Loading label="Checking sign-in…" />}
 
           {session.isError && (
@@ -141,14 +140,9 @@ export default function AccountPage() {
               </div>
             </>
           )}
-        </div>
-
-        {session.data && (
-          <div className="account-col">
-            <TeamPanel signedIn={Boolean(signedIn)} />
-          </div>
-        )}
       </div>
+
+      {signedIn && <TeamPanel signedIn />}
     </section>
   );
 }

@@ -1237,20 +1237,6 @@ input:focus {
   outline-offset: 1px;
 }
 
-/* Account page: sign-in on the left, team on the right; stacks on narrow screens. */
-.account-columns {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 32px;
-  max-width: 1120px;
-  margin: 0 auto;
-  align-items: start;
-}
-
-.account-col .team-choices {
-  grid-template-columns: 1fr;
-}
-
 /* Groups: the invite code is shown large and in a monospace font so it's easy to read out. */
 .groups-page {
   padding-top: 24px;
@@ -1986,7 +1972,7 @@ input:focus {
 .team-files .download-folder-control { margin: 0; padding: 0 16px 12px; }
 .team-files-empty { margin: 0; padding: 0 16px 16px; }
 
-.account-col .groups-page .account-card { max-width: none; }
+.groups-page .group-card { max-width: 1120px; }
 
 /* Team page, not on a team yet: create and join sit side by side, and stack on narrow screens. */
 .team-choices {
@@ -2046,10 +2032,6 @@ input:focus {
 
 /* Narrow screens */
 @media (max-width: 720px) {
-  .account-columns {
-    grid-template-columns: 1fr;
-  }
-
   .team-choices {
     grid-template-columns: 1fr;
   }

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import logoUrl from "./assets/hivemind-logo.png";
 import userIconUrl from "./assets/icons/user.svg";
+import BeeLogo from "./components/BeeLogo";
 import StatusIndicator from "./components/StatusIndicator";
 import AccountPage from "./pages/AccountPage";
 import AskPage from "./pages/AskPage";
@@ -51,7 +51,7 @@ export default function App() {
     <div className="app">
       <header className="app-header">
         <div className="brand">
-          <img className="brand-logo" src={logoUrl} alt="" width="32" height="32" />
+          <BeeLogo />
           <span>HiveMind</span>
         </div>
         <nav className="tabs" aria-label="Main">

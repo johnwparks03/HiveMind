@@ -1,58 +1,53 @@
-/* HiveMind design tokens (amber theme, from the Figma "HiveMind" file). Change colours here, not per component.
-   Amber is for fills, borders, focus and accent text; text on amber is white. */
+/* HiveMind design tokens (Deloitte green theme). Change colours here, not per component.
+   Green is for fills, borders, focus and accent text; text on green is always dark (charcoal). */
 :root {
-  --hm-amber: #8d4b00;
-  --hm-amber-dark: #825100;
-  --hm-amber-tile: #ffdcc3;
-  --hm-page: #f8f9ff;
-  --hm-tint: #eff4ff;
-  --hm-ribbon: #e5eeff;
-  --hm-pill: #dce9ff;
-  --hm-ink: #0b1c30;
-  --hm-ink-soft: #554336;
-  --hm-ink-muted: #887364;
-  --hm-placeholder: #dbc2b0;
-  --hm-line: #dce3f2;
-  --hm-green: #0f8a5f;
-  --hm-green-tint: #e2f5ec;
-  --hm-red: #ba1a1a;
-  --hm-red-tint: #ffe9e6;
-  --hm-yellow-tint: #fff3d4;
+  --dl-green: #86bc25;
+  --dl-green-hover: #75a521;
+  --dl-green-tint: #eef6dc;
+  --dl-blue: #00a3e0;
+  --dl-blue-tint: #e5f5fc;
+  --dl-red: #da291c;
+  --dl-red-tint: #fbe9e7;
+  --dl-amber-tint: #fdf3dc;
+  --dl-charcoal: #282728;
+  --dl-grey: #555555;
+  --dl-line: #e6e6e6;
+  --dl-page: #f5f5f5;
 
-  --bg: var(--hm-page);
+  --bg: var(--dl-page);
   --surface: #ffffff;
-  --surface-tint: var(--hm-tint);
-  --surface-ribbon: var(--hm-ribbon);
-  --pill-bg: var(--hm-pill);
-  --accent-tile: var(--hm-amber-tile);
-  --ink: var(--hm-ink);
-  --ink-soft: var(--hm-ink-soft);
-  --ink-muted: var(--hm-ink-muted);
-  --muted: var(--hm-ink-muted);
-  --placeholder: var(--hm-placeholder);
-  --line: var(--hm-line);
-  --accent: var(--hm-amber);
-  --accent-hover: var(--hm-amber-dark);
-  --accent-soft: var(--hm-tint);
-  --on-accent: #ffffff;
-  --ok: var(--hm-green);
-  --ok-soft: var(--hm-green-tint);
-  --pending: var(--hm-amber-dark);
-  --pending-soft: var(--hm-yellow-tint);
-  --error: var(--hm-red);
-  --error-soft: var(--hm-red-tint);
-  --warn-soft: var(--hm-yellow-tint);
+  --surface-tint: var(--dl-green-tint);
+  --surface-ribbon: var(--dl-green-tint);
+  --pill-bg: var(--dl-green-tint);
+  --accent-tile: var(--dl-green-tint);
+  --ink: var(--dl-charcoal);
+  --ink-soft: var(--dl-grey);
+  --ink-muted: var(--dl-grey);
+  --muted: var(--dl-grey);
+  --placeholder: #aaaaaa;
+  --line: var(--dl-line);
+  --accent: var(--dl-green);
+  --accent-hover: var(--dl-green-hover);
+  --accent-soft: var(--dl-green-tint);
+  --on-accent: var(--dl-charcoal);
+  --ok: var(--dl-green);
+  --ok-soft: var(--dl-green-tint);
+  --pending: var(--dl-blue);
+  --pending-soft: var(--dl-blue-tint);
+  --error: var(--dl-red);
+  --error-soft: var(--dl-red-tint);
+  --warn-soft: var(--dl-amber-tint);
 
   --r-sm: 4px;
   --r-md: 8px;
   --r-lg: 12px;
   --r-xl: 16px;
-  --radius: var(--r-md);
+  --radius: 10px;
   --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.05);
   --shadow-up: 0 -2px 5px rgba(0, 0, 0, 0.03);
   --shadow-inset: inset 0 2px 4px rgba(0, 0, 0, 0.05);
-  --focus: 0 0 0 3px rgba(141, 75, 0, 0.35);
-  --font-sans: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --focus: 0 0 0 3px rgba(134, 188, 37, 0.45);
+  --font-sans: "Open Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
   --font-mono: ui-monospace, "Cascadia Mono", "Liberation Mono", Consolas, monospace;
   color-scheme: light;
 }

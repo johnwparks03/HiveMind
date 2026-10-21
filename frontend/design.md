@@ -45,7 +45,7 @@ Inter 400/500/600/700 (Google Fonts link in `index.html`). Sizes in use: 11px ca
 ## Page layouts
 - **Search** (`.search-page`): centred column, max 1120px. Search box, teammates switch (`.include-teammates`), "Try" chips (shown before the first search), results, teammate section with the download-folder strip.
 - **Ask** (`.ask-page`): grid of a 288px sidebar and the chat card. The page height is `100vh - 112px`; the chat list and `.ask-thread` scroll on their own. `.ask-thread.is-empty` centres the hero (icon tile, H2, step cards, starter chips). The composer (`.ask-composer`) holds `.ask-controls` (scope picker + teammates switch) and `.ask-form` with the Send button inside the field. `is-chatting` and `is-active` are still set by `AskPage.jsx`. Below 720px it stacks and the page scrolls.
-- **Files** (`.files-page`): add-folder card, filter block, optional `.selection-bar`, then `.file-group` per folder (header, progress bar, `.file-list` rows).
+- **Files** (`.files-page`): keeps the pre-Figma layout, not the Figma Files frame. A 1200px column with a bordered add-folder card, plain filter chips (dark pill when a status chip is pressed), an optional bordered `.selection-bar`, then one bordered folder bar per `.file-group` with the progress bar beneath it and a bordered `.file-list`. These rules live in the "Files page: previous layout" block in `App.css` and are scoped under `.files-page`, because the Account Team panel shares `.file-group`, `.file-list` and `.file-row` and keeps the card look. Colours still come from the tokens.
 - **Account** (`#/account`, `#/groups` redirects here): sign-in or signed-in card on top, then the full-width team section (`TeamPanel`, shown when signed in; invite and members in `.team-columns`, then the public files as a `.file-group` of `TeammateFileRow` rows). Token-only restyle (no Figma frames): `.account-card`, `.team-choices`, `.invite-code`.
 - Breakpoints: 720px (Ask stacks, team choices stack) and 640px (header wraps, forms stack).
 - Search and Ask stay mounted and are toggled with `hidden` in `App.jsx`; keep that so their state survives tab changes.
@@ -59,7 +59,7 @@ Inter 400/500/600/700 (Google Fonts link in `index.html`). Sizes in use: 11px ca
 Logo: `src/assets/hivemind-logo.png` (64px, shown at 32px). Icons: `src/assets/icons/*.svg` (plus, trash, chat, user, send, scope-folder, chevron-down). To refresh from Figma, call `get_design_context` for the frame and download with `curl -L --ssl-no-revoke` (plain `curl` fails on this machine). Figma asset URLs expire after 7 days.
 
 ## In the Figma design but deliberately not built
-These have no feature behind them; do not fake them:
+These have no feature behind them; do not fake them (the Files layout itself was also reverted to the previous one, see Page layouts):
 - Files: file table column headers and Modified column, "Local Engine" / "POSIX Local" tags, "Retry OCR", per-folder "Indexed 95%" label (the progress bar is built).
 - Search: "Semantic match" strip and "Found N results (x local, y teammates)" line.
 - Ask: multiline textarea ("Shift+Enter for newline"); the composer stays a single-line input.

@@ -1825,6 +1825,102 @@ input:focus {
   gap: 8px;
 }
 
+/* Files page: previous (pre-Figma) layout. Scoped under .files-page because the Account Team panel
+   shares .file-group, .file-list and .file-row and keeps the card look. Colours still come from the tokens. */
+.files-page {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.files-page .add-folder {
+  border: 1px solid var(--line);
+  box-shadow: none;
+  padding: 16px 18px;
+  margin-bottom: 24px;
+}
+
+.files-page .files-section { margin-top: 32px; }
+
+.files-page .filter-block {
+  padding: 0;
+  background: none;
+  box-shadow: none;
+  border-radius: 0;
+}
+
+.files-page .filter-chip {
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-soft);
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.files-page .filter-chip[aria-pressed="true"] {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #fff;
+  font-weight: 400;
+}
+
+.files-page .filter-chip-share { border-radius: 8px; }
+
+.files-page .filter-chip-share[aria-pressed="true"] {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.files-page .filter-label {
+  font-size: 11.5px;
+  letter-spacing: 0.06em;
+}
+
+.files-page .selection-bar {
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  font-weight: 400;
+}
+
+.files-page .file-group {
+  background: none;
+  box-shadow: none;
+  border-radius: 0;
+  overflow: visible;
+}
+
+.files-page .file-group-head {
+  padding: 0 14px;
+  min-height: 46px;
+  margin: 0 0 6px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.files-page .file-group-head:hover { border-color: var(--accent); }
+
+.files-page .file-group-name {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.files-page .file-group-count { font-size: 13px; }
+
+.files-page .folder-row-progress { margin: 0 0 6px; }
+
+.files-page .file-list {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.files-page .file-row:hover { background: none; }
+.files-page .file-row.is-selected { background: var(--accent-soft); }
+.files-page .file-name { font-weight: 500; }
+
 /* Markdown inside assistant answers. The bubble's pre-wrap would double the spacing, so turn it off here. */
 .ask-bubble.ask-answer { white-space: normal; }
 

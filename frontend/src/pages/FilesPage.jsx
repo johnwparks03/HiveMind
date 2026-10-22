@@ -386,7 +386,7 @@ export default function FilesPage() {
                         className="btn btn-ghost btn-sm"
                         onClick={() => setSelected(visible.map((f) => f.file_id))}
                       >
-                        Select all shown
+                        Select All
                       </button>
                     </div>
                   )}

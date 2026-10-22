@@ -1697,7 +1697,7 @@ input:focus {
   margin: 0 0 8px;
 }
 
-/* "Select all shown" on the left, "Expand all" / "Collapse all" on the right, on one line. */
+/* "Select All" on the left, "Expand all" / "Collapse all" on the right, on one line. */
 .list-controls {
   display: flex;
   flex-wrap: wrap;

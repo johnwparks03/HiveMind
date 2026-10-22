@@ -55,6 +55,7 @@ export default function FolderRow({
         <button type="button" className="file-group-toggle" aria-expanded={open} onClick={onToggleOpen}>
           <span className="file-group-chevron" aria-hidden="true">{open ? "▾" : "▸"}</span>
           <span className="file-group-name">{name}</span>
+          {scanning && <Spinner />}
           <span className="muted file-group-count">
             {scanning ? `Reading ${folder.scan_done} of ${folder.scan_total ?? "?"} files…` : null}
             {scanning ? null : `${counts.total} file${counts.total === 1 ? "" : "s"}`}

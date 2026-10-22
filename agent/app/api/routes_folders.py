@@ -1,4 +1,6 @@
 import asyncio
+import logging
+import threading
 
 from fastapi import APIRouter
 from pydantic import BaseModel
@@ -7,9 +9,10 @@ from app.central import teams
 from app.db import session
 from app.errors import ApiError
 from app.folders import picker, share, watcher
-from app.folders.scanner import add_folder, list_folders, remove_folder, scan_folder
+from app.folders.scanner import list_folders, register_folder, remove_folder, scan_folder
 
 router = APIRouter()
+log = logging.getLogger(__name__)
 
 
 def _folder_exists(folder_id: str) -> bool:
@@ -17,6 +20,21 @@ def _folder_exists(folder_id: str) -> bool:
         return conn.execute(
             "SELECT 1 FROM folders WHERE folder_id = ?", (folder_id,)
         ).fetchone() is not None
+
+
+def _get_folder(folder_id: str) -> dict:
+    with session() as conn:
+        return dict(conn.execute("SELECT * FROM folders WHERE folder_id = ?", (folder_id,)).fetchone())
+
+
+def _scan_then_watch(folder_id: str, path: str) -> None:
+    """Runs the initial scan off the request, then starts the watcher. A failed scan is recorded on
+    the folder (scan_state 'failed') and the folder is still watched, so later changes get picked up."""
+    try:
+        scan_folder(folder_id, path)
+    except Exception:
+        log.exception("initial scan failed for folder %s", folder_id)
+    watcher.watch_folder(folder_id, path)
 
 
 @router.post("/folders/pick")
@@ -31,17 +49,20 @@ class AddFolderRequest(BaseModel):
     path: str
 
 
-@router.post("/folders")
+@router.post("/folders", status_code=201)
 def post_folder(body: AddFolderRequest):
     """Stand-in for the native Windows folder dialog (E0-S4) — takes a path string
     directly for now so local search is testable without the frontend.
+
+    Returns at once with the folder in scan_state 'scanning'; the scan runs on a background thread
+    and GET /folders reports its progress.
     """
     import os
     if not os.path.isdir(body.path):
         raise ApiError(400, "invalid_request", "not a directory")
-    folder_id = add_folder(body.path)
-    watcher.watch_folder(folder_id, body.path)
-    return {"folder_id": folder_id}
+    folder_id = register_folder(body.path)
+    threading.Thread(target=_scan_then_watch, args=(folder_id, body.path), daemon=True).start()
+    return _get_folder(folder_id)
 
 
 @router.get("/folders")

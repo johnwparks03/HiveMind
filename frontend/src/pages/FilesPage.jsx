@@ -11,6 +11,7 @@ import {
   countsFor,
   folderName,
   hasPendingWork,
+  hasScanningFolders,
   matchesShareFilter,
   totalsByShare,
   totalsByState,
@@ -53,13 +54,17 @@ export default function FilesPage() {
   const folders = useQuery({
     queryKey: ["folders"],
     queryFn: api.listFolders,
-    refetchInterval: IDLE_POLL_MS,
+    refetchInterval: (query) => (hasScanningFolders(query.state.data ?? []) ? FAST_POLL_MS : IDLE_POLL_MS),
   });
 
+  // Files also refresh quickly while a folder is still being read, so new rows appear as they're read.
   const files = useQuery({
     queryKey: ["files"],
     queryFn: api.listFiles,
-    refetchInterval: (query) => (hasPendingWork(query.state.data ?? []) ? FAST_POLL_MS : IDLE_POLL_MS),
+    refetchInterval: (query) =>
+      hasPendingWork(query.state.data ?? []) || hasScanningFolders(queryClient.getQueryData(["folders"]) ?? [])
+        ? FAST_POLL_MS
+        : IDLE_POLL_MS,
   });
 
   function refresh() {
@@ -372,27 +377,31 @@ export default function FilesPage() {
             <p className="empty muted">No files in this view.</p>
           ) : (
             <>
-              {visible.length > 1 && selectedShown.length === 0 && (
-                <div className="select-all">
-                  <button
-                    type="button"
-                    className="btn btn-ghost btn-sm"
-                    onClick={() => setSelected(visible.map((f) => f.file_id))}
-                  >
-                    Select all shown
-                  </button>
+              {(visible.length > 1 && selectedShown.length === 0) || groups.length > 1 ? (
+                <div className="list-controls">
+                  {visible.length > 1 && selectedShown.length === 0 && (
+                    <div className="select-all">
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => setSelected(visible.map((f) => f.file_id))}
+                      >
+                        Select All
+                      </button>
+                    </div>
+                  )}
+                  {groups.length > 1 && (
+                    <div className="group-controls">
+                      <button type="button" className="btn btn-outline" onClick={() => setAllGroups(true)}>
+                        Expand all
+                      </button>
+                      <button type="button" className="btn btn-outline" onClick={() => setAllGroups(false)}>
+                        Collapse all
+                      </button>
+                    </div>
+                  )}
                 </div>
-              )}
-              {groups.length > 1 && (
-                <div className="group-controls">
-                  <button type="button" className="btn btn-outline" onClick={() => setAllGroups(true)}>
-                    Expand all
-                  </button>
-                  <button type="button" className="btn btn-outline" onClick={() => setAllGroups(false)}>
-                    Collapse all
-                  </button>
-                </div>
-              )}
+              ) : null}
               {groups.map(({ folder, files: groupFiles }) => {
                 const id = folder.folder_id;
                 const open = isOpen(id, groupFiles.length);

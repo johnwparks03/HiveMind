@@ -41,7 +41,7 @@ def central(cognito_fake, keyring_fake, monkeypatch):
 
 def _seed_file(file_id, path, public_state="public"):
     with db.session() as conn:
-        conn.execute("INSERT OR IGNORE INTO folders VALUES ('f1', 'C:/x', '2026-01-01T00:00:00+00:00')")
+        conn.execute("INSERT OR IGNORE INTO folders (folder_id, path, added_at) VALUES ('f1', 'C:/x', '2026-01-01T00:00:00+00:00')")
         conn.execute(
             "INSERT INTO files (file_id, folder_id, path, filename, index_status, public_state) "
             "VALUES (?, 'f1', ?, ?, 'indexed', ?)",

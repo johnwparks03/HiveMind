@@ -298,7 +298,7 @@ def test_scans_of_one_folder_never_overlap_but_different_folders_can(monkeypatch
             active["now"] -= 1
         return {}
 
-    monkeypatch.setattr(scanner, "_scan_folder", slow_scan)
+    monkeypatch.setattr(scanner, "_scan_files", slow_scan)
     threads = [threading.Thread(target=scanner.scan_folder, args=("same", "p")) for _ in range(3)]
     for t in threads:
         t.start()
@@ -332,6 +332,7 @@ def test_adding_and_removing_a_folder_starts_and_stops_watching_it(api, tmp_path
     folder.mkdir()
     (folder / "a.txt").write_text("alpha")
     folder_id = api.post("/folders", json={"path": str(folder)}).json()["folder_id"]
+    assert wait_until(lambda: watched == [(folder_id, str(folder))])  # the watch starts after the background scan
     assert watched == [(folder_id, str(folder))]
     assert api.delete(f"/folders/{folder_id}").status_code == 200
     assert unwatched == [folder_id]

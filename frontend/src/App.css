@@ -1341,6 +1341,7 @@ input:focus {
 }
 
 .scope-folder-name:hover { color: var(--accent-hover); }
+.scope-folder-name .spinner { margin: 0 6px; vertical-align: -2px; }
 
 .scope-folder-head .file-check { cursor: pointer; }
 
@@ -1694,6 +1695,24 @@ input:focus {
   justify-content: flex-end;
   gap: 4px;
   margin: 0 0 8px;
+}
+
+/* "Select All" on the left, "Expand all" / "Collapse all" on the right, on one line. */
+.list-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+}
+
+.list-controls .select-all,
+.list-controls .group-controls {
+  margin: 0;
+}
+
+.list-controls .group-controls {
+  margin-left: auto;
 }
 
 .file-group {

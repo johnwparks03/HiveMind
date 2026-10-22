@@ -79,6 +79,24 @@ def test_a_failed_scan_is_reported_on_the_folder(client, corpus, monkeypatch):
     assert wait_for_scan(client, folder_id)["scan_state"] == "failed"
 
 
+def test_each_file_is_readable_before_the_next_one_is_read(client, corpus, monkeypatch):
+    from app import db
+    from app.folders import scanner
+
+    root, _ = corpus
+    real_index = scanner.index_file
+    visible_before = []
+
+    def recording_index(**kwargs):
+        with db.session() as conn:
+            visible_before.append(conn.execute("SELECT COUNT(*) FROM files").fetchone()[0])
+        return real_index(**kwargs)
+
+    monkeypatch.setattr(scanner, "index_file", recording_index)
+    add_folder_and_wait(client, root)
+    assert visible_before == list(range(TOTAL_DOCX + TOTAL_PPTX + 3))
+
+
 def test_adding_a_folder_indexes_the_whole_corpus(client, corpus):
     root, _ = corpus
     folder_id = add_folder_and_wait(client, root)

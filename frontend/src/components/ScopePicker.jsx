@@ -1,7 +1,11 @@
-import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import { api } from "../api/client";
-import { folderName } from "../lib/files";
+import { folderName, hasPendingWork, hasScanningFolders } from "../lib/files";
+import { Spinner } from "./Loading";
+
+// While a folder is being read or a file is still pending, the list refreshes this often.
+const SCAN_POLL_MS = 2000;
 
 // Folder checkboxes expand to individual file checkboxes. There's no separate
 // "folder selected" state — a folder's checkbox is checked/indeterminate/unchecked
@@ -12,8 +16,24 @@ export default function ScopePicker({ selectedFileIds, onChange }) {
   const [open, setOpen] = useState(false);
   const [expanded, setExpanded] = useState(() => new Set());
 
-  const folders = useQuery({ queryKey: ["folders"], queryFn: api.listFolders });
-  const files = useQuery({ queryKey: ["files"], queryFn: api.listFiles });
+  const queryClient = useQueryClient();
+  const folders = useQuery({
+    queryKey: ["folders"],
+    queryFn: api.listFolders,
+    refetchInterval: (query) => (hasScanningFolders(query.state.data ?? []) ? SCAN_POLL_MS : false),
+  });
+  const files = useQuery({
+    queryKey: ["files"],
+    queryFn: api.listFiles,
+    refetchInterval: (query) =>
+      hasPendingWork(query.state.data ?? []) || hasScanningFolders(folders.data ?? []) ? SCAN_POLL_MS : false,
+  });
+
+  // The last poll can land just before the final file is written, so refresh the files once when a scan ends.
+  const scanning = hasScanningFolders(folders.data ?? []);
+  useEffect(() => {
+    if (!scanning) queryClient.invalidateQueries({ queryKey: ["files"] });
+  }, [scanning, queryClient]);
 
   if (!folders.data || !files.data || folders.data.length === 0) return null;
 
@@ -85,6 +105,7 @@ export default function ScopePicker({ selectedFileIds, onChange }) {
                       onClick={() => toggleExpanded(folder.folder_id)}
                     >
                       {folderName(folder.path)} ({ids.length})
+                      {folder.scan_state === "scanning" && <Spinner />}
                       <span aria-hidden="true">{isExpanded ? " ▲" : " ▼"}</span>
                     </button>
                   </div>

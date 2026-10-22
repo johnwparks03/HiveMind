@@ -1341,6 +1341,7 @@ input:focus {
 }
 
 .scope-folder-name:hover { color: var(--accent-hover); }
+.scope-folder-name .spinner { margin: 0 6px; vertical-align: -2px; }
 
 .scope-folder-head .file-check { cursor: pointer; }
 

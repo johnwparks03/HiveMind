@@ -2,9 +2,8 @@ import Loading, { Spinner } from "../components/Loading";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api, isAgentUnreachable } from "../api/client";
-import HowTo from "../components/HowTo";
-
 import PasswordInput from "../components/PasswordInput";
+import TeamPanel from "../components/TeamPanel";
 import { authErrorMessage, validateCredentials } from "../lib/auth";
 
 export default function AccountPage() {
@@ -36,6 +35,7 @@ export default function AccountPage() {
       }));
       refreshSession();
       queryClient.invalidateQueries({ queryKey: ["group"] });
+      window.location.hash = "#/search";
     },
   });
 
@@ -64,9 +64,22 @@ export default function AccountPage() {
   }
 
   const signedIn = session.data?.signed_in;
+  const initial = (session.data?.email ?? "?").trim().charAt(0).toUpperCase();
+  const signedOutLede = "Sign in to share with your team. Your files stay on this computer until you choose to share them, and teammates can read the files you make public, including through Ask.";
+  const steps = [
+    "Sign in with your email and password.",
+    "Your files stay on this computer until you make them public; teammates can then read them.",
+    "Sign out here anytime.",
+  ];
 
   return (
-    <section className="account-page" aria-label={signedIn ? "Signed in" : "Sign in"}>
+    <section className="account-page" aria-label="Account">
+      <header className="ac-intro">
+        <h2 className="ac-title">Account</h2>
+        {signedIn && <p className="ac-lede">Your profile, team and shared files.</p>}
+        {session.data && !signedIn && <p className="ac-lede">{signedOutLede}</p>}
+      </header>
+
       {session.isPending && <Loading label="Checking sign-in…" />}
 
       {session.isError && (
@@ -78,56 +91,75 @@ export default function AccountPage() {
       )}
 
       {signedIn && (
-        <div className="account-card signed-in-card">
-          <p className="signed-in-text">
-            You are signed in as <strong>{session.data.email}</strong>
-          </p>
-          <button
-            type="button"
-            className="btn btn-danger"
-            onClick={() => logOut.mutate()}
-            disabled={logOut.isPending}
-          >
-            {logOut.isPending ? <><Spinner />Signing out…</> : "Sign out"}
-          </button>
-          {logOut.isError && (
-            <p className="inline-error" role="alert">Couldn't sign out. Try again.</p>
-          )}
-        </div>
+        <>
+          <div className="ac-card ac-identity">
+            <span className="ac-avatar" aria-hidden="true">{initial}</span>
+            <p className="ac-identity-text">
+              You are signed in as <strong>{session.data.email}</strong>
+            </p>
+            <button
+              type="button"
+              className="ac-btn ac-btn-danger"
+              onClick={() => logOut.mutate()}
+              disabled={logOut.isPending}
+            >
+              {logOut.isPending ? <><Spinner />Signing out…</> : "Sign out"}
+            </button>
+            {logOut.isError && (
+              <p className="inline-error ac-identity-error" role="alert">Couldn't sign out. Try again.</p>
+            )}
+          </div>
+          <TeamPanel signedIn />
+        </>
       )}
 
       {session.data && !signedIn && (
         <>
-          <h2 className="page-title">Sign <span className="accent-word">in</span></h2>
-          <p className="page-lede">Sign in to share with your team. Your files stay on this computer until you choose to share them, and teammates can read the files you make public, including through Ask.</p>
-          <HowTo steps={['Sign in with your email and password.', 'Your files stay on this computer until you make them public. Teammates can then read them.', 'Sign out here anytime.']} />
+          <div className="ac-card ac-howto">
+            <p className="ac-eyebrow">How it works</p>
+            <ol className="ac-steps" aria-label="How to use this page">
+              {steps.map((step) => (
+                <li key={step}>{step}</li>
+              ))}
+            </ol>
+          </div>
 
-          <div className="account-card">
-            <form className="account-form" onSubmit={handleSubmit} noValidate>
-              <label htmlFor="account-email" className="field-label">Email</label>
-              <input
-                id="account-email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                autoComplete="email"
-                spellCheck={false}
-              />
+          <div className="ac-card ac-signin">
+            <form className="ac-form" onSubmit={handleSubmit} noValidate>
+              <div>
+                <h3 className="ac-card-title">Sign in</h3>
+                <p className="ac-muted">Your account connects you to your team.</p>
+              </div>
 
-              <label htmlFor="account-password" className="field-label">Password</label>
-              <PasswordInput
-                id="account-password"
-                value={password}
-                onChange={setPassword}
-                autoComplete="current-password"
-              />
+              <div className="ac-field">
+                <label htmlFor="account-email" className="ac-label">Email</label>
+                <input
+                  id="account-email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="email"
+                  spellCheck={false}
+                  placeholder="you@example.com"
+                />
+              </div>
+
+              <div className="ac-field">
+                <label htmlFor="account-password" className="ac-label">Password</label>
+                <PasswordInput
+                  id="account-password"
+                  value={password}
+                  onChange={setPassword}
+                  autoComplete="current-password"
+                />
+              </div>
 
               {formError && <p className="inline-error" role="alert">{formError}</p>}
               {signIn.error && !formError && (
                 <p className="inline-error" role="alert">{authErrorMessage(signIn.error)}</p>
               )}
 
-              <button type="submit" className="btn btn-primary" disabled={signIn.isPending}>
+              <button type="submit" className="ac-btn ac-btn-primary" disabled={signIn.isPending}>
                 {signIn.isPending ? <><Spinner />Signing in…</> : "Sign in"}
               </button>
             </form>

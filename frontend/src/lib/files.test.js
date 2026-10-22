@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  fileTypeOf,
   countsByFolder,
   allShared,
   countsFor,
@@ -173,4 +174,14 @@ test("groupByFolder keeps folder order and skips empty folders", () => {
   const groups = groupByFolder(files, folders);
   assert.deepEqual(groups.map((g) => g.folder.folder_id), ["a", "c"]);
   assert.deepEqual(groups[1].files.map((f) => f.file_id), [1, 3]);
+});
+
+test("fileTypeOf reads the extension, case-insensitively, and falls back to other", () => {
+  assert.equal(fileTypeOf("Budget.PDF"), "pdf");
+  assert.equal(fileTypeOf("notes.v2.docx"), "docx");
+  assert.equal(fileTypeOf("deck.pptx"), "pptx");
+  assert.equal(fileTypeOf("falcon-budget.txt"), "txt");
+  assert.equal(fileTypeOf("archive.zip"), "other");
+  assert.equal(fileTypeOf("README"), "other");
+  assert.equal(fileTypeOf(null), "other");
 });

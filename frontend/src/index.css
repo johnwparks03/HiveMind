@@ -1,10 +1,9 @@
-/* Deloitte brand tokens (digital-brand reference). Change colours here, not per component.
-   Green is for fills, borders and focus; text on green is always dark (white fails contrast). */
+/* HiveMind design tokens (Deloitte green theme). Change colours here, not per component.
+   Green is for fills, borders, focus and accent text; text on green is always dark (charcoal). */
 :root {
   --dl-green: #86bc25;
   --dl-green-hover: #75a521;
   --dl-green-tint: #eef6dc;
-  --dl-neon: #86eb22;
   --dl-blue: #00a3e0;
   --dl-blue-tint: #e5f5fc;
   --dl-red: #da291c;
@@ -17,8 +16,15 @@
 
   --bg: var(--dl-page);
   --surface: #ffffff;
+  --surface-tint: var(--dl-green-tint);
+  --surface-ribbon: var(--dl-green-tint);
+  --pill-bg: var(--dl-green-tint);
+  --accent-tile: var(--dl-green-tint);
   --ink: var(--dl-charcoal);
   --ink-soft: var(--dl-grey);
+  --ink-muted: var(--dl-grey);
+  --muted: var(--dl-grey);
+  --placeholder: #aaaaaa;
   --line: var(--dl-line);
   --accent: var(--dl-green);
   --accent-hover: var(--dl-green-hover);
@@ -31,8 +37,18 @@
   --error: var(--dl-red);
   --error-soft: var(--dl-red-tint);
   --warn-soft: var(--dl-amber-tint);
+
+  --r-sm: 4px;
+  --r-md: 8px;
+  --r-lg: 12px;
+  --r-xl: 16px;
   --radius: 10px;
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-up: 0 -2px 5px rgba(0, 0, 0, 0.03);
+  --shadow-inset: inset 0 2px 4px rgba(0, 0, 0, 0.05);
   --focus: 0 0 0 3px rgba(134, 188, 37, 0.45);
+  --font-sans: "Open Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Mono", "Liberation Mono", Consolas, monospace;
   color-scheme: light;
 }
 
@@ -48,7 +64,7 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--ink);
-  font-family: "Open Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  font-family: var(--font-sans);
   font-size: 14px;
   line-height: 1.5;
 }

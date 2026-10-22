@@ -1,5 +1,5 @@
 // Empty-state artwork for the Search page: two brains trading ideas across a shared document.
-// Drawn as single outlines (no overlapping circles, per the Deloitte digital brand rules).
+// Drawn as single outlines (no overlapping circles, per the HiveMind design tokens).
 // Decorative only, so it's hidden from assistive tech; the text beside it carries the meaning.
 
 const BRAIN =
@@ -35,7 +35,7 @@ export default function SearchIllustration() {
       <defs>
         {/* userSpaceOnUse keeps the head at 10 units; the default scales it with the 3px stroke. */}
         <marker id="hm-arrow" markerWidth="10" markerHeight="10" refX="10" refY="5" orient="auto" markerUnits="userSpaceOnUse">
-          <path d="M 0 0 L 10 5 L 0 10 z" fill="#00a3e0" />
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#75a521" />
         </marker>
       </defs>
 
@@ -46,7 +46,7 @@ export default function SearchIllustration() {
       <path
         d="M 166 84 Q 230 28 294 84"
         fill="none"
-        stroke="#00a3e0"
+        stroke="#75a521"
         strokeWidth="3"
         strokeLinecap="round"
         markerEnd="url(#hm-arrow)"
@@ -54,7 +54,7 @@ export default function SearchIllustration() {
       <path
         d="M 294 136 Q 230 192 166 136"
         fill="none"
-        stroke="#00a3e0"
+        stroke="#75a521"
         strokeWidth="3"
         strokeLinecap="round"
         markerEnd="url(#hm-arrow)"

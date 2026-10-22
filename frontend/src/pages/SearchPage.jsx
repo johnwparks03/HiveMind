@@ -9,6 +9,7 @@ import DownloadFolderControl from "../components/DownloadFolderControl";
 import TeammateResultCard from "../components/TeammateResultCard";
 import Switch from "../components/Switch";
 import { interpretedCaption } from "../lib/files";
+import { TEAM_REQUIRED_HINT, useHasTeam } from "../lib/useTeamAccess";
 import { addRecent, loadRecent, removeRecent, saveRecent } from "../lib/recent";
 
 const EXAMPLES = [
@@ -22,6 +23,7 @@ export default function SearchPage() {
   const [recent, setRecent] = useState(loadRecent);
   const [recentOpen, setRecentOpen] = useState(false);
   const [includeTeammates, setIncludeTeammates] = useState(false);
+  const hasTeam = useHasTeam();
   const search = useMutation({ mutationFn: ({ query, includeTeammates }) => api.search(query, includeTeammates) });
 
   function run(query) {
@@ -32,7 +34,7 @@ export default function SearchPage() {
     const next = addRecent(recent, q);
     setRecent(next);
     saveRecent(next);
-    search.mutate({ query: q, includeTeammates });
+    search.mutate({ query: q, includeTeammates: includeTeammates && hasTeam });
   }
 
   function clearRecent() {
@@ -56,7 +58,7 @@ export default function SearchPage() {
 
   return (
     <section className="search-page" aria-labelledby="search-title">
-      <h2 id="search-title" className="page-title">Find a <span className="accent-word">file</span></h2>
+      <h2 id="search-title" className="page-title">Search</h2>
       <p className="page-lede">Describe what you need in plain words.</p>
       <HowTo steps={['Type a topic, or a time like "last week".', 'Press Enter to search.', 'Open the file you need.']} />
 
@@ -82,8 +84,8 @@ export default function SearchPage() {
           </button>
         </form>
 
-        <div className="include-teammates">
-          <Switch checked={includeTeammates} onChange={setIncludeTeammates}>
+        <div className="include-teammates" title={hasTeam ? undefined : TEAM_REQUIRED_HINT}>
+          <Switch checked={includeTeammates && hasTeam} onChange={setIncludeTeammates} disabled={!hasTeam}>
             Also search teammates' public files
           </Switch>
         </div>
@@ -145,7 +147,7 @@ export default function SearchPage() {
 
         {!search.isPending && !results && !search.isError && (
           <div className="examples">
-            <p className="examples-label">Try one of these</p>
+            <p className="examples-label">Try</p>
             <div className="example-list">
               {EXAMPLES.map((example) => (
                 <button key={example} type="button" className="example-chip" onClick={() => run(example)}>

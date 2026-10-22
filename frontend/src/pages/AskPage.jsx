@@ -1,6 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { api, isAgentUnreachable } from "../api/client";
+import chatIconUrl from "../assets/icons/chat.svg";
+import plusIconUrl from "../assets/icons/plus.svg";
+import trashIconUrl from "../assets/icons/trash.svg";
 import { useDialog } from "../components/dialogContext";
 import HowTo from "../components/HowTo";
 import Loading, { Spinner } from "../components/Loading";
@@ -8,6 +11,7 @@ import Markdown from "../components/Markdown";
 import OpenButton from "../components/OpenButton";
 import ScopePicker from "../components/ScopePicker";
 import Switch from "../components/Switch";
+import { TEAM_REQUIRED_HINT, useHasTeam } from "../lib/useTeamAccess";
 import TransferControl from "../components/TransferControl";
 import {
   isTeammateSource,
@@ -75,6 +79,7 @@ export default function AskPage() {
   const [pendingQuestion, setPendingQuestion] = useState(null);
   // Off by default; remembered for this browser session only.
   const [includeTeammates, setIncludeTeammates] = useState(() => loadIncludeTeammates(sessionStore()));
+  const hasTeam = useHasTeam();
   // Why teammates' files were left out of the latest answer. It comes only with the live answer (it is
   // not saved with the chat), so it is kept here until the next question or another chat is opened.
   const [skippedReason, setSkippedReason] = useState(null);
@@ -142,7 +147,7 @@ export default function AskPage() {
     if (!q || send.isPending) return;
     setPendingQuestion(q);
     setSkippedReason(null);
-    send.mutate({ chatId: activeId, question: q, fileIds: Array.from(scopeFileIds), includeTeammates });
+    send.mutate({ chatId: activeId, question: q, fileIds: Array.from(scopeFileIds), includeTeammates: includeTeammates && hasTeam });
   }
 
   function handleSubmit(e) {
@@ -174,8 +179,10 @@ export default function AskPage() {
     <section className={`ask-page${showExamples ? "" : " is-chatting"}`} aria-labelledby="ask-title">
       <aside className="ask-sidebar" aria-label="Saved chats">
         <button type="button" className="btn btn-primary ask-new" onClick={startNewChat}>
+          <img src={plusIconUrl} alt="" width="11" height="11" />
           New chat
         </button>
+        <p className="ask-side-label" aria-hidden="true">Saved chats</p>
 
         {chats.isPending && <Loading label="Loading chats…" />}
         {chats.data?.length === 0 && <p className="muted ask-side-note">Your chats will show here.</p>}
@@ -202,7 +209,7 @@ export default function AskPage() {
                 title="Delete chat"
                 onClick={() => handleDelete(c.chat_id, c.title)}
               >
-                ×
+                <img src={trashIconUrl} alt="" width="11" height="12" />
               </button>
             </li>
           ))}
@@ -213,7 +220,10 @@ export default function AskPage() {
         <div className={`ask-thread${showExamples ? " is-empty" : ""}`} aria-live="polite">
           {showExamples && (
             <div className="ask-empty">
-              <h2 className="page-title">Ask about <span className="accent-word">your files</span></h2>
+              <span className="ask-hero-icon" aria-hidden="true">
+                <img src={chatIconUrl} alt="" width="30" height="30" />
+              </span>
+              <h2 id="ask-title" className="page-title">Ask about your files</h2>
               <p className="page-lede">
                 Ask across your files, like a summary of recent notes. Turn on teammates' files to include what your team has made public.
               </p>
@@ -270,11 +280,13 @@ export default function AskPage() {
         </div>
 
         <div className="ask-composer">
-          <ScopePicker selectedFileIds={scopeFileIds} onChange={setScopeFileIds} />
-          <div className="include-teammates ask-teammates">
-            <Switch checked={includeTeammates} onChange={changeIncludeTeammates}>
-              Also use teammates' public files
-            </Switch>
+          <div className="ask-controls">
+            <ScopePicker selectedFileIds={scopeFileIds} onChange={setScopeFileIds} />
+            <div className="include-teammates ask-teammates" title={hasTeam ? undefined : TEAM_REQUIRED_HINT}>
+              <Switch checked={includeTeammates && hasTeam} onChange={changeIncludeTeammates} disabled={!hasTeam}>
+                Also use teammates' public files
+              </Switch>
+            </div>
           </div>
           <form className="ask-form" onSubmit={handleSubmit}>
             <label htmlFor="ask-input" className="sr-only">Ask a question about your files</label>

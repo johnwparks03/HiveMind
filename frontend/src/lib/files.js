@@ -21,6 +21,13 @@ export function normaliseFile(raw) {
   };
 }
 
+// Which kind of file a name is, from its extension: "pdf", "docx", "pptx" or "txt" (the types HiveMind
+// reads), otherwise "other". Used to pick a file icon.
+export function fileTypeOf(filename) {
+  const ext = String(filename ?? "").split(".").pop().toLowerCase();
+  return ["pdf", "docx", "pptx", "txt"].includes(ext) ? ext : "other";
+}
+
 const EMPTY_COUNTS = { total: 0, indexed: 0, pending: 0, failed: 0, public: 0 };
 
 // The agent's folder object has no counts yet, so derive them from the file list.

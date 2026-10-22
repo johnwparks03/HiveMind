@@ -1,30 +1,24 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import userIconUrl from "./assets/icons/user.svg";
 import BeeLogo from "./components/BeeLogo";
 import StatusIndicator from "./components/StatusIndicator";
 import AccountPage from "./pages/AccountPage";
 import AskPage from "./pages/AskPage";
 import FilesPage from "./pages/FilesPage";
-import GroupsPage from "./pages/GroupsPage";
 import SearchPage from "./pages/SearchPage";
 import { api } from "./api/client";
+import { tabFromHash } from "./lib/tabs";
 import "./App.css";
 
 const TABS = [
   { id: "search", label: "Search" },
   { id: "ask", label: "Ask" },
   { id: "files", label: "Files" },
-  { id: "groups", label: "Team" },
-  { id: "account", label: "Sign in" },
 ];
 
-function tabFromHash() {
-  const id = window.location.hash.replace("#/", "");
-  return TABS.some((t) => t.id === id) ? id : "search";
-}
-
 export default function App() {
-  const [tab, setTab] = useState(tabFromHash);
+  const [tab, setTab] = useState(() => tabFromHash(window.location.hash));
   // Bumped when the Search tab is clicked while already on Search, to clear it back to the entry page.
   const [searchKey, setSearchKey] = useState(0);
 
@@ -37,7 +31,12 @@ export default function App() {
   const signedIn = Boolean(session.data?.signed_in);
 
   useEffect(() => {
-    const onHashChange = () => setTab(tabFromHash());
+    const onHashChange = () => {
+      const next = tabFromHash(window.location.hash);
+      if (window.location.hash === "#/groups") window.history.replaceState(null, "", "#/account");
+      setTab(next);
+    };
+    onHashChange();
     window.addEventListener("hashchange", onHashChange);
     return () => window.removeEventListener("hashchange", onHashChange);
   }, []);
@@ -64,12 +63,24 @@ export default function App() {
               aria-current={tab === t.id ? "page" : undefined}
               onClick={(e) => handleTabClick(t.id, e)}
             >
-              {t.id === "account" && signedIn ? "Sign out" : t.label}
+              {t.label}
             </a>
           ))}
         </nav>
-        <StatusIndicator />
+        <div className="header-end">
+          <StatusIndicator />
+          <a
+            className="account-btn"
+            href="#/account"
+            aria-label={signedIn ? "Profile (signed in)" : "Profile (signed out)"}
+            title="Profile"
+            aria-current={tab === "account" ? "page" : undefined}
+          >
+            <img src={userIconUrl} alt="" width="12" height="12" />
+          </a>
+        </div>
       </header>
+      <div className="header-ribbon" aria-hidden="true" />
 
       <main className="page">
         {/* Search and Ask stay mounted so their query/answer survive a trip to another tab. */}
@@ -80,7 +91,6 @@ export default function App() {
           <AskPage />
         </div>
         {tab === "files" && <FilesPage />}
-        {tab === "groups" && <GroupsPage />}
         {tab === "account" && <AccountPage />}
       </main>
     </div>

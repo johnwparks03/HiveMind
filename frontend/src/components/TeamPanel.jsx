@@ -6,6 +6,9 @@ import { useDialog } from "./dialogContext";
 import TeammateFileRow from "./TeammateFileRow";
 import { api, isAgentUnreachable } from "../api/client";
 import { formatDate } from "../lib/files";
+import copyIconUrl from "../assets/icons/copy.svg";
+import keyIconUrl from "../assets/icons/key-round.svg";
+import usersIconUrl from "../assets/icons/users-round.svg";
 import { groupErrorMessage, normaliseInviteCode } from "../lib/groups";
 
 // One group per person for the MVP. Groups live on the central service, so everything here
@@ -25,10 +28,8 @@ export default function TeamPanel({ signedIn }) {
 
   if (!signedIn) {
     return (
-      <Shell lede="Sign in to create or join a team.">
-        <div className="account-card">
-          <p className="signed-in-text">Your team shows up here once you are signed in.</p>
-        </div>
+      <Shell>
+        <p className="ac-muted">Your team shows up here once you are signed in.</p>
       </Shell>
     );
   }
@@ -43,17 +44,15 @@ export default function TeamPanel({ signedIn }) {
     );
   }
 
-  if (group.data) {
-    return (
-      <Shell>
-        <GroupDetail group={group.data} onChanged={refreshGroup} />
-      </Shell>
-    );
-  }
+  if (group.data) return <GroupDetail group={group.data} onChanged={refreshGroup} />;
 
   return (
-    <Shell lede="You're not on a team yet. Create one, or join with an invite code.">
-      <div className="team-choices">
+    <Shell>
+      <div className="ac-team-intro">
+        <h3 className="ac-card-title ac-card-title-lg">Your team starts here</h3>
+        <p className="ac-muted ac-muted-lg">Create a team or join one with an invite code. You can belong to only one team.</p>
+      </div>
+      <div className="ac-choices">
         <CreateGroup onCreated={refreshGroup} />
         <JoinGroup onJoined={refreshGroup} />
       </div>
@@ -61,11 +60,9 @@ export default function TeamPanel({ signedIn }) {
   );
 }
 
-function Shell({ lede, children }) {
+function Shell({ children }) {
   return (
-    <section className="groups-page" aria-label="Team">
-      <h2 className="page-title">Your <span className="accent-word">team</span></h2>
-      {lede && <p className="page-lede">{lede}</p>}
+    <section className="ac-card ac-team" aria-label="Team">
       {children}
     </section>
   );
@@ -88,17 +85,21 @@ function CreateGroup({ onCreated }) {
   }
 
   return (
-    <div className="account-card">
-      <h3 className="section-title">Create a team</h3>
-      <form className="account-form" onSubmit={handleSubmit}>
-        <label htmlFor="group-name" className="field-label">Team name</label>
-        <input id="group-name" type="text" value={name} onChange={(e) => setName(e.target.value)} />
-        {create.isError && <p className="inline-error" role="alert">{groupErrorMessage(create.error)}</p>}
-        <button type="submit" className="btn btn-primary" disabled={create.isPending || !name.trim()}>
-          {create.isPending ? <><Spinner />Creating…</> : "Create team"}
-        </button>
-      </form>
-    </div>
+    <form className="ac-choice" onSubmit={handleSubmit}>
+      <span className="ac-icon-tile ac-icon-tile-sm" aria-hidden="true"><img src={usersIconUrl} alt="" width="20" height="20" /></span>
+      <div>
+        <h3 className="ac-card-title">Create a team</h3>
+        <p className="ac-muted">Start a shared space for your team.</p>
+      </div>
+      <div className="ac-field">
+        <label htmlFor="group-name" className="ac-label">Team name</label>
+        <input id="group-name" type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Enter a team name" />
+      </div>
+      {create.isError && <p className="inline-error" role="alert">{groupErrorMessage(create.error)}</p>}
+      <button type="submit" className="ac-btn ac-btn-primary" disabled={create.isPending || !name.trim()}>
+        {create.isPending ? <><Spinner />Creating…</> : "Create team"}
+      </button>
+    </form>
   );
 }
 
@@ -119,10 +120,14 @@ function JoinGroup({ onJoined }) {
   }
 
   return (
-    <div className="account-card">
-      <h3 className="section-title">Join with a code</h3>
-      <form className="account-form" onSubmit={handleSubmit}>
-        <label htmlFor="group-code" className="field-label">Invite code</label>
+    <form className="ac-choice" onSubmit={handleSubmit}>
+      <span className="ac-icon-tile ac-icon-tile-sm" aria-hidden="true"><img src={keyIconUrl} alt="" width="20" height="20" /></span>
+      <div>
+        <h3 className="ac-card-title">Join with a code</h3>
+        <p className="ac-muted">Use a code from someone on your team.</p>
+      </div>
+      <div className="ac-field">
+        <label htmlFor="group-code" className="ac-label">Invite code</label>
         <input
           id="group-code"
           type="text"
@@ -130,14 +135,14 @@ function JoinGroup({ onJoined }) {
           onChange={(e) => setCode(e.target.value)}
           autoCapitalize="characters"
           spellCheck={false}
-          placeholder="XXXX-XXXX"
+          placeholder="Enter an invite code"
         />
-        {join.isError && <p className="inline-error" role="alert">{groupErrorMessage(join.error)}</p>}
-        <button type="submit" className="btn btn-primary" disabled={join.isPending || !code.trim()}>
-          {join.isPending ? <><Spinner />Joining…</> : "Join team"}
-        </button>
-      </form>
-    </div>
+      </div>
+      {join.isError && <p className="inline-error" role="alert">{groupErrorMessage(join.error)}</p>}
+      <button type="submit" className="ac-btn ac-btn-primary" disabled={join.isPending || !code.trim()}>
+        {join.isPending ? <><Spinner />Joining…</> : "Join team"}
+      </button>
+    </form>
   );
 }
 
@@ -186,65 +191,83 @@ function GroupDetail({ group, onChanged }) {
   }
 
   return (
-    <div className="account-card group-card">
-      <div className="team-header">
-        <h3 className="section-title">{group.name}</h3>
-      </div>
+    <>
+      <section className="ac-card ac-team" aria-label="Team">
+        <div className="ac-team-heading">
+          <span className="ac-icon-tile" aria-hidden="true"><img src={usersIconUrl} alt="" width="20" height="20" /></span>
+          <div>
+            <p className="ac-eyebrow ac-eyebrow-muted">Your team</p>
+            <h3 className="ac-team-name">{group.name}</h3>
+          </div>
+          <div className="ac-leave">
+            {leave.isError && <p className="inline-error" role="alert">{groupErrorMessage(leave.error)}</p>}
+            <button type="button" className="ac-btn ac-btn-danger-outline" onClick={handleLeave} disabled={leave.isPending}>
+              {leave.isPending ? <><Spinner />Leaving…</> : "Leave team"}
+            </button>
+          </div>
+        </div>
 
-      <div className="team-columns">
-        <section className="team-invite" aria-labelledby="invite-heading">
-          <p className="field-label" id="invite-heading">Invite someone</p>
-          {invite ? (
-            <>
-              <p className="invite-code" aria-label={`Invite code ${invite.code}`}>{invite.code}</p>
-              <p className="muted">Valid until {formatDate(invite.expires_at)}. Anyone with this code can join.</p>
-              <button type="button" className="btn btn-outline" onClick={copyCode}>
-                {copied ? "Copied" : "Copy code"}
+        <div className="ac-columns">
+          <div className="ac-side">
+          <section className="ac-invite" aria-labelledby="invite-heading">
+            <div>
+              <h4 className="ac-card-title" id="invite-heading">Invite someone</h4>
+              <p className="ac-muted">Invite codes last 7 days.</p>
+            </div>
+            {invite && (
+              <div className="ac-code">
+                <p className="ac-code-value" aria-label={`Invite code ${invite.code}`}>{invite.code}</p>
+                <p>Valid until {formatDate(invite.expires_at)}. Anyone with this code can join.</p>
+              </div>
+            )}
+            {createInvite.isError && (
+              <p className="inline-error" role="alert">{groupErrorMessage(createInvite.error)}</p>
+            )}
+            <div className="ac-actions">
+              {invite && (
+                <button type="button" className="ac-btn" onClick={copyCode}>
+                  <img src={copyIconUrl} alt="" width="16" height="16" />
+                  {copied ? "Copied" : "Copy code"}
+                </button>
+              )}
+              <button
+                type="button"
+                className={invite ? "ac-btn" : "ac-btn ac-btn-primary"}
+                onClick={() => createInvite.mutate()}
+                disabled={createInvite.isPending}
+              >
+                {createInvite.isPending ? <><Spinner />Creating code…</> : invite ? "Create a new code" : "Create invite code"}
               </button>
-            </>
-          ) : (
-            <p className="muted">Create a code and share it. It works for 7 days.</p>
-          )}
-          {createInvite.isError && (
-            <p className="inline-error" role="alert">{groupErrorMessage(createInvite.error)}</p>
-          )}
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={() => createInvite.mutate()}
-            disabled={createInvite.isPending}
-          >
-            {createInvite.isPending ? <><Spinner />Creating code…</> : invite ? "Create a new code" : "Create invite code"}
-          </button>
-        </section>
-        <section className="team-members" aria-labelledby="members-heading">
-          <p className="field-label" id="members-heading">Members ({members.length})</p>
-          {members.length > 0 && (
-            <ul className="member-list" aria-label="Team members">
-              {members.map((m, i) => (
-                <li key={m.email ?? i} className="member-row">
-                  {m.email ? (
-                    <span className="member-email">{m.email}</span>
-                  ) : (
-                    <span className="member-email muted">Email not available yet</span>
-                  )}
-                  {m.is_you && <span className="member-you">You</span>}
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      </div>
+            </div>
+          </section>
 
-      <TeamFiles />
+          <section className="ac-members" aria-labelledby="members-heading">
+            <div className="ac-heading-row">
+              <h4 className="ac-card-title" id="members-heading">Members</h4>
+              <span className="ac-muted">{members.length}</span>
+            </div>
+            {members.length > 0 && (
+              <ul className="ac-member-list" aria-label="Team members">
+                {members.map((m, i) => (
+                  <li key={m.email ?? i} className="ac-member">
+                    <span className={m.email ? "ac-member-avatar" : "ac-member-avatar is-empty"} aria-hidden="true">
+                      {m.email ? m.email.charAt(0).toUpperCase() : "–"}
+                    </span>
+                    <span className={m.email ? "ac-member-email" : "ac-member-email ac-muted"}>
+                      {m.email ?? "Email not available yet"}
+                    </span>
+                    {m.is_you && <span className="ac-you">You</span>}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+          </div>
 
-      <div className="card-footer">
-        {leave.isError && <p className="inline-error" role="alert">{groupErrorMessage(leave.error)}</p>}
-        <button type="button" className="btn btn-danger-outline" onClick={handleLeave} disabled={leave.isPending}>
-          {leave.isPending ? <><Spinner />Leaving…</> : "Leave team"}
-        </button>
-      </div>
-    </div>
+          <TeamFiles />
+        </div>
+      </section>
+    </>
   );
 }
 
@@ -253,7 +276,7 @@ function GroupDetail({ group, onChanged }) {
 function TeamFiles() {
   const files = useQuery({ queryKey: ["group-files"], queryFn: api.getGroupFiles });
 
-  if (files.isPending) return <Loading label="Loading public files…" />;
+  if (files.isPending) return <section className="ac-files"><Loading label="Loading public files…" /></section>;
 
   if (files.isError) {
     return (
@@ -266,23 +289,23 @@ function TeamFiles() {
   }
 
   return (
-    <div className="file-group team-files">
-      <div className="file-group-head">
-        <span className="file-group-name">Public files</span>
-        <span className="muted file-group-count">
+    <section className="ac-files" aria-label="Public files">
+      <div className="ac-heading-row">
+        <h3 className="ac-card-title ac-card-title-lg">Public files</h3>
+        <span className="ac-muted">
           {files.data.length} file{files.data.length === 1 ? "" : "s"}
         </span>
       </div>
       <DownloadFolderControl />
       {files.data.length === 0 ? (
-        <p className="muted team-files-empty">No public files yet. Make one public from the Files page.</p>
+        <p className="ac-muted">No public files yet. Make one public from the Files page.</p>
       ) : (
-        <ul className="file-list">
+        <ul className="ac-file-list">
           {files.data.map((file) => (
             <TeammateFileRow key={file.file_id} file={file} />
           ))}
         </ul>
       )}
-    </div>
+    </section>
   );
 }

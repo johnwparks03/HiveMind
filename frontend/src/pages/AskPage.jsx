@@ -11,6 +11,7 @@ import Markdown from "../components/Markdown";
 import OpenButton from "../components/OpenButton";
 import ScopePicker from "../components/ScopePicker";
 import Switch from "../components/Switch";
+import { TEAM_REQUIRED_HINT, useHasTeam } from "../lib/useTeamAccess";
 import TransferControl from "../components/TransferControl";
 import {
   isTeammateSource,
@@ -78,6 +79,7 @@ export default function AskPage() {
   const [pendingQuestion, setPendingQuestion] = useState(null);
   // Off by default; remembered for this browser session only.
   const [includeTeammates, setIncludeTeammates] = useState(() => loadIncludeTeammates(sessionStore()));
+  const hasTeam = useHasTeam();
   // Why teammates' files were left out of the latest answer. It comes only with the live answer (it is
   // not saved with the chat), so it is kept here until the next question or another chat is opened.
   const [skippedReason, setSkippedReason] = useState(null);
@@ -145,7 +147,7 @@ export default function AskPage() {
     if (!q || send.isPending) return;
     setPendingQuestion(q);
     setSkippedReason(null);
-    send.mutate({ chatId: activeId, question: q, fileIds: Array.from(scopeFileIds), includeTeammates });
+    send.mutate({ chatId: activeId, question: q, fileIds: Array.from(scopeFileIds), includeTeammates: includeTeammates && hasTeam });
   }
 
   function handleSubmit(e) {
@@ -280,8 +282,8 @@ export default function AskPage() {
         <div className="ask-composer">
           <div className="ask-controls">
             <ScopePicker selectedFileIds={scopeFileIds} onChange={setScopeFileIds} />
-            <div className="include-teammates ask-teammates">
-              <Switch checked={includeTeammates} onChange={changeIncludeTeammates}>
+            <div className="include-teammates ask-teammates" title={hasTeam ? undefined : TEAM_REQUIRED_HINT}>
+              <Switch checked={includeTeammates && hasTeam} onChange={changeIncludeTeammates} disabled={!hasTeam}>
                 Also use teammates' public files
               </Switch>
             </div>

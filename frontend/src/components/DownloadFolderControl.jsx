@@ -26,7 +26,7 @@ export default function DownloadFolderControl() {
 
   return (
     <p className="download-folder-control muted">
-      Teammate downloads save to <strong>{folder.isPending ? <Spinner /> : folder.data?.path ?? "…"}</strong>.
+      <span>Teammate downloads save to <strong>{folder.isPending ? <Spinner /> : folder.data?.path ?? "…"}</strong>.</span>
       <button type="button" className="btn btn-outline btn-sm download-folder-change" onClick={() => choose.mutate()} disabled={choose.isPending}>
         {choose.isPending ? <><Spinner />Choosing…</> : "Change folder"}
       </button>

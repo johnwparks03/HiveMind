@@ -9,7 +9,7 @@ export default function TeammateResultCard({ result }) {
     <article className="result-card teammate-result-card">
       <div className="result-head">
         <h3 className="result-name">{result.filename}</h3>
-        <span className={`pill ${result.owner_online ? "pill-indexed" : "pill-pending"}`}>
+        <span className={`pill ${result.owner_online ? "pill-indexed" : "pill-failed"}`}>
           <span className="pill-dot" aria-hidden="true" />
           {result.owner_online ? "Owner online" : "Owner offline"}
         </span>

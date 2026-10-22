@@ -305,14 +305,6 @@ input:focus {
   box-shadow: var(--focus);
 }
 
-.field-label {
-  display: block;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--ink-soft);
-  margin-bottom: 6px;
-}
-
 .inline-error {
   font-size: 12.5px;
   color: var(--error);
@@ -333,7 +325,6 @@ input:focus {
 .search-page {
   max-width: 1120px;
   margin: 0 auto;
-  padding-top: 24px;
 }
 
 .search-form {
@@ -360,7 +351,8 @@ input:focus {
 }
 
 .include-teammates {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
   margin: 8px 0 12px;
   padding: 6px 12px;
   background: var(--surface);
@@ -389,8 +381,8 @@ input:focus {
   width: 32px;
   height: 16px;
   border-radius: var(--r-lg);
-  background: var(--pill-bg);
-  box-shadow: inset 0 0 0 1px var(--line);
+  background: #aeb4a8;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
   transition: background 150ms ease;
 }
 
@@ -408,6 +400,10 @@ input:focus {
 
 .switch[aria-checked="true"] .switch-track { background: var(--accent); box-shadow: none; }
 .switch[aria-checked="true"] .switch-thumb { transform: translateX(16px); }
+
+.switch:hover:not(:disabled) .switch-track { background: #969c90; }
+.switch[aria-checked="true"]:hover:not(:disabled) .switch-track { background: var(--accent-hover); }
+.switch:disabled { cursor: not-allowed; color: var(--ink-muted); opacity: 0.55; }
 
 .switch:focus-visible {
   outline: 2px solid var(--accent);
@@ -452,9 +448,20 @@ input:focus {
   font-size: 13px;
   font-weight: 500;
   box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  transition: background 120ms, transform 120ms, box-shadow 120ms;
 }
 
-.example-chip:hover { background: var(--pill-bg); }
+.example-chip:hover {
+  background: var(--accent);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .example-chip { transition: none; }
+  .example-chip:hover { transform: none; }
+}
 
 .caption {
   margin: 0;
@@ -1127,73 +1134,6 @@ input:focus {
   padding: 4px 6px;
 }
 
-/* Account: sign-in and sign-up card, and the signed-in state. */
-.account-page {
-  text-align: center;
-  padding-top: 24px;
-}
-
-.account-page .page-lede {
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.account-card {
-  max-width: 400px;
-  margin: 32px auto 0;
-  padding: 28px;
-  text-align: left;
-  background: var(--surface);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-1);
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.account-status {
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.account-form {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-/* Same field look as the search box. */
-.account-form input {
-  width: 100%;
-  padding: 11px 14px;
-  font-size: 15px;
-}
-
-.account-form .field-label {
-  margin: 10px 0 2px;
-}
-
-.account-form .btn-primary {
-  width: 100%;
-  margin-top: 16px;
-  padding: 12px 14px;
-  font-size: 15px;
-}
-
-/* Signed-in page: just the box, plus the red sign-out button. */
-.signed-in-card {
-  align-items: center;
-  text-align: center;
-  padding: 32px 28px;
-}
-
-.signed-in-text {
-  margin: 0;
-  font-size: 15px;
-}
-
 /* Password fields: one eye control at the far right, shown only once something is typed.
    The browser's own reveal icon is hidden so the two never appear together. */
 /* Masked password text: dots drawn by CSS on a text input, so no browser reveal icon appears. */
@@ -1235,42 +1175,6 @@ input:focus {
 .reveal-toggle:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
-}
-
-/* Groups: the invite code is shown large and in a monospace font so it's easy to read out. */
-.groups-page {
-  padding-top: 24px;
-}
-
-.groups-page .account-card {
-  max-width: 440px;
-  margin: 20px auto 0;
-  text-align: left;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.groups-page .section-title {
-  margin: 0;
-}
-
-.invite-code {
-  margin: 4px 0 0;
-  font-family: var(--font-mono);
-  font-size: 22px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-}
-
-.groups-page .btn-primary,
-.groups-page .btn-outline,
-.groups-page .btn-danger-ghost {
-  align-self: flex-start;
-}
-
-.groups-page .account-form {
-  gap: 6px;
 }
 
 /* Loading: spinning ring with a label, and a pulsing status dot while the agent is being checked. */
@@ -1413,6 +1317,9 @@ input:focus {
   padding: 0;
 }
 
+.scope-panel > .scope-folder-list:first-child { margin-top: 0; }
+.ask-controls .scope-panel { padding-top: 8px; padding-bottom: 8px; }
+
 .scope-folder-row + .scope-folder-row {
   margin-top: 10px;
 }
@@ -1430,22 +1337,33 @@ input:focus {
   font-weight: 600;
   font-size: 14px;
   cursor: pointer;
+  transition: color 120ms;
 }
+
+.scope-folder-name:hover { color: var(--accent-hover); }
+
+.scope-folder-head .file-check { cursor: pointer; }
 
 .scope-file-list {
   margin: 6px 0 0 24px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 1px;
 }
 
 .scope-file-row label {
   display: flex;
   align-items: center;
+  padding: 3px 8px 3px 4px;
+  border-radius: var(--r-sm);
   font-size: 13px;
   color: var(--ink-soft);
   cursor: pointer;
+  transition: background 120ms, color 120ms;
 }
+
+.scope-file-row label:hover { background: var(--surface-tint); color: var(--ink); }
+.scope-file-row .file-check { cursor: pointer; }
 
 /* Ask as a chat: saved conversations on the left, the thread in the middle, the question box below.
    The page fills the window; the chat list and the conversation scroll on their own. */
@@ -1474,7 +1392,11 @@ input:focus {
 .ask-new {
   width: 100%;
   min-height: 36px;
+  color: #000;
 }
+
+/* The plus icon is a white SVG; brightness(0) turns it black to match the label. */
+.ask-new img { filter: brightness(0); }
 
 .ask-side-label {
   margin: 0;
@@ -1596,7 +1518,7 @@ input:focus {
   display: flex;
   flex-direction: column;
   align-items: center;
-  max-width: 672px;
+  max-width: 960px;
   margin: 0 auto;
   padding: 24px 0;
   text-align: center;
@@ -1864,6 +1786,23 @@ input:focus {
   font-weight: 400;
 }
 
+.files-page .filter-chip {
+  cursor: pointer;
+  transition: background 120ms, border-color 120ms, color 120ms;
+}
+
+.files-page .filter-chip:hover {
+  background: var(--surface-tint);
+  border-color: var(--accent);
+  color: var(--ink);
+}
+
+.files-page .filter-chip[aria-pressed="true"]:hover {
+  background: #000;
+  border-color: #000;
+  color: #fff;
+}
+
 .files-page .filter-chip-share { border-radius: 8px; }
 
 .files-page .filter-chip-share[aria-pressed="true"] {
@@ -1871,6 +1810,13 @@ input:focus {
   border-color: var(--accent);
   color: var(--ink);
   font-weight: 600;
+}
+
+.files-page .filter-chip-share:hover,
+.files-page .filter-chip-share[aria-pressed="true"]:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--ink);
 }
 
 .files-page .filter-label {
@@ -1945,52 +1891,6 @@ input:focus {
 .markdown th, .markdown td { border: 1px solid var(--line); padding: 5px 10px; text-align: left; }
 .markdown th { background: var(--surface); font-weight: 600; }
 
-/* Group card: member list and a quiet footer for Leave. */
-.members-label { margin: 12px 0 6px; }
-
-.member-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-}
-
-.member-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 8px 12px;
-  font-size: 14px;
-  border-top: 1px solid var(--line);
-}
-
-.member-row:first-child { border-top: none; }
-.member-email { overflow: hidden; text-overflow: ellipsis; }
-
-.member-you {
-  flex: none;
-  padding: 1px 8px;
-  border-radius: 999px;
-  background: var(--accent-soft);
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.card-footer {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 16px;
-  padding-top: 12px;
-  border-top: 1px solid var(--line);
-}
-
-.card-footer .inline-error { margin: 0 auto 0 0; }
-
 /* How-to steps under each page intro: three numbered cards in a row. */
 .how-to {
   display: flex;
@@ -2034,55 +1934,278 @@ input:focus {
   font-weight: 700;
 }
 
-/* Team page: one card. The invite comes first, then members and files, then Leave. */
-.team-header {
-  padding-bottom: 4px;
-}
-
-.team-invite {
+/* Account page (#/account): a centred column of cards (Figma "Stacked cards"). Its palette is local to the page. */
+.account-page {
+  --ac-ink: #20291d;
+  --ac-soft: #65705f;
+  --ac-line: #dde3d8;
+  --ac-tint: #f0f6e6;
+  --ac-tint-ink: #365915;
+  --ac-surface: #f5f7f3;
+  --ac-red: #b42332;
+  --ac-red-tint: #fff1f2;
+  --ac-disabled: #eaede7;
+  --ac-disabled-ink: #737c6e;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 14px;
-  background: var(--accent-soft);
-  border-radius: var(--radius);
+  gap: 24px;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 0 0 48px;
+  color: var(--ac-ink);
 }
 
-/* Team card: invite and members side by side (stacking when the column is narrow), public files below. */
-.team-columns {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 16px;
-  align-items: start;
-}
+.ac-intro { display: flex; flex-direction: column; gap: 10px; }
+.ac-title { margin: 0; font-size: 34px; font-weight: 600; line-height: 1.25; }
+.ac-lede { margin: 0; font-size: 14px; line-height: 1.55; color: var(--ac-soft); }
 
-.team-members {
+.ac-card {
   display: flex;
   flex-direction: column;
+  gap: 24px;
+  padding: 24px;
+  background: #fff;
+  border: 1px solid var(--ac-line);
+  border-radius: 16px;
+}
+
+.ac-card-title { margin: 0; font-size: 18px; font-weight: 600; line-height: 1.25; }
+.ac-card-title-lg { font-size: 20px; }
+.ac-muted { margin: 0; font-size: 12px; line-height: 1.55; color: var(--ac-soft); }
+.ac-muted-lg { font-size: 14px; }
+.ac-label { font-size: 13px; font-weight: 600; color: var(--ac-ink); }
+.ac-heading-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.ac-eyebrow { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ac-tint-ink); }
+.ac-eyebrow-muted { font-size: 11px; font-weight: 600; color: var(--ac-soft); }
+
+/* Buttons and fields. */
+.ac-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   gap: 8px;
+  min-height: 40px;
+  padding: 11px 16px;
+  background: #fff;
+  border: 1px solid var(--ac-line);
+  border-radius: 8px;
+  color: var(--ac-ink);
+  font-size: 13px;
+  font-weight: 600;
+  transition: background 120ms, border-color 120ms, color 120ms;
 }
 
-.team-members .field-label { margin: 0; }
+.ac-btn:hover:not(:disabled) { background: var(--ac-tint); border-color: var(--accent); }
+.ac-btn-primary { background: var(--accent); border-color: transparent; width: 100%; }
+.ac-btn-primary:hover:not(:disabled) { background: var(--accent-hover); border-color: transparent; }
+.ac-btn-danger { background: var(--ac-red); border-color: transparent; color: #fff; }
+.ac-btn-danger:hover:not(:disabled) { background: #9a1d2a; border-color: transparent; }
+.ac-btn-danger-outline { border-color: var(--ac-red); color: var(--ac-red); }
+.ac-btn-danger-outline:hover:not(:disabled) { background: var(--ac-red-tint); border-color: var(--ac-red); }
+.ac-btn .spinner { margin-right: 0; }
 
-.team-files .file-group-head { min-height: 48px; gap: 10px; }
-.team-files .download-folder-control { margin: 0; padding: 0 16px 12px; }
-.team-files-empty { margin: 0; padding: 0 16px 16px; }
-
-.groups-page .group-card { max-width: 1120px; }
-
-/* Team page, not on a team yet: create and join sit side by side, and stack on narrow screens. */
-.team-choices {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-  max-width: 880px;
-  margin: 20px auto 0;
-  align-items: start;
+.account-page input[type="text"],
+.account-page input[type="email"] {
+  flex: none;
+  width: 100%;
+  min-height: 44px;
+  padding: 12px 13px;
+  border-color: var(--ac-line);
+  box-shadow: none;
+  font-size: 14px;
 }
 
-.team-choices .account-card {
-  max-width: none;
+.account-page .password-field input { min-height: 44px; padding: 12px 44px 12px 13px; border-color: var(--ac-line); box-shadow: none; font-size: 14px; }
+.account-page input:focus { border-color: var(--accent); box-shadow: var(--focus); }
+.account-page input::placeholder { color: var(--ac-soft); }
+.ac-field { display: flex; flex-direction: column; gap: 7px; }
+.ac-icon-tile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 42px;
+  height: 42px;
+  background: var(--ac-tint);
+  border-radius: 12px;
+}
+.ac-icon-tile-sm { width: 36px; height: 36px; border-radius: 10px; }
+
+/* Signed in: who you are and the sign-out button. */
+.ac-identity { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 12px; }
+.ac-identity .ac-btn { margin-left: 12px; }
+.ac-card.ac-identity { padding: 12px 20px; }
+.ac-identity-text { flex: 1; min-width: 0; margin: 0; font-size: 14px; font-weight: 500; line-height: 1.6; overflow-wrap: anywhere; }
+.ac-identity-text strong { font-weight: 700; }
+.ac-identity-error { flex-basis: 100%; margin: 0; }
+.ac-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  background: #fff;
+  border: 1px solid var(--ac-line);
+  border-radius: 50%;
+  color: var(--ac-tint-ink);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+/* Signed out. */
+.ac-howto { gap: 16px; background: var(--ac-tint); }
+.ac-steps { display: flex; gap: 24px; margin: 0; padding: 0; list-style: none; counter-reset: ac-step; }
+.ac-steps li { display: flex; flex: 1; gap: 12px; font-size: 12px; line-height: 1.55; color: var(--ac-soft); counter-increment: ac-step; }
+.ac-steps li::before {
+  content: counter(ac-step);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  background: #fff;
+  border: 1px solid var(--ac-line);
+  border-radius: 50%;
+  color: var(--ac-tint-ink);
+  font-size: 12px;
+  font-weight: 700;
+}
+.ac-form { display: flex; flex-direction: column; gap: 20px; width: 100%; max-width: 440px; margin: 0 auto; }
+.ac-form .ac-card-title { font-size: 20px; margin-bottom: 6px; }
+.ac-form .ac-muted { font-size: 14px; }
+
+/* Team: not on one yet, then on one. */
+.ac-team-intro { display: flex; flex-direction: column; gap: 8px; }
+.ac-choices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.ac-choice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 18px;
+  padding: 20px;
+  border: 1px solid var(--ac-line);
+  border-radius: 16px;
+}
+.ac-choice .ac-field { width: 100%; }
+.ac-choice .ac-btn-primary { margin-top: auto; }
+
+.ac-team-heading { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding-bottom: 24px; border-bottom: 1px solid var(--ac-line); }
+.ac-team-name { margin: 3px 0 0; font-size: 24px; font-weight: 600; line-height: 1.25; }
+.ac-columns { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: 0; align-items: start; }
+.ac-side { display: flex; flex-direction: column; gap: 24px; min-width: 0; padding-right: 32px; }
+.ac-side > section + section { padding-top: 24px; border-top: 1px solid var(--ac-line); }
+.ac-side > section { width: 100%; }
+.account-page:has(.ac-columns) { max-width: 1120px; }
+.ac-invite, .ac-members { display: flex; flex-direction: column; align-items: flex-start; gap: 16px; min-width: 0; }
+.ac-members { gap: 12px; }
+.ac-members .ac-heading-row { width: 100%; }
+.ac-code { display: flex; flex-direction: column; gap: 8px; width: 100%; padding: 16px; background: var(--ac-tint); border-radius: 8px; color: var(--ac-tint-ink); }
+.ac-code p { margin: 0; font-size: 12px; line-height: 1.5; }
+.ac-code .ac-code-value { font-family: var(--font-mono); font-size: 25px; font-weight: 500; line-height: normal; overflow-wrap: anywhere; }
+.ac-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.ac-actions .ac-btn-primary { width: auto; }
+
+.ac-member-list { width: 100%; margin: 0; padding: 0; list-style: none; }
+.ac-member { display: flex; align-items: center; gap: 10px; padding: 11px 0; border-bottom: 1px solid var(--ac-line); }
+.ac-member:last-child { border-bottom: 0; }
+.ac-member-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  background: var(--ac-tint);
+  border-radius: 50%;
+  color: var(--ac-soft);
+  font-size: 11px;
+  font-weight: 600;
+}
+.ac-member-avatar.is-empty { background: var(--ac-surface); }
+.ac-member-email { flex: 1; min-width: 0; font-size: 13px; overflow: hidden; text-overflow: ellipsis; }
+.ac-you { flex: none; padding: 4px 7px; background: var(--ac-tint); border-radius: 5px; color: var(--ac-tint-ink); font-size: 11px; font-weight: 600; }
+
+/* Public files: the download-folder bar, then one row per file. */
+.ac-files { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.ac-columns .ac-files { padding-left: 32px; border-left: 1px solid var(--ac-line); }
+.ac-files .download-folder-control {
   margin: 0;
+  padding: 16px;
+  gap: 12px;
+  flex-wrap: nowrap;
+  justify-content: space-between;
+  background: var(--ac-tint);
+  border-radius: 8px;
+  color: var(--ac-tint-ink);
+  font-size: 14px;
+  line-height: 1.6;
+}
+.ac-files .download-folder-control strong { font-weight: 400; }
+.ac-files .download-folder-control > span:first-child { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.ac-files .download-folder-change { margin-left: auto; flex: none; min-height: 40px; padding: 11px 16px; border: 1px solid var(--ac-line); border-radius: 8px; background: #fff; color: var(--ac-ink); font-size: 13px; }
+.ac-files .download-folder-change:hover:not(:disabled) { background: var(--ac-tint); border-color: var(--accent); }
+
+.ac-file-list { margin: 0; padding: 0; list-style: none; }
+.ac-file { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--ac-line); }
+.ac-file .transfer-row { margin-top: 0; }
+.ac-file:last-child { border-bottom: 0; }
+.ac-file-icon { display: flex; align-items: center; justify-content: center; flex: none; width: 32px; height: 32px; background: var(--ac-surface); border-radius: 6px; }
+.ac-file-icon.is-pdf { background: var(--ac-red-tint); }
+.ac-file-icon.is-docx { background: #e8f1fb; }
+.ac-file-icon.is-pptx { background: #fdf3dc; }
+.ac-file-main { display: flex; flex: 1; align-items: center; min-width: 0; }
+.ac-file-line { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.ac-file-name { font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
+.ac-file .pill { padding: 5px 9px; background: var(--ac-tint); color: var(--ac-tint-ink); font-size: 11px; font-weight: 500; }
+.ac-file .pill.pill-failed { background: var(--ac-red-tint); color: var(--ac-red); }
+.ac-file .pill-dot { width: 5px; height: 5px; background: currentColor; }
+
+/* The Download button from TransferControl, with the design's icon drawn in the text colour. */
+.ac-file .transfer-row .btn-outline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 6px 14px;
+  border: 1px solid var(--ac-line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ac-ink);
+  font-size: 13px;
+  font-weight: 600;
+  opacity: 1;
+}
+.ac-file .transfer-row .btn-outline::before {
+  content: "";
+  width: 16px;
+  height: 16px;
+  background: currentColor;
+  -webkit-mask: url("./assets/icons/download.svg") center / contain no-repeat;
+  mask: url("./assets/icons/download.svg") center / contain no-repeat;
+}
+.ac-file .transfer-row .btn-outline:hover:not(:disabled) { background: var(--ac-tint); border-color: var(--accent); }
+.ac-file .transfer-row .btn-outline:disabled { background: var(--ac-disabled); color: var(--ac-disabled-ink); }
+
+.ac-leave { display: flex; align-items: center; gap: 12px; margin-left: auto; }
+.ac-leave .inline-error { margin: 0; }
+
+@media (max-width: 720px) {
+  .account-page { padding: 0 0 40px; }
+  .ac-title { font-size: 28px; }
+  .ac-card { padding: 16px; }
+  .ac-steps, .ac-choices, .ac-columns { grid-template-columns: 1fr; }
+  .ac-steps { flex-direction: column; gap: 14px; }
+  .ac-columns { gap: 24px; }
+  .ac-side { padding-right: 0; }
+  .ac-columns .ac-files { padding-left: 0; padding-top: 24px; border-left: 0; border-top: 1px solid var(--ac-line); }
+  .ac-identity .ac-btn { width: 100%; }
+  .ac-files .download-folder-control { flex-wrap: wrap; }
+  .ac-files .download-folder-change { margin-left: 0; }
+  .ac-file { flex-wrap: wrap; }
+  .ac-file-main { flex-basis: calc(100% - 48px); }
+  .ac-file .transfer-row { flex-basis: 100%; }
 }
 
 /* HiveMind dialog: replaces the browser's confirm and alert popups. */
@@ -2128,10 +2251,6 @@ input:focus {
 
 /* Narrow screens */
 @media (max-width: 720px) {
-  .team-choices {
-    grid-template-columns: 1fr;
-  }
-
   .ask-page {
     grid-template-columns: 1fr;
     height: auto;

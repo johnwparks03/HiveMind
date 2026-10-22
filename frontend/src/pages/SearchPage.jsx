@@ -9,6 +9,7 @@ import DownloadFolderControl from "../components/DownloadFolderControl";
 import TeammateResultCard from "../components/TeammateResultCard";
 import Switch from "../components/Switch";
 import { interpretedCaption } from "../lib/files";
+import { TEAM_REQUIRED_HINT, useHasTeam } from "../lib/useTeamAccess";
 import { addRecent, loadRecent, removeRecent, saveRecent } from "../lib/recent";
 
 const EXAMPLES = [
@@ -22,6 +23,7 @@ export default function SearchPage() {
   const [recent, setRecent] = useState(loadRecent);
   const [recentOpen, setRecentOpen] = useState(false);
   const [includeTeammates, setIncludeTeammates] = useState(false);
+  const hasTeam = useHasTeam();
   const search = useMutation({ mutationFn: ({ query, includeTeammates }) => api.search(query, includeTeammates) });
 
   function run(query) {
@@ -32,7 +34,7 @@ export default function SearchPage() {
     const next = addRecent(recent, q);
     setRecent(next);
     saveRecent(next);
-    search.mutate({ query: q, includeTeammates });
+    search.mutate({ query: q, includeTeammates: includeTeammates && hasTeam });
   }
 
   function clearRecent() {
@@ -82,8 +84,8 @@ export default function SearchPage() {
           </button>
         </form>
 
-        <div className="include-teammates">
-          <Switch checked={includeTeammates} onChange={setIncludeTeammates}>
+        <div className="include-teammates" title={hasTeam ? undefined : TEAM_REQUIRED_HINT}>
+          <Switch checked={includeTeammates && hasTeam} onChange={setIncludeTeammates} disabled={!hasTeam}>
             Also search teammates' public files
           </Switch>
         </div>

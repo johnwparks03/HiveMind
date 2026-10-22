@@ -58,13 +58,19 @@ def _sync_central(changes: list[tuple[str, str]]) -> None:
         publish.enqueue_sync(file_id, intent)
 
 
-def add_folder(path: str) -> str:
+def register_folder(path: str) -> str:
+    """Adds the folder row in the 'scanning' state, so it can be listed before its scan starts."""
     folder_id = str(uuid.uuid4())
     with session() as conn:
         conn.execute(
-            "INSERT INTO folders (folder_id, path, added_at) VALUES (?, ?, ?)",
+            "INSERT INTO folders (folder_id, path, added_at, scan_state) VALUES (?, ?, ?, 'scanning')",
             (folder_id, path, datetime.now(timezone.utc).isoformat()),
         )
+    return folder_id
+
+
+def add_folder(path: str) -> str:
+    folder_id = register_folder(path)
     scan_folder(folder_id, path)
     return folder_id
 
@@ -126,10 +132,22 @@ def scan_folder(folder_id: str, path: str) -> dict:
     two scans of the same folder would both try to register the same new file.
     """
     with _folder_lock(folder_id):
-        return _scan_folder(folder_id, path)
+        try:
+            return _scan_files(folder_id, path)
+        except Exception:
+            _set_scan_progress(folder_id, scan_state="failed")
+            raise
 
 
-def _scan_folder(folder_id: str, path: str) -> dict:
+def _set_scan_progress(folder_id: str, **fields) -> None:
+    """Writes the folder's scan_state / scan_total / scan_done. Commits on its own, so the
+    folder list shows progress while the scan is still running."""
+    assignments = ", ".join(f"{column} = ?" for column in fields)
+    with session() as conn:
+        conn.execute(f"UPDATE folders SET {assignments} WHERE folder_id = ?", (*fields.values(), folder_id))
+
+
+def _scan_files(folder_id: str, path: str) -> dict:
     source = LocalFilesystemSource(path)
     found = source.list_files()
     found_paths = {f.source_path for f in found}
@@ -144,9 +162,15 @@ def _scan_folder(folder_id: str, path: str) -> dict:
         }
         excluded = {row["path"] for row in conn.execute("SELECT path FROM excluded_files").fetchall()}
 
-        for source_file in found:
-            if source_file.source_path in excluded:
-                continue  # removed from HiveMind by the user; leave it out until they add it back
+    # Files the user removed from HiveMind stay out until they add them back, so they don't count toward progress.
+    to_scan = [f for f in found if f.source_path not in excluded]
+    _set_scan_progress(folder_id, scan_state="scanning", scan_total=len(to_scan), scan_done=0)
+
+    for index, source_file in enumerate(to_scan):
+        # One transaction per file: its row shows in the file list as soon as it's read, and scan_done
+        # counts the files finished before this one.
+        with session() as conn:
+            conn.execute("UPDATE folders SET scan_done = ? WHERE folder_id = ?", (index, folder_id))
             raw = source.get_file_bytes(source_file.source_path)
             new_hash = content_hash(raw)
             existing_row = existing.get(source_file.source_path)
@@ -223,6 +247,7 @@ def _scan_folder(folder_id: str, path: str) -> dict:
             if index_result["index_status"] == "failed":
                 stats["failed"] += 1
 
+    with session() as conn:
         # Anything in the registry but no longer on disk: drop it and its chunks.
         for path_, row in existing.items():
             if path_ not in found_paths:
@@ -233,4 +258,5 @@ def _scan_folder(folder_id: str, path: str) -> dict:
                     central_changes.append((row["file_id"], "unpublish"))
 
     _sync_central(central_changes)
+    _set_scan_progress(folder_id, scan_state="ready", scan_done=len(to_scan))
     return stats

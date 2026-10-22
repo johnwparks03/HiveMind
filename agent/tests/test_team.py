@@ -44,7 +44,7 @@ def local_db(tmp_path, monkeypatch):
     monkeypatch.setattr(db, "SQLITE_PATH", tmp_path / "registry.db")
     db.init_db()
     with db.session() as conn:
-        conn.execute("INSERT INTO folders VALUES ('f1', 'C:/x', '2026-01-01T00:00:00+00:00')")
+        conn.execute("INSERT INTO folders (folder_id, path, added_at) VALUES ('f1', 'C:/x', '2026-01-01T00:00:00+00:00')")
         conn.execute(
             "INSERT INTO files (file_id, folder_id, path, filename, tags, public_state, publish_state, "
             "published_at, expires_at, last_confirmed) VALUES "

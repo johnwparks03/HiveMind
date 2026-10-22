@@ -54,6 +54,11 @@ export function hasPendingWork(files) {
   return files.some((file) => file.index_state === "pending");
 }
 
+// A folder whose initial or rescan is still reading its files. The Files page polls faster until none are left.
+export function hasScanningFolders(folders) {
+  return folders.some((folder) => folder.scan_state === "scanning");
+}
+
 // Files inside the selected folder, or every folder when none is selected (folderId == null).
 export function scopeFiles(files, folderId) {
   return files.filter((file) => folderId == null || file.folder_id === folderId);

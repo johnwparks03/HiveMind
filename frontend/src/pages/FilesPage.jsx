@@ -11,6 +11,7 @@ import {
   countsFor,
   folderName,
   hasPendingWork,
+  hasScanningFolders,
   matchesShareFilter,
   totalsByShare,
   totalsByState,
@@ -53,13 +54,17 @@ export default function FilesPage() {
   const folders = useQuery({
     queryKey: ["folders"],
     queryFn: api.listFolders,
-    refetchInterval: IDLE_POLL_MS,
+    refetchInterval: (query) => (hasScanningFolders(query.state.data ?? []) ? FAST_POLL_MS : IDLE_POLL_MS),
   });
 
+  // Files also refresh quickly while a folder is still being read, so new rows appear as they're read.
   const files = useQuery({
     queryKey: ["files"],
     queryFn: api.listFiles,
-    refetchInterval: (query) => (hasPendingWork(query.state.data ?? []) ? FAST_POLL_MS : IDLE_POLL_MS),
+    refetchInterval: (query) =>
+      hasPendingWork(query.state.data ?? []) || hasScanningFolders(queryClient.getQueryData(["folders"]) ?? [])
+        ? FAST_POLL_MS
+        : IDLE_POLL_MS,
   });
 
   function refresh() {

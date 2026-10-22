@@ -22,10 +22,15 @@ export default function FolderRow({
   children,
 }) {
   const name = folderName(folder.path);
-  const percent = counts.total === 0 ? 0 : Math.round((counts.indexed / counts.total) * 100);
+  const scanning = folder.scan_state === "scanning";
+  // While the scan runs, progress is files finished out of files found; after that, files indexed out of files shown.
+  const percent = scanning
+    ? folder.scan_total ? Math.round((folder.scan_done / folder.scan_total) * 100) : 0
+    : counts.total === 0 ? 0 : Math.round((counts.indexed / counts.total) * 100);
   const attention = [
     counts.pending > 0 && `${counts.pending} still reading`,
     counts.failed > 0 && `${counts.failed} couldn't be read`,
+    folder.scan_state === "failed" && "Stopped before reading every file",
   ].filter(Boolean);
 
   const checkRef = useRef(null);
@@ -51,8 +56,9 @@ export default function FolderRow({
           <span className="file-group-chevron" aria-hidden="true">{open ? "▾" : "▸"}</span>
           <span className="file-group-name">{name}</span>
           <span className="muted file-group-count">
-            {counts.total} file{counts.total === 1 ? "" : "s"}
-            {counts.public > 0 ? ` · ${counts.public} public` : ""}
+            {scanning ? `Reading ${folder.scan_done} of ${folder.scan_total ?? "?"} files…` : null}
+            {scanning ? null : `${counts.total} file${counts.total === 1 ? "" : "s"}`}
+            {!scanning && counts.public > 0 ? ` · ${counts.public} public` : ""}
             {attention.length > 0 ? ` · ${attention.join(" · ")}` : ""}
           </span>
         </button>

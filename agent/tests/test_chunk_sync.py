@@ -391,7 +391,7 @@ CREATE TABLE publish_queue (
     file_id TEXT PRIMARY KEY REFERENCES files(file_id),
     intent TEXT NOT NULL CHECK (intent IN ('publish', 'unpublish')),
     attempts INTEGER NOT NULL DEFAULT 0, next_attempt_at TEXT NOT NULL, last_error TEXT);
-INSERT INTO folders VALUES ('f', 'C:/x', 't');
+INSERT INTO folders (folder_id, path, added_at) VALUES ('f', 'C:/x', 't');
 INSERT INTO files (file_id, folder_id, path, filename) VALUES ('a', 'f', 'C:/x/a.txt', 'a.txt');
 INSERT INTO publish_queue VALUES ('a', 'publish', 2, '2026-01-01T00:00:00+00:00', 'boom');
 """

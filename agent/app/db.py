@@ -8,7 +8,10 @@ SCHEMA = """
 CREATE TABLE IF NOT EXISTS folders (
     folder_id   TEXT PRIMARY KEY,
     path        TEXT NOT NULL UNIQUE,
-    added_at    TEXT NOT NULL
+    added_at    TEXT NOT NULL,
+    scan_state  TEXT NOT NULL DEFAULT 'ready',  -- scanning | ready | failed
+    scan_total  INTEGER,                       -- files the current scan will read (null before it lists them)
+    scan_done   INTEGER NOT NULL DEFAULT 0     -- files finished so far in the current scan
 );
 
 CREATE TABLE IF NOT EXISTS files (
@@ -136,9 +139,21 @@ def _migrate_files_columns(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE files ADD COLUMN publish_failed_intent TEXT")
 
 
+def _migrate_folders_columns(conn: sqlite3.Connection) -> None:
+    """Scan progress columns on folders. Idempotent ADD COLUMN for databases created before they existed."""
+    columns = {row["name"] for row in conn.execute("PRAGMA table_info(folders)").fetchall()}
+    if "scan_state" not in columns:
+        conn.execute("ALTER TABLE folders ADD COLUMN scan_state TEXT NOT NULL DEFAULT 'ready'")
+    if "scan_total" not in columns:
+        conn.execute("ALTER TABLE folders ADD COLUMN scan_total INTEGER")
+    if "scan_done" not in columns:
+        conn.execute("ALTER TABLE folders ADD COLUMN scan_done INTEGER NOT NULL DEFAULT 0")
+
+
 def init_db() -> None:
     with get_connection() as conn:
         conn.executescript(SCHEMA)
+        _migrate_folders_columns(conn)
         _migrate_files_columns(conn)
         _migrate_publish_queue(conn)
 

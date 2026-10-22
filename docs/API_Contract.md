@@ -124,11 +124,15 @@ Folder object:
 {
   "folder_id": "…",
   "path": "C:\\Users\\me\\Documents\\Notes",
-  "scan_state": "scanning",              // scanning | ready
+  "scan_state": "scanning",              // scanning | ready | failed
+  "scan_total": 142,                     // files the current scan will read (null until the scan lists them)
+  "scan_done": 120,                      // files the current scan has finished so far
   "counts": { "total": 142, "indexed": 120, "pending": 20, "failed": 2, "public": 37 },
   "shared": false                        // derived: total > 0 and every file is public
 }
 ```
+
+`scan_state` is `scanning` while the initial scan or a rescan is reading the folder, `ready` when it finishes, and `failed` if the scan stopped with an error (the folder is still watched). `scan_total` and `scan_done` drive the "Reading N of M files" line; each file appears in `GET /files` as soon as it is read.
 
 **`GET /folders`** → `200 { "folders": [Folder] }`
 
@@ -139,7 +143,7 @@ Folder object:
 { "path": "C:\\Users\\me\\Documents\\Notes" }   // or { "path": null } if cancelled
 ```
 
-**`POST /folders`** → request `{ "path": "…" }`. `201 Folder`. Starts the initial scan. Errors: `404 path_not_found`, `409 already_watched`.
+**`POST /folders`** → request `{ "path": "…" }`. `201 Folder` with `scan_state: "scanning"`, returned before the scan finishes. The initial scan runs in the background and the watcher starts after it; poll `GET /folders` for progress. Errors: `400 invalid_request` (not a directory), `404 path_not_found`, `409 already_watched`.
 
 **`DELETE /folders/{folder_id}`** → stops watching, removes the folder's chunks, and queues an unpublish for every file under it that is public. The unpublish entries survive in the publish queue even though the folder is gone.
 

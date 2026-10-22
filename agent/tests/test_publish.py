@@ -47,7 +47,7 @@ def _seed_file(file_id="a", path="C:/x/a.txt", tags='["budget"]', index_status="
                 public_state="private", publish_state=None, folder_id="f1"):
     with db.session() as conn:
         conn.execute(
-            "INSERT OR IGNORE INTO folders VALUES (?, 'C:/x', '2026-01-01T00:00:00+00:00')", (folder_id,)
+            "INSERT OR IGNORE INTO folders (folder_id, path, added_at) VALUES (?, 'C:/x', '2026-01-01T00:00:00+00:00')", (folder_id,)
         )
         conn.execute(
             "INSERT INTO files (file_id, folder_id, path, filename, index_status, tags, "

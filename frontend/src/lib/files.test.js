@@ -10,6 +10,7 @@ import {
   totalsByShare,
   folderName,
   hasPendingWork,
+  hasScanningFolders,
   interpretedCaption,
   matchPercent,
   normaliseFile,
@@ -62,6 +63,12 @@ test("hasPendingWork is true only while a file is still pending", () => {
   assert.equal(hasPendingWork([{ index_state: "indexed" }, { index_state: "failed" }]), false);
   assert.equal(hasPendingWork([{ index_state: "indexed" }, { index_state: "pending" }]), true);
   assert.equal(hasPendingWork([]), false);
+});
+
+test("hasScanningFolders is true only while a folder is still being read", () => {
+  assert.equal(hasScanningFolders([{ scan_state: "idle" }, { scan_state: "failed" }]), false);
+  assert.equal(hasScanningFolders([{ scan_state: "idle" }, { scan_state: "scanning" }]), true);
+  assert.equal(hasScanningFolders([]), false);
 });
 
 test("matchPercent converts the agent's distance score to a clamped percentage", () => {

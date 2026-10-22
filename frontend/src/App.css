@@ -1697,6 +1697,24 @@ input:focus {
   margin: 0 0 8px;
 }
 
+/* "Select all shown" on the left, "Expand all" / "Collapse all" on the right, on one line. */
+.list-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+}
+
+.list-controls .select-all,
+.list-controls .group-controls {
+  margin: 0;
+}
+
+.list-controls .group-controls {
+  margin-left: auto;
+}
+
 .file-group {
   margin: 0 0 12px;
   background: var(--surface);

@@ -1,0 +1,29 @@
+HIRING INTERVIEW NOTES
+
+My personal notes from interviews for the engineer role on the Falcon team, held 8 to 19 June 2026. Three candidates, labelled A, B and C. These are scored and rough, and only I should see them. The panel decision was made with HR, so this file is for recall only.
+
+SCORING SCALE
+1 to 5 on each of technical skill, problem solving, communication and fit. Scores are mine, out of 20 in total.
+
+CANDIDATE A (interview 8 June)
+- Strong backend experience. Built search services in a previous role and talked clearly about trade-offs between speed and quality.
+- Technical 5, problem solving 4, communication 4, fit 4. Total 17.
+- Impression: confident, a bit quick to give a solution before asking questions. Would work well with minimal supervision.
+- Concern: asked a lot about career progression and less about the work itself.
+
+CANDIDATE B (interview 11 June)
+- Solid generalist with front-end and API experience. Good in the pair-programming exercise, narrated their thinking well.
+- Technical 4, problem solving 4, communication 5, fit 5. Total 18.
+- Impression: warm, curious, asked good questions about the client. Needs a little time to learn the data side.
+- Concern: has not worked on a data-heavy platform yet.
+
+CANDIDATE C (interview 15 June)
+- Early-career engineer with strong fundamentals. Struggled with the system design question but recovered after a hint.
+- Technical 3, problem solving 3, communication 4, fit 4. Total 14.
+- Impression: eager to learn. Better suited to a junior role later in the year.
+- Concern: would need close mentoring, which the team cannot give in Phase 2.
+
+DEBRIEF (19 June)
+- Panel agreed Candidate B is the strongest fit for the team as it is today, with Candidate A as the second choice.
+- Next steps: HR to prepare an offer to B and keep A warm. Send a kind decline to C with feedback.
+- Reminder: give feedback within a week and record the scores in the hiring tool.

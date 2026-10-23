@@ -1,0 +1,33 @@
+CERTIFICATION STUDY NOTES
+
+My dated notes for a cloud practitioner style certification, studied from 2 March to 26 May 2026. They cover the main topics I revised and the practice scores I recorded along the way.
+
+2 MAR
+Plan: 45 minutes on weekday mornings, a longer block on Saturday. Exam booked for late May. Started with the shared responsibility model: the provider secures the infrastructure, the customer secures what they put on it.
+
+9 MAR
+Compute basics. Virtual machines, containers, and functions that run on demand. Remember when each fits: steady load versus spiky load.
+
+16 MAR
+Storage types: object, block and file. Object storage for documents and backups, block for disks, file for shared folders. Lifecycle rules move old data to cheaper tiers.
+
+30 MAR
+Networking. Private networks, subnets, and how traffic is allowed or blocked. Practice test 1: 62 percent. Weak on networking.
+
+13 APR
+Security and identity. Least privilege, multi-factor sign-in, roles instead of long-lived keys. Linked to the firm data-handling training I finished in March.
+
+27 APR
+Databases. Relational for structured data with joins, key-value for fast lookups, and why managed services reduce operations work.
+
+11 MAY
+Pricing and support. On-demand versus reserved pricing, budgets and alerts, free tiers. Practice test 2: 78 percent.
+
+18 MAY
+Full revision of weak areas: networking and pricing. Practice test 3: 84 percent.
+
+25 MAY
+Last review. Rested the evening before.
+
+26 MAY
+Sat the exam and passed. Plan: add the certificate to my profile and tell my manager. Next topic to study: something on data and analytics, later in the year.

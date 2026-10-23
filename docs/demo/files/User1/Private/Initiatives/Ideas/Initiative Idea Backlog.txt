@@ -1,0 +1,43 @@
+INITIATIVE IDEA BACKLOG
+
+My running list of ideas for improving how the practice works, kept from 20 January to 15 October 2026. One line per idea, with a note on why it matters or what stopped it.
+
+20 JAN
+- Reusable proposal answer library. Note: the same five questions appear in every bid.
+- Shared glossary of client terms. Note: new joiners ask the same things in week one.
+
+3 FEB
+- Template for a one-page decision log. Note: Falcon will need one; maybe it becomes the standard.
+
+24 FEB
+- Lunch-and-learn on estimation mistakes. Note: ask the Delivery lead whether they would present.
+
+30 MAR
+- Practice innovation pitch about searching past project work. Note: started drafting the deck, see Practice Innovation Proposal.
+
+14 APR
+- Pitched the idea to the practice. Feedback was positive, no budget. Parked until there is evidence from real use.
+
+19 MAY
+- Demo day where teams show unfinished work. Note: low cost, needs a sponsor.
+
+6 JUL
+- Started the Knowledge Reuse Pilot charter. Note: the Falcon search tool is the obvious test bed.
+
+11 AUG
+- Retrospective summary format that links lessons to the next sprint backlog. Note: borrowed from Falcon's Sprint 8 session.
+
+12 AUG
+- Stakeholder map for the pilot. Started today.
+
+16 SEP
+- Onboarding checklist for new project leads. Note: write it from my own first month.
+
+29 SEP
+- Business case deck done. Idea: add a one-page FAQ for sceptics.
+
+8 OCT
+- Short note on what a data-handling review for shared files should cover. Note: needed before go-live.
+
+15 OCT
+- Personal rule: no new ideas until the pilot decision is made. Keep this list for after.

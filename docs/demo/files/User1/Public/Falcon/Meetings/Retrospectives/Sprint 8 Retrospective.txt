@@ -1,0 +1,33 @@
+SPRINT 8 RETROSPECTIVE
+
+Retrospective for Sprint 8 (27 July to 7 August 2026), held on 7 August 2026. This was the last sprint of Phase 1 of the Falcon engagement for Brightwater Logistics, which ended the same day. Purpose: capture what worked, what to change and the actions for the bridge period and Phase 2.
+
+Attendees: Project lead (User 1), Delivery lead (User 2), four engineers, two analysts, Client delivery lead (guest for the first half).
+
+Sprint summary
+- Committed 14 stories, completed 13. One story (retention view) moved to the bridge period.
+- Defect count at close: 6 open, none severe.
+- Phase 1 budget finished at $38,300, as planned after Change Order 01.
+
+What went well
+- Handover notes were written during the sprint, not after it.
+- The OCR pass removed the main relevance complaint from the client.
+- Pairing between data and engineering sped up the tagging fixes.
+- The security review closed without rework.
+- Change Order 02 gave the team a clear plan for the next five weeks.
+
+What to improve
+- Stories for the CRM connector were too large; two of them carried across three sprints.
+- Test data refresh was manual and took half a day each time.
+- Client feedback arrived late in the sprint, after the demo rather than before.
+- Risk register updates lagged behind weekly status notes.
+- Too many meetings in the last three days of the sprint.
+
+Actions
+A-41  Split any story over five points before planning. Owner: Delivery lead (User 2). Due: bridge Sprint 9.
+A-42  Automate test data refresh. Owner: engineer. Due: 21 August 2026.
+A-43  Share the demo build with the client two days early. Owner: Project lead (User 1). Due: every sprint.
+A-44  Update the risk register on Fridays. Owner: Project lead (User 1). Due: weekly.
+A-45  No new meetings in the last two days of a sprint. Owner: Delivery lead (User 2). Due: 10 August 2026.
+
+Team mood: 4 out of 5. Next retrospective: Sprint 10, 4 September 2026.

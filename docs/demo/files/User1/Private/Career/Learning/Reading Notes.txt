@@ -1,0 +1,33 @@
+READING NOTES
+
+Notes on articles and books I have read between 25 January and 3 October 2026, with the points I want to remember and what I might apply at work.
+
+25 JAN - Book: a guide to running effective retrospectives
+Main idea: keep the format simple and always follow up on one action. Apply: Falcon retrospectives; pick one change per sprint.
+
+14 FEB - Article: why estimates slip
+Teams forget integration and review time. Apply: add a line for integration in each sprint plan.
+
+8 MAR - Book: managing technical projects
+Useful chapter on stakeholders: map interest against influence. Apply: early version of my stakeholder map idea.
+
+2 APR - Article: writing a decision log
+Short entries with the date, decision, reason and owner. Apply: propose the format for Falcon.
+
+19 MAY - Book: making learning stick
+Spaced repetition beats cramming; relevant for my cloud study. Apply: weekly review.
+
+30 JUN - Article: how consulting teams lose their own knowledge
+Most lessons live in people's heads and leave with them. Apply: link to my reuse idea.
+
+21 JUL - Book: leading without doing everything
+Delegation means agreeing outcomes, not tasks. Apply: let engineers own sprint review notes.
+
+15 AUG - Article: pricing change orders fairly
+Separate the change from the original scope and show the effect on the plan. Apply: confirmed my approach on the CRM change order.
+
+12 SEP - Article: measuring productivity gains from search tools
+Self-reported time savings are noisy; use a baseline survey. Apply: the pilot measurement plan.
+
+3 OCT - Book: telling a story with numbers
+One message per slide. Apply: cut the business case to one claim per slide.

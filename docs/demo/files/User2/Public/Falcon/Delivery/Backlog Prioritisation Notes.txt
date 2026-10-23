@@ -1,0 +1,35 @@
+BACKLOG PRIORITISATION NOTES
+
+Topic: how the Falcon backlog was ordered between 22 June and 14 October 2026, with the reasons for each change. Kept by the Delivery lead (User 2) after each refinement session. Ordering rule: value to the pilot first, then risk reduction, then effort.
+
+22 JUNE 2026
+Refinement before Sprint 5 ended. CRM integration items stay on top because Change Order 01 is funded and dated. Moved the folder-level public/private toggle above tag tuning: users told us in discovery that control over sharing comes first.
+
+13 JULY 2026
+Sprint 7 start. Pulled the file download relay forward; the Executive sponsor wants it in the Sprint 10 demo. Deferred PowerPoint slide-text extraction: PDF and DOCX cover most of the sample files.
+
+27 JULY 2026
+Sprint 8 start, last sprint of Phase 1. Cut three polish items (result sorting, dark theme, keyboard shortcuts) to a later phase. Defects from the Sprint 6 demo take the first 4 points.
+
+3 AUGUST 2026
+Change Order 02 signed. Bridge period (Sprints 9 to 11) holds capacity for defects, the Phase 1 readout follow-ups and discovery of Phase 2 scope. No new features above 5 points are accepted during the bridge.
+
+24 AUGUST 2026
+Sprint 10 start. Ask over several documents moved to the top of the Phase 2 candidate list. Warehouse extract mapping ranked second because the cutover has a fixed date.
+
+14 SEPTEMBER 2026
+Steering approved the Phase 2 budget. Ordered the first Phase 2 sprint: environment baseline (HM-201), Ask answers over several documents (HM-203), extract mapping (HM-204).
+
+28 SEPTEMBER 2026
+Mid-Sprint 12 refinement. The Client delivery lead asked for faster first answers; added a speed target of 4 seconds as a pilot gate and created HM-242. The data quality threshold of 98.5 percent was agreed on 29 September 2026, so the extract quality check (HM-244) moves above all new Ask features.
+
+9 OCTOBER 2026
+Release v0.9 shipped. Three known issues went into the backlog: slow first answer on long PDFs, duplicate results after a file is renamed, and a missing progress message on large folders.
+
+14 OCTOBER 2026
+Refinement for Sprint 14: 19 to 30 October 2026. Order for the pilot sprint: speed tuning, extract quality check, teammate source names in answers, pilot setup, feedback form, regression pack. Held back: Ask export to document and saved questions; both go after the pilot.
+
+RULES WE KEEP USING
+- Anything the pilot depends on outranks anything it does not.
+- Defects found in a demo are fixed in the next sprint, not queued.
+- A story over 8 points is split before it is committed.

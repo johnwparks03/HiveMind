@@ -1,0 +1,34 @@
+SPRINT 12 RETROSPECTIVE
+
+Retrospective for Sprint 12 (21 September to 2 October 2026), held on 2 October 2026. Sprint 12 was the first sprint of Phase 2 of the Falcon engagement for Brightwater Logistics. Purpose: record what went well and what to change before Sprint 13, and agree actions.
+
+Attendees: Project lead (User 1), Delivery lead (User 2), five engineers, two analysts, one designer.
+
+Sprint summary
+- Goal: harden the ingest pipeline and upload chunks for Ask. Goal met.
+- Committed 16 stories, completed 15. One deferred: dashboard export.
+- Phase 2 kickoff took place on 21 September; the team grew from three (bridge) to eight.
+- Phase 2 budget of $48,200 is tracked weekly by the Finance business partner.
+
+What went well
+- Kickoff was clear: every person knew the Sprint 12 goal on day one.
+- The two new engineers were productive in the first week because of the environment guide.
+- Chunk upload retries behaved correctly in failure tests.
+- Daily stand-ups stayed at fifteen minutes.
+- The client named pilot teams early, ahead of the 30 September action date.
+
+What to improve
+- Definition of done was applied unevenly for design stories.
+- Staging environment was unavailable for most of Wednesday 30 September.
+- Demo scope for Sprint 14 is still vague; two stakeholders hold different expectations.
+- Backlog refinement happened too late in the week.
+- Defects found in Sprint 11 were not triaged until Sprint 12.
+
+Actions
+A-51  Add a design checklist to the definition of done. Owner: designer. Due: 9 October 2026.
+A-52  Agree a staging environment on-call rota. Owner: Delivery lead (User 2). Due: 6 October 2026.
+A-53  Write a one-page scope for the Sprint 14 demo. Owner: Project lead (User 1). Due: 16 October 2026.
+A-54  Move refinement to Tuesdays. Owner: Delivery lead (User 2). Due: 5 October 2026.
+A-55  Triage defects within two days of discovery. Owner: engineer. Due: ongoing.
+
+Team mood: 4 out of 5. Next retrospective: Sprint 13, 16 October 2026.

@@ -1,0 +1,35 @@
+BENCHMARKING NOTES - SEARCH TOOLS
+
+Topic: comparison of generic search approaches for the Falcon knowledge-search discovery. Period 24 March to 8 April 2026. Kept by the Delivery lead (User 2). No named products are compared; we looked at approach types only.
+
+APPROACHES COMPARED
+A. File-name search (what the shared drive offers today)
+B. Keyword full-text index over document content
+C. Semantic (embedding) search over document content
+D. Hybrid: keyword plus semantic with a name boost
+
+24 MARCH 2026
+Set up a sample set of 120 documents from the shared drive (contracts, procedures, letters). Wrote 20 test questions with known answers, agreed with the Client delivery lead.
+
+27 MARCH 2026
+Approach A found the right file in the first five results for 6 of 20 questions. File names are often generic ("Final v3"). Approach B scored 12 of 20; it misses questions phrased differently from the document.
+
+31 MARCH 2026
+Approach C scored 15 of 20. It handles paraphrased questions well but sometimes ranks a general document above a specific one. Embeddings are cheap to compute on a laptop for a few thousand files.
+
+2 APRIL 2026
+Approach D scored 17 of 20. A boost for matches on the file name fixed most of the cases where C ranked a general document first. Notes from interviews say people recognise files by name, which supports D.
+
+6 APRIL 2026
+Looked at privacy implications. Searching content on the user's own laptop avoids sending private files anywhere. For teammates' files, searching names and short tags only is the least invasive starting point.
+
+8 APRIL 2026
+Summary for the findings report:
+- Name-only search is not enough; semantic plus name boost gave the best results on the sample.
+- Content search should run where the files are, and only metadata is searched centrally.
+- Question answering should be treated as a separate feature after search.
+
+OPEN QUESTIONS
+- How many chunks per document are needed for long PDFs?
+- What age and owner details should be shown with results?
+- How to rank a teammate's file against the user's own file on the same topic?

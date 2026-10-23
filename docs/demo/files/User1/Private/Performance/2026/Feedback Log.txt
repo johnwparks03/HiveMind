@@ -1,0 +1,38 @@
+FEEDBACK LOG
+
+Feedback I have received in 2026, logged from 12 January to 9 October with the source role and theme. I record the substance, not exact wording.
+
+12 JAN | Manager | Theme: planning
+Strong first week of planning. Asked me to write down assumptions earlier.
+
+9 FEB | Executive sponsor | Theme: communication
+Status updates are clear but arrive late on Mondays. Move them to Friday afternoon.
+
+17 MAR | Client delivery lead | Theme: collaboration
+Appreciated that I involved their team in the discovery workshop rather than presenting at them.
+
+22 APR | Delivery lead | Theme: delegation
+Suggested I let engineers own sprint review notes. I tend to rewrite them.
+
+20 MAY | Client sponsor | Theme: stakeholder management
+Praised the handling of the CRM change order. Wants advance warning of any scope question.
+
+16 JUN | Executive sponsor | Theme: leadership
+Steering committee preparation was thorough. Encouraged me to be more direct about risks.
+
+10 JUL | Client delivery lead | Theme: delivery
+The Sprint 6 demo showed real progress. Asked for a shorter version for their leadership.
+
+13 AUG | Manager | Theme: strategy
+Readout was well structured. Next step is showing commercial thinking beyond the plan.
+
+22 SEP | Finance business partner | Theme: budgeting
+Budget packs are easy to review. Wants a variance line by role in future packs.
+
+9 OCT | Manager | Theme: delegation
+Strong on structure, but should hand off day-to-day tracking so I have time for the initiative.
+
+PATTERNS
+- Delegation appears three times and is my main development theme.
+- Clear structure and calm client handling appear most often as strengths.
+- Commercial thinking is a newer theme and links to my promotion case.

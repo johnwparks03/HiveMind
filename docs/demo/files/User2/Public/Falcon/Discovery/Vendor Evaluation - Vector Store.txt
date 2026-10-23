@@ -1,0 +1,45 @@
+VENDOR EVALUATION - VECTOR STORE
+
+STATUS: DRAFT, 11 MAY 2026. Not reviewed by the Client delivery lead. Decision not recorded.
+
+Topic: options for storing and searching document embeddings for the Harborview Platform. Prepared by the Delivery lead (User 2) while Change Order 01 (CRM integration) was being approved. This draft has not been updated since the options were first written down.
+
+OPTIONS
+A. Managed vector index: a separate hosted vector search service.
+B. Vector extension on the existing Postgres cluster: add vector columns to the database the platform already uses.
+C. Local index in the agent: each laptop keeps its own embedding index and nothing is stored centrally.
+
+CRITERIA
+1. Cost at demo scale (a few thousand files, a handful of teams)
+2. Operational effort for a small team
+3. Fit with the existing database and security model
+4. Support for per-team access control
+5. Ability to answer questions over teammates' documents
+6. Time to build
+
+NOTES
+A. Managed vector index
+- Scales well and has good tooling, but adds a new service, a new bill and a second place to apply team access rules.
+- Extra effort to keep it in step with the file registry (publish, unpublish, delete).
+
+B. Vector extension on the existing Postgres cluster
+- Reuses the cluster, backups and access control we already run. Deleting a file can remove its vectors in the same transaction.
+- Fine for this scale; would need review if the data grows by a factor of 100.
+- Needs the extension enabled and tested on the chosen database version.
+
+C. Local index in the agent
+- Strongest privacy and no central cost. Already needed on each laptop for the user's own files.
+- Cannot answer from teammates' documents unless the laptop is online, which does not meet criterion 5.
+
+SCORING (1 low, 5 high, rough)
+A: cost 2, effort 2, fit 2, access control 3, team answers 4, time 2
+B: cost 4, effort 4, fit 5, access control 5, team answers 4, time 4
+C: cost 5, effort 4, fit 3, access control 2, team answers 1, time 5
+
+LEANING
+Option B looks the best fit. Keep option C for each user's own files.
+
+TO DO
+- Confirm extension support on the database version.
+- Review with the Client delivery lead and the Project lead (User 1).
+- Record the decision in the Decision Log.

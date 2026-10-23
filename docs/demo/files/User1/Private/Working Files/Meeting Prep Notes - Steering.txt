@@ -1,0 +1,30 @@
+MEETING PREP NOTES - STEERING
+
+My preparation notes for the steering committee on Monday 14 September 2026, written between 10 and 13 September. Topic: the Phase 2 funding request of $48,200, the likely questions and the answers I want to give. Audience: the client sponsor, the client delivery lead, the Executive sponsor and me.
+
+THE ASK (10 SEPTEMBER)
+- Request approval of a Phase 2 budget of $48,200 for the Harborview Platform, covering the period from kickoff on 21 September.
+- Show that Phase 1 is complete and delivered what was promised. Phase 1 ended 7 August and the bridge period (Sprints 9 to 11) is nearly over.
+- Ask for a decision in the meeting, not a follow-up.
+
+STORY TO TELL (11 SEPTEMBER)
+1. What we delivered in Phase 1, in plain terms.
+2. What the bridge period has shown so far, particularly search quality.
+3. What Phase 2 adds, and what it costs.
+4. What we need from the client: sign-off, data access, test users.
+
+EXPECTED QUESTIONS AND ANSWERS (12 SEPTEMBER)
+- Q: Why $48,200? A: It is built bottom-up from the Phase 2 scope and team plan, and sits within what the client sponsor told us was available.
+- Q: What if scope grows? A: Changes go through the change order process. Nothing is added without written agreement.
+- Q: Can the pilot start earlier? A: No. The platform needs Sprints 12 to 14 to reach pilot quality.
+- Q: What are the main risks? A: Data quality in the warehouse migration and the availability of client test users. Both are on the risk register with owners.
+- Q: What do we get at the end? A: A working search and Ask capability, training and a support model.
+
+LOGISTICS (13 SEPTEMBER)
+- Slides to the Executive sponsor on Sunday evening for review.
+- Print a one-page budget summary for the client sponsor.
+- Arrive 20 minutes early to check the room and the screen.
+- Have the signed Change Order 02 and the Phase 1 readout to hand.
+
+IF THEY HESITATE
+Offer a staged release of funds, with a checkpoint after Sprint 12. Do not offer a price reduction.

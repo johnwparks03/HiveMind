@@ -1,0 +1,31 @@
+DECISION LOG - FALCON
+
+This log records the key decisions on the Falcon project from kickoff on 2 March 2026 to 20 October 2026: contract changes, approvals, dates and governance. Each entry has an ID, the decision, the decider and the reason.
+
+02 March 2026 - DEC-001: Phase 1 kickoff held; project cadence set as a weekly delivery meeting and a status note every Friday. Decided by: Project lead and Client delivery lead.
+
+02 March 2026 - DEC-002: steering committee meets monthly. Decided by: Executive sponsor and Client sponsor. Reason: enough oversight without slowing the team.
+
+18 March 2026 - DEC-003: build sprints are two weeks, Monday start, with Sprint 1 on 20 April 2026. Decided by: Delivery lead. Reason: leaves seven weeks for discovery and design first.
+
+11 May 2026 - DEC-004: Change Order 01 approved, adding the CRM integration for $6,800 and raising the Phase 1 total from $31,500 to $38,300. Decided by: Client sponsor and Executive sponsor. Reason: discovery showed the CRM holds the notes users want most.
+
+15 June 2026 - DEC-005: steering committee asks for an early Phase 2 outline by the end of July. Decided by: Client sponsor.
+
+10 July 2026 - DEC-006: after the Sprint 6 demo, Ask answers must show the source document for every answer. Decided by: Client sponsor.
+
+03 August 2026 - DEC-007: Change Order 02 approved. A bridge period covering Sprints 9 to 11 runs at no added fee, funded from the Phase 1 contingency. Decided by: Client sponsor and Executive sponsor. Reason: keep the team and momentum while the Phase 2 budget is decided.
+
+07 August 2026 - DEC-008: Phase 1 declared complete; executive readout set for 12 August 2026. Decided by: Project lead.
+
+14 September 2026 - DEC-009: steering committee approved the Phase 2 budget of $48,200. Decided by: Client sponsor and Executive sponsor. Reason: Phase 1 results and the Phase 2 plan met the agreed conditions.
+
+14 September 2026 - DEC-010: Phase 2 kickoff set for 21 September 2026, together with the start of Sprint 12. Decided by: Executive sponsor and Project lead.
+
+21 September 2026 - DEC-011: pilot will run with two client teams from 9 to 27 November 2026. Decided by: Client sponsor.
+
+05 October 2026 - DEC-012: a short written update is added between monthly steering meetings during the pilot build. Decided by: Executive sponsor.
+
+12 October 2026 - DEC-013: warehouse cutover stays planned for early November; a rehearsal is added before it. Decided by: Delivery lead.
+
+20 October 2026 - DEC-014: Sprint 14 goal confirmed as pilot Ask for two teams. Decided by: Project lead and Delivery lead.

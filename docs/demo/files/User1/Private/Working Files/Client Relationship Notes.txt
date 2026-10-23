@@ -1,0 +1,36 @@
+CLIENT RELATIONSHIP NOTES
+
+My private notes on the Brightwater Logistics client sponsor and client delivery lead, kept from 2 March to 16 October 2026. They record preferences, sensitivities and things to remember, by role only. They are for my own preparation before meetings and are not shared with the client or the team.
+
+2 MARCH 2026 - KICKOFF
+- Client sponsor: senior, values brevity. Likes decisions framed with two options and a recommendation. Does not like surprises in front of their leadership.
+- Client delivery lead: practical and detail oriented. Wants dates and owners for everything.
+
+18 MARCH 2026 - DISCOVERY WORKSHOP
+- Client delivery lead was guarded about legacy systems. Sensitive about the old search tool, because their team built it. Frame improvement as building on it.
+- Sponsor asked for one-page summaries after each meeting.
+
+11 MAY 2026 - CRM CHANGE ORDER
+- Sponsor was quick to approve the change order once the benefit was clear. Delivery lead worried about integration risk. Agreed to a short design review.
+
+15 JUNE 2026 - STEERING
+- Both were happy with progress. Sponsor praised the demos. Delivery lead wants fewer surprises in sprint scope.
+
+7 AUGUST 2026 - END OF PHASE 1
+- Sponsor wants a clear story for their own leadership. Offered a short executive readout. Delivery lead is tired, so avoid adding meetings.
+
+14 SEPTEMBER 2026 - PHASE 2 APPROVAL
+- Sponsor decisive and positive. Delivery lead asked about test user availability. Promised a plan by the end of the month.
+
+1 OCTOBER 2026
+- Sponsor prefers calls to email on difficult topics. Delivery lead prefers written follow-ups with actions. Do both.
+
+8 OCTOBER 2026 - ON SITE
+- Working lunch with the delivery lead. They mentioned pressure from their own manager about the November timeline. Reassure, and keep dates firm.
+
+16 OCTOBER 2026
+- Sponsor asked about the pilot with two teams. Keep answers simple: dates, who is involved, what we need.
+- Reminder: send the delivery lead a short note thanking their team for the site visit.
+
+GENERAL
+- Never discuss one client contact's comments with the other. Keep the tone warm and factual.

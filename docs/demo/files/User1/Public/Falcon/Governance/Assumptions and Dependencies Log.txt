@@ -1,0 +1,27 @@
+ASSUMPTIONS AND DEPENDENCIES LOG - FALCON
+
+This log records the assumptions the Falcon plan relies on and the dependencies on the client and on other teams, with dated entries from March to September 2026. It was last updated on 30 September 2026.
+
+04 March 2026 - A01 (assumption): documents are in PDF, DOCX, PPTX or TXT only. Owner: Project lead. Status: confirmed in discovery.
+
+04 March 2026 - D01 (dependency): client provides read access to the shared drives within two weeks of kickoff. Owner: Client delivery lead. Status: met 20 March 2026.
+
+18 March 2026 - A02 (assumption): between five and eight business users are available for interviews and testing. Owner: Client delivery lead. Status: confirmed.
+
+08 April 2026 - D02 (dependency): the client security team reviews the architecture before any production connection. Owner: Delivery lead. Status: review completed in July 2026.
+
+11 May 2026 - A03 (assumption): the CRM vendor interface stays stable during Sprints 3 to 5. Owner: Delivery lead. Status: held; Change Order 01 approved.
+
+15 June 2026 - D03 (dependency): the client names a business owner for the platform before the end of Phase 1. Owner: Client sponsor. Status: met 3 July 2026.
+
+03 August 2026 - A04 (assumption): the Phase 1 contingency is enough to fund the bridge period, Sprints 9 to 11. Owner: Project lead. Status: confirmed in Change Order 02.
+
+14 September 2026 - A05 (assumption): the Phase 2 budget of $48,200 is not-to-exceed and holds without a further change order. Owner: Project lead. Status: open, reviewed monthly.
+
+21 September 2026 - D04 (dependency): the client names two pilot teams and releases their time. Owner: Client sponsor. Status: open, due end of Sprint 12.
+
+21 September 2026 - D05 (dependency): the warehouse system owner supports the migration window planned for early November. Owner: Delivery lead. Status: open.
+
+30 September 2026 - A06 (assumption): the pilot runs from 9 to 27 November 2026 with two teams. Owner: Project lead. Status: open.
+
+30 September 2026 - D06 (dependency): the client support team joins the handover sessions in October. Owner: Client delivery lead. Status: open.

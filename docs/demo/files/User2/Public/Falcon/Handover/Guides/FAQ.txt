@@ -1,0 +1,42 @@
+HARBORVIEW PLATFORM FAQ
+
+Frequently asked questions for the two pilot teams. First written 12 October 2026, last updated 20 October 2026. The pilot runs 9 to 27 November 2026. Dated notes at the end record changes.
+
+Q: What can I search?
+A: Your own files in the folders you added, and the details of teammates' public files. Supported types are PDF, DOCX, PPTX and TXT.
+
+Q: Who can see my files?
+A: Nobody, unless you mark a file public. Private files never leave your laptop.
+
+Q: What happens when I make a file public?
+A: Teammates can find it by name and tags, ask questions that use its text, and request a download. The text of the file is stored centrally while it is public.
+
+Q: How do I stop sharing a file?
+A: Mark it private or unpublish it. The stored text is removed.
+
+Q: Why did Ask not use my teammate's document?
+A: Teammates' files are skipped when the question has no topic, or when it contains a date range. Rephrase the question to name the topic and drop the dates.
+
+Q: How fast should Ask be?
+A: The first answer should appear in under 4 seconds. If it is slower, note the time and the question topic and send it to the support analyst.
+
+Q: Why can I not download a file?
+A: Downloads need the owner's laptop to be online. Try again later. Ask still works when the owner is offline.
+
+Q: How long do public files stay?
+A: 45 days. A warning shows in the last 7 days. Publish again to renew.
+
+Q: A folder is still showing a spinner. Is something wrong?
+A: No. The folder is still being read. Large folders take a few minutes.
+
+Q: Where do I report a problem?
+A: Use the help desk form. Include the time, what you did and what you saw. Do not paste document text.
+
+Q: Can I use the platform on a phone or Mac?
+A: Not in the pilot. Windows laptops only.
+
+UPDATE NOTES
+- 2026-10-12: First version written from user interview questions.
+- 2026-10-15: Added the question about Ask skipping teammates' documents after pilot rehearsal feedback.
+- 2026-10-19: Added the spinner question after the Files page update in the release notes.
+- 2026-10-20: Reviewed with the support analyst; wording on downloads clarified.

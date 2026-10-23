@@ -1,0 +1,33 @@
+PILOT PITCH TALKING POINTS
+
+Prepared 5 to 8 October 2026 for my conversation with the Executive sponsor about the Knowledge Reuse Pilot. These are my own prompts, not a script.
+
+5 OCTOBER - POINTS TO MAKE
+- Open with the problem in one sentence: teams rebuild work that already exists elsewhere in the practice.
+- Link it to Falcon. The Harborview Platform showed what search over shared work looks like, and Phase 2 is already moving toward a two-team Ask pilot in Sprint 14.
+- The ask is small and bounded: a $22,000 pilot, two teams, 14 users, four weeks of measurement.
+- Lead with the numbers: 3 hours saved per person per month at $75 per hour, break-even around 7 months.
+- Stress privacy. Private files are never uploaded; users choose what to share.
+- Close with the decision: approve the budget and a go-live target of 15 December 2026.
+
+6 OCTOBER - LIKELY OBJECTIONS AND ANSWERS
+Objection: Three hours a month is a guess.
+Answer: Agreed. That is why the pilot has a baseline survey and four measured weeks. If the real figure is lower we stop.
+
+Objection: Why not wait until Falcon Phase 2 finishes?
+Answer: The pilot uses the same technology but a different audience, and the lessons arrive sooner if we start in December.
+
+Objection: Is this a distraction from the client work?
+Answer: The effort is separate from Falcon staffing. Build time is charged to the pilot budget, not the engagement.
+
+Objection: What if people share the wrong files?
+Answer: Sharing is a deliberate step per folder, and the data-handling review is an open item I will close before go-live.
+
+7 OCTOBER - PREPARATION
+- Rehearsed the cost slide with the Finance business partner; the three budget lines add to the total.
+- Need one concrete story of a reused document. Pull an example from my own notes.
+
+8 OCTOBER - AFTER A DRY RUN
+- Cut the risks to three. Lead with adoption, not technology.
+- Do not promise a date before the funding decision.
+- Follow up in writing the same day with the one-page charter.

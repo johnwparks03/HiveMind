@@ -1,0 +1,33 @@
+STAKEHOLDER INTERVIEW NOTES - DISCOVERY
+
+Falcon stakeholder interviews held 9 to 13 March 2026 with Brightwater Logistics, ahead of the discovery workshop. Purpose: understand how people find information today, what they expect from the Harborview Platform and what worries them. Quotes are paraphrased and unattributed beyond role.
+
+9 March 2026 - Client sponsor (30 minutes)
+Wants a visible win within one quarter. Expects the platform to reduce duplicate effort between regional teams. Worried about cost creep and asked for a clear change-control route. Sees success as "people stop asking in chat before searching".
+
+10 March 2026 - Client delivery lead (45 minutes)
+Owns the source systems. Concerned that permissions differ between the two shared drives and that nobody has a full map. Offered an engineer for two days a week. Wants nightly refresh, not real time.
+
+11 March 2026 - Operations analyst (30 minutes)
+Searches daily. Keeps a personal spreadsheet of useful documents because search fails. Would use a tool that explained why a result matched. Dislikes tools that return forty results with no ranking.
+
+11 March 2026 - Customer success manager (30 minutes)
+Needs customer history fast before calls. Information sits in the CRM and in old proposals. Interested in CRM records appearing in search; unsure about data sensitivity.
+
+12 March 2026 - Warehouse systems lead (45 minutes)
+Runtime documents change during the warehouse system migration planned for later in the year. Wants to be sure search will not show retired procedures. Asked who owns freshness.
+
+12 March 2026 - Finance analyst (30 minutes)
+Looks for contract terms and past budgets. Often finds the draft rather than the signed version. Asked for signed documents to rank first.
+
+13 March 2026 - Information security representative (45 minutes)
+Requires that private files are never uploaded and that access is logged. Will review the design before anything touches client data. Prefers a short review early over a long one late.
+
+Themes across interviews
+- Trust: people need to see the source and the date.
+- Freshness: retired and draft documents cause rework.
+- Permissions: nobody wants a surprise exposure.
+- Adoption: results must beat asking a colleague.
+
+Next steps
+Synthesis goes into the discovery workshop on 18 March 2026. Open question: who owns document freshness after go-live.

@@ -1,0 +1,33 @@
+RELEASE NOTES - V0.9
+
+Topic: Harborview Platform release v0.9, published 9 October 2026 by the Delivery lead (User 2). It contains the work from Sprint 12: 21 September to 2 October 2026 and the fixes made in the first week of Sprint 13. Sprint 13 is still running.
+
+WHAT IS NEW
+- HM-203 Ask can now answer a question from several of your documents and name its sources.
+- HM-205 The Ask page has a new layout with the answer on the left and the sources on the right.
+- HM-204 The warehouse extract mapping is in place for the first three tables; the rest follow before the cutover.
+- HM-201 The Phase 2 environment is the single environment used for the demo and the pilot.
+- HM-207 The release checklist is now part of every build.
+
+IMPROVEMENTS
+- HM-202 Failed uploads of public files are retried automatically with a limit.
+- HM-208 The Files page shows a spinner next to a folder that is still being read.
+- Search results now show the file owner and last modified date.
+
+FIXES
+- A renamed file no longer appears twice in your own results until the next scan.
+- Opening a file whose name contains an ampersand now works.
+- The tag list on the Files page no longer cuts off long tags.
+
+KNOWN ISSUES
+- The first answer for a question over very long PDFs can take longer than we want. Tracked as HM-242 and planned for Sprint 14: 19 to 30 October 2026.
+- After a file is renamed in the shared folder, a teammate may still see the old name for up to one scan.
+- A very large folder can show no progress message for the first few seconds.
+- Ask does not yet cover PowerPoint slide notes.
+
+UPGRADE NOTES
+- No action needed. The agent updates the local database on first start.
+- Re-run the folder scan if you want tags regenerated for older files.
+
+NEXT
+Release v0.10 is planned after Sprint 14 with the pilot features. The pilot with two teams runs 9 to 27 November 2026.

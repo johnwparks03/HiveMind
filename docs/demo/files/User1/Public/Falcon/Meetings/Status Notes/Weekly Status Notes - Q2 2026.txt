@@ -1,0 +1,42 @@
+WEEKLY STATUS NOTES - Q2 2026
+
+Falcon weekly status for Brightwater Logistics, 6 April to 26 June 2026. Written by the Project lead (User 1). Phase 1 runs from kickoff on 2 March 2026 to 7 August 2026. Sprint 1 starts 20 April 2026; sprints are two weeks.
+
+06 Apr 2026
+Discovery wrap-up. Current-state assessment in review. Environment access still pending for two libraries. Status: amber.
+
+13 Apr 2026
+Backlog drafted, 41 stories. Definition of done agreed. Architecture options reviewed with the Client delivery lead. Status: green.
+
+20 Apr 2026 (Sprint 1, week 1)
+Sprint 1 started. Goal: ingest one shared drive and return a first search result. Team of five engineers and analysts on site.
+
+27 Apr 2026 (Sprint 1, week 2)
+First end-to-end search working on sample data. Two stories slipped to Sprint 2. Status: green.
+
+04 May 2026 (Sprint 2, week 1)
+Sprint 1 demo to the client delivery lead went well. Relevance tuning starts. CRM integration request raised by the client sponsor.
+
+11 May 2026 (Sprint 2, week 2)
+Change Order 01 approved today: CRM integration, +$6,800, bringing Phase 1 to $38,300. Two engineer-weeks reallocated. Status: green.
+
+18 May 2026 (Sprint 3, week 1)
+Sprint 2 closed with 12 of 13 stories. Tagging prototype running on 300 documents.
+
+25 May 2026 (Sprint 3, week 2)
+Access list mismatch found on one library (risk R-04). Client delivery lead investigating. Status: amber.
+
+01 Jun 2026 (Sprint 4, week 1)
+Sprint 3 closed. Four of six libraries now ingest nightly. Test plan draft shared for comment.
+
+08 Jun 2026 (Sprint 4, week 2)
+CRM connector read-only test passed against the sandbox. Scanned PDFs flagged as a relevance risk (R-07).
+
+15 Jun 2026 (Sprint 5, week 1)
+Steering committee held. CO01 in effect, scope unchanged, spend 44 percent. Actions A-21 to A-24 logged. Status: green.
+
+22 Jun 2026 (Sprint 5, week 2)
+OCR approach drafted. Sandbox hours confirmed with the CRM vendor. Sprint 6 planning scheduled for 26 June.
+
+26 Jun 2026 (end of Sprint 5)
+Sprint 5 closed with 11 of 12 stories. Sprint 6 (29 June to 10 July) goal: tagging at scale and a demo. Q2 summary: three milestones met, one risk open (R-04).

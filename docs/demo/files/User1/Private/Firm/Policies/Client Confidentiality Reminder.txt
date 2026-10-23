@@ -1,0 +1,27 @@
+CLIENT CONFIDENTIALITY REMINDER
+
+Issued 1 December 2025 by Firm Information Security. This reminder explains what the firm expects of every employee when handling client information, in the office, at the client site and while working remotely. It applies to all engagements and to everyone who works on them, including contractors.
+
+WHAT COUNTS AS CONFIDENTIAL
+Anything you learn about a client through your work is confidential unless the client has said otherwise in writing. That includes contracts and pricing, project plans, data extracts, system details, organisation charts, people matters and the existence of the engagement itself where the client has asked for discretion.
+
+WHAT TO DO
+- Store client material only in approved firm or client-provided locations. Do not use personal email, personal cloud storage or removable drives.
+- Share files on a need-to-know basis. Check the recipient list before you send, especially when replying to a group.
+- Lock your screen whenever you step away. Do not discuss client matters in lifts, cafes, trains or other public places.
+- Label documents with the client sensitivity marking given in the engagement kickoff pack.
+- Use only approved collaboration tools for calls and chat with client staff.
+
+WHAT NOT TO DO
+- Do not reuse one client's material in work for another client without the engagement lead's written approval, even if the content has been anonymised.
+- Do not post about client work on social media, including the fact that you work with a named client.
+- Do not take client data off the client network unless the contract allows it and the data is encrypted.
+
+SEPARATING ENGAGEMENTS
+Where one team works for clients who compete with each other, the engagement lead sets up information barriers. Follow them and raise any doubt early.
+
+IF SOMETHING GOES WRONG
+Report a lost device, a misdirected email or any suspected leak to Firm Information Security within one hour of noticing. Early reporting protects you and the client. Nobody is penalised for reporting a mistake promptly; concealing one is a conduct matter.
+
+OBLIGATIONS CONTINUE
+Your duty of confidentiality continues after an engagement ends and after you leave the firm. Questions go to your engagement lead or the Information Security desk.

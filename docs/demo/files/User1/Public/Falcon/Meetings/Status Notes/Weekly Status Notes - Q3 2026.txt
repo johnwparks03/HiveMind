@@ -1,0 +1,48 @@
+WEEKLY STATUS NOTES - Q3 2026
+
+Falcon weekly status for Brightwater Logistics, 3 July to 25 September 2026. Written by the Project lead (User 1). Covers the end of Phase 1 (7 August), the bridge period (Sprints 9 to 11, 10 August to 18 September) and the start of Phase 2.
+
+03 Jul 2026 (Sprint 6, week 1)
+Sprint 6 in progress. Tagging runs on 2,100 documents. OCR pass designed. Status: green.
+
+10 Jul 2026 (end of Sprint 6)
+Sprint 6 demo held today. Client sponsor asked for a retention view of stale documents. Status: green.
+
+17 Jul 2026 (Sprint 7, week 1)
+OCR pass live for scanned PDFs. Security review pack sent to the information security representative.
+
+24 Jul 2026 (Sprint 7, week 2)
+Sprint 7 closed. Relevance on the test set up to 81 percent for the first answer. Security review summary agreed.
+
+31 Jul 2026 (Sprint 8, week 1)
+Sprint 8 is the last Phase 1 sprint. Handover notes started. Phase 1 closure plan circulated.
+
+03 Aug 2026 (Sprint 8, week 2)
+Change Order 02 signed: a bridge period for Sprints 9 to 11 at no added fee, funded from Phase 1 contingency.
+
+07 Aug 2026 (Sprint 8 ends)
+Phase 1 ended. Sprint 8 retrospective held. Final Phase 1 total $38,300.
+
+14 Aug 2026 (Sprint 9, week 1)
+Executive readout held on 12 August. Phase 2 proposal well received. Lessons learned deck drafted.
+
+21 Aug 2026 (Sprint 9, week 2)
+Sprint 9 closed. Bridge team reduced to three people. Phase 2 statement of work drafting begins.
+
+28 Aug 2026 (Sprint 10, week 1)
+Phase 2 kickoff deck drafting. Sprint 10 demo prepared.
+
+04 Sep 2026 (end of Sprint 10)
+Sprint 10 demo held. Question answering prototype shown for the first time.
+
+11 Sep 2026 (Sprint 11, week 1)
+Steering pre-read issued. Budget request ready for approval.
+
+14 Sep 2026
+Steering committee approved the Phase 2 budget of $48,200. Kickoff set for 21 September.
+
+18 Sep 2026 (end of Sprint 11)
+Bridge period closed. Staffing plan updated for Phase 2.
+
+25 Sep 2026 (Sprint 12, week 1)
+Phase 2 kickoff held on 21 September and Sprint 12 started. Goal: ingest pipeline hardening and Ask chunk upload. Status: green.
